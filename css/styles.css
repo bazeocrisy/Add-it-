@@ -34,7 +34,7 @@
 
   /* Instructional color meanings (reserved for later builds) */
   --c-ones:var(--royal-blue);      /* start-right / ones column   */
-  --c-carry:var(--orange);         /* the carried "1"             */
+  --c-regroup:var(--orange);       /* the regrouped value         */
   --c-sum:var(--green);            /* completed sums              */
   --c-check:var(--gold);           /* check-it step               */
 }

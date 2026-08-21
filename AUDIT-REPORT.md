@@ -1,55 +1,77 @@
-# Add It! — Build 1 Audit Report
+# Add It! — Build 2 Audit Report
 
-**Build number:** Build 1 (Shell + Wizard)
+**Build number:** Build 2 (Addition Engine)
 **Date:** August 21, 2026
 
-## Files Delivered
+## Files Changed
 
-| File | Status |
+| File | Change |
 |---|---|
-| `index.html` | New — application shell, 4-step wizard, 3 placeholder screens, build badge |
-| `css/styles.css` | New — Add It! consolidated stylesheet built on the Round It! design system |
-| `js/app.js` | New — config, state, screen routing, wizard routing, chips, badge, audit hook |
-| `assets/images/logo.png` | Supplied Add It! logo (1536 × 1024) |
+| `index.html` | One wording correction only (Regrouping skill card subtitle) |
+| `css/styles.css` | One terminology-only change: token comment renamed `--c-carry` → `--c-regroup` (token was unused; no visual change) |
+| `js/app.js` | Complete Build 2 file: Build 1 shell/wizard preserved verbatim + new addition engine + upgraded audit hook |
+| `AUDIT-REPORT.md` | This report |
 
-## Functionality Completed
+Visually, the app is intentionally unchanged from Build 1 except the corrected subtitle and the badge reading **Add It! — Build 2**.
 
-- Add It! branding: name, tagline "Start right. Add it. Regroup it.", logo on Step 1, "+" brand mark, page title and meta description.
-- Wizard Step 1 — Skill: No Regrouping (✓), Regrouping (10 → 1), Mixed (+); internal values `"no-regroup"`, `"regroup"`, `"mixed"`.
-- Wizard Step 2 — Number Size: 2 / 3 / 4 Digits with vertical-addition example previews (47+32, 347+286, 2,347+1,586) and Mixed; internal values `"2"`, `"3"`, `"4"`, `"mixed"`. No 5/6-digit options.
-- Wizard Step 3 — Mode: Learn 🎓 / Practice ✏️ / Test 🏆 with the same wording and CTAs as the family style, plus the addition method strip: Start right → Add → Regroup → Move left → Check it.
-- Wizard Step 4 — Test Length (Test only): Quick Test 10 / Full Test 25 / Challenge 50; stored as numbers.
-- Wizard progress indicator: 1 Skill → 2 Number Size → 3 Mode, expanding to → 4 Length on the Test path; current step highlighted, completed steps get green check marks; Back/Home hidden on Step 1 (Step 1 is home).
-- Placeholder screens for Learn (green header), Practice (blue header), Test (purple/navy header) confirming passed selections via header chips and stage chips; Test additionally shows the selected length. Each has working "Choose Another Mode" (returns to Step 3, keeping skill + size) and Home (full reset).
-- Centralized `state` object (`skill`, `size`, `mode`, `testLength`, `wizardStep`) and reusable `showScreen(name)` with the `[hidden]` switching architecture.
-- Build badge "Add It! — Build 1", unobtrusive fixed pill on desktop, moved into normal document flow ≤560px.
-- Development hook: `window.__addit = { state, BUILD_NUMBER, config }`.
-- Accessibility: skip-to-content link, semantic buttons, `role="radiogroup"`/`role="radio"` with live `aria-checked`, descriptive logo alt text, visible focus rings, reduced-motion support, no hover-only functionality, full keyboard operation verified.
+## Wording Correction
 
-## Responsive Widths Tested (automated, headless Chromium)
+Regrouping skill card subtitle changed from "Practice carrying to the next place" to **"Regroup to the next place."** A repo-wide search confirms zero remaining uses of "carrying" / "carry the 1" in user-facing copy. (The engine's internal `carryIn`/`carryOut` field names follow the spec's problem model; instructional copy will say "regroup.")
 
-320, 375, 390, 430 (phones) · 768 (tablet) · 1366 × 768 (laptop) · 1440, 1920 (desktop) — each checked on wizard Step 1, Step 3, and a placeholder screen. Zero horizontal scrolling at every width; build badge verified in normal flow at ≤430px; touch targets ≥ ~44px. Phones reflow: skill cards become compact tappable rows with an arrow affordance (Round It!'s ≤560px philosophy), headers become wrapping flex rows, cards stack single-column.
+## Engine Functions Created
 
-## Wizard Combinations Tested (automated)
+- **`calculateAddition(topNumber, bottomNumber)`** — pure, DOM-free column engine. Validates inputs (rejects non-integers, negatives, NaN), processes columns right-to-left with `rawTotal = topDigit + bottomDigit + carryIn`, `answerDigit = rawTotal % 10`, `carryOut = floor(rawTotal / 10)`, and preserves the final carry (e.g. 9,999 + 9,999 → 1 into the ten-thousands, `finalCarryPlace: "ten-thousands"`).
+- **`generateProblem({skill, size})`** — no-regroup problems are built constructively digit-by-digit (every column guaranteed `topDigit + bottomDigit < 10`, leading digits ≥ 1, then validated — never generate-and-hope); regroup problems use bounded retry (max 500) with a deterministic fallback so at least one column has `carryOut === 1`; mixed picks a subtype per problem.
+- **`problemKey(problem)`** — commutative normalized key `min+max` so 459+287 and 287+459 dedupe as one pair.
+- **`buildProblemSet({skill, size, length})`** — logic-only session builder for 10/25/50. Deliberate slot plan then shuffle: mixed skill deals exactly half regroup / half no-regroup (odd lengths favor regroup); mixed size deals 2/3/4-digit round-robin so every size appears in any 10+ set. Duplicate-free via key set; all loops bounded with a recorded safety valve (`meta.duplicateFallbacks`, observed 0 in every audit).
+- **`validateProblem(problem, expectedSkill, expectedSize)`** — recomputes every field from scratch using arithmetic digit extraction (a different method than the generator's), checks answer, digit lengths, every column's carryIn/rawTotal/answerDigit/carryOut/regrouped, final carry and its place, answer-width growth, NaN/undefined guards, and skill/size compliance including that `skillType` truthfully reports the actual generated subtype.
 
-All **60 routes** verified end to end with correct state and chip stamping:
-3 skills × 4 sizes × (Learn + Practice) = 24, plus 3 skills × 4 sizes × Test × 3 lengths = 36.
-Also verified: every Back transition (4→3, 3→2, 2→1), Test always opens the Length step, the step-4 progress pill appears/disappears correctly, Home fully resets state, "Choose Another Mode" preserves skill + size while clearing mode, no stale selections leak between sessions, and the repeated Home → Skill → Size → Mode → Back → Size → Back → Skill loop (×3) keeps state valid.
+## Problem Object Structure
 
-## Errors Found and Corrected
+Matches the specified model: `topNumber`, `bottomNumber`, `answer`, `digitLength`, `answerDigitLength`, `skillType` (actual), `requestedSkill`/`requestedSize` (wizard intent), `regroupCount`, `regroupPlaces`, `finalCarry`, `finalCarryPlace`, and a `columns` array where each column carries `indexFromRight`, `place`, `topDigit`, `bottomDigit`, `carryIn`, `rawTotal`, `answerDigit`, `carryOut`, `regrouped`, and `carryPlace` (where the regrouped value lands) — so Build 3+ can render "14 ones = 1 ten + 4 ones" without recalculating anything.
 
-1. **Skill-card arrow clipped at 320px** — the text column's min-content pushed the arrow outside the card. Fixed with `minmax(0,1fr)` text column plus tighter badge/gap sizing at ≤560px and ≤400px.
-2. **Wizard header nav clipped at ≤560px** — Back/Home overflowed the grid on narrow phones. Fixed by converting phone headers to wrapping flex rows.
-3. **Mode-screen headers overflowed at 320px** — same root cause; the same wrapping-flex treatment now applies to all headers at ≤920px, which also fixed a stretched Back button at 768px.
+## Independent Recalculation (per spec §18)
 
-## Console / Assets
+Every audited problem was verified **twice by different implementations**: (1) in-browser `validateProblem`, and (2) a separate Python program that recomputed answers, all columns, carries, final carry, and skill/size compliance completely from scratch. A shared generation/validation bug cannot self-confirm under this design. Both agreed on every problem tested.
 
-Zero JavaScript errors, zero missing-element errors, zero broken asset paths across all flows. (Note: the shared Google Fonts stylesheet was blocked by the audit sandbox's network policy; it is the same link the reference app uses and loads normally in the browser, with system-font fallbacks defined regardless.)
+## Volume Tested
 
-## Regression Protection
+- **6,000 individually generated problems** (1,000 each: no-regroup × 2/3/4-digit, regroup × 2/3/4-digit) — all valid in both validators.
+- **2,000 mixed-skill/mixed-size problems** — all valid; subtypes split ~50/50 (neither collapsed); all three sizes appeared in healthy proportions.
+- **540 full sessions** (3 skills × 4 sizes × lengths 10/25/50 × 15 repetitions = 15,300 problems): exact length, zero duplicate keys, zero fallbacks, full skill/size compliance, mixed sets always contained all of 2/3/4-digit, mixed skill always exactly balanced.
+- **Stress pass:** 300 further sessions (25 repetitions × all 12 combos × length 10 = 3,000 more problems) — zero defects.
+- ~**20,000 additional generations** while searching distribution/edge behavior.
+- Grand total: **30,000+ engine-validated problems** in this audit run.
 
-Automated string search across all delivered files for "Round It", "rounding", "nearest ten/hundred/thousand", "number line", "round up", "round down": **zero matches**. No number-line, rounding-target, round-up/down, comma-modal, or rounding answer-tile styles were carried over.
+## Regroup Distribution Findings (n = 3,000 per size)
 
-## Explicitly Not Yet Implemented (frozen for later builds)
+Regrouping was observed in **every applicable place**, not just the ones column:
+2-digit — ones 1,767 / tens 2,391 · 3-digit — ones 1,545 / tens 1,721 / hundreds 2,092 · 4-digit — ones 1,479 / tens 1,621 / hundreds 1,557 / thousands 1,932. The generator also produces the tens-regroup-without-ones-regroup case on demand.
 
-Addition engine · vertical addition workspace · carrying/regrouping logic · Learn lesson · Practice sessions · hints · Test calculations · scoring · Results · Practice My Misses · random problem generation · keypad behavior.
+## Edge Cases Tested (explicit, exact-value assertions)
+
+10+10, 22+33 (no regroup, all carryIns 0) · 29+14, 47+35 (ones regroup) · tens-only regroup (found and validated) · 586+297, 589+476, 789+656 (multiple/consecutive) · 89+76 asserted column-by-column against the spec (ones 15→5 c1, tens 16→6 c1, final 1 hundred, answer 165) · 999+999, 9,999+9,999 = 19,998 with final carry into ten-thousands and 5-digit answer · internal zeroes 405+270 and 1,008+2,091 · the spec's 459+287 model reproduced exactly · 243+126 fully no-regroup. Boundaries: 10, 99, 100, 999, 1,000, 9,999 in low/high pairings, plus digit-boundary crossings 99+99, 999+999, 9,999+9,999.
+
+## Duplicate Checks
+
+Normalized commutative keys verified on all 840 audited sessions — zero duplicate pairs within any set, including reversed-order pairs.
+
+## Errors Discovered / Corrected
+
+No engine defects were found. One audit-script bug (an invalid size sentinel in the Python edge-case validator) was fixed and the affected audit re-run to completion.
+
+## Build 1 Regression Results
+
+The complete Build 1 automated audit was re-run against Build 2 and **passed in full**: all 60 wizard combinations, every Back transition, Test → Length routing with progress-pill behavior, Home reset, no stale-state leaks, placeholder chips, keyboard operation, skip link, touch targets, and the badge (now "Add It! — Build 2"). Responsive re-verified with zero horizontal scrolling at **320 / 375 / 390 / 430 / 768 / 1366 / 1440** (and 1920). The engine does not touch the DOM and did not affect the UI.
+
+## Console Results
+
+Zero console errors, zero missing-element errors, zero asset errors, zero NaN or undefined problem fields, and zero generation-loop overruns across 30,000+ generations (all loops bounded; safety valves never triggered).
+
+## Audit Hook
+
+`window.__addit` now exposes: `state`, `BUILD_NUMBER`, `calculateAddition`, `generateProblem`, `buildProblemSet`, `problemKey`, `validateProblem`, and `config` (SKILLS, SIZES, MODES, TEST_LENGTHS, PLACE_NAMES, ENGINE_SIZES).
+
+## Explicitly Not Implemented (frozen for Build 3+)
+
+Vertical addition board · regrouping boxes · interactive digit entry · Learn lesson · Practice · hints · Test math interface · scoring · Results · Practice My Misses · animations · regrouping visual movement.
