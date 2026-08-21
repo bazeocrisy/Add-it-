@@ -1,12 +1,242 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add It!</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add It! — Start right. Add it. Regroup it.</title>
+  <meta name="description" content="Add It! teaches third-grade whole-number addition with place value, regrouping, guided learning, practice, and independent testing.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <h1>Add It!</h1>
-    <p>Third Grade Addition Practice</p>
+
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="app-shell" id="main">
+
+    <!-- ================= WIZARD ================= -->
+    <section class="screen screen-wizard" id="screen-wizard" aria-labelledby="wiz-heading" hidden>
+      <div class="wizard-bg" aria-hidden="true">
+        <span class="mb-circle mb-c1"></span><span class="mb-circle mb-c2"></span><span class="mb-circle mb-c3"></span>
+        <span class="mb-num mb-n1">+</span><span class="mb-num mb-n2">47</span><span class="mb-num mb-n3">=</span>
+        <span class="mb-ruler"></span>
+      </div>
+
+      <header class="app-header header-wizard">
+        <div class="ph-brand"><span class="ph-mark" aria-hidden="true"><span class="ph-mark-plus">+</span></span><span class="ph-name">Add It!</span></div>
+        <span class="ph-tagline">Start right. Add it. Regroup it.</span>
+        <button type="button" class="nav-btn nav-back" id="wiz-back" hidden><span aria-hidden="true">&larr;</span> Back</button>
+        <button type="button" class="nav-btn nav-home" id="wiz-home" hidden><span aria-hidden="true">&#127968;</span> Home</button>
+      </header>
+
+      <div class="wizard-inner">
+        <ol class="wiz-progress" id="wiz-progress" aria-label="Setup progress">
+          <li data-wstep="1"><span class="wp-num">1</span> Skill</li>
+          <li class="wp-arrow" aria-hidden="true">&rarr;</li>
+          <li data-wstep="2"><span class="wp-num">2</span> Number Size</li>
+          <li class="wp-arrow" aria-hidden="true">&rarr;</li>
+          <li data-wstep="3"><span class="wp-num">3</span> Mode</li>
+          <li class="wp-arrow wp-len" aria-hidden="true" hidden>&rarr;</li>
+          <li data-wstep="4" class="wp-len" hidden><span class="wp-num">4</span> Length</li>
+        </ol>
+
+        <!-- Wizard step 1: skill -->
+        <div class="wiz-step" id="wiz-step-1">
+          <img class="wiz-logo" src="assets/images/logo.png" alt="Add It! — Start right. Add it. Regroup it." width="1536" height="1024">
+          <h2 id="wiz-heading" class="wiz-title">What kind of addition do you want to practice?</h2>
+          <div class="card-grid skill-grid" role="radiogroup" aria-label="Addition skill">
+            <button type="button" class="pick-card skill-noregroup" data-skill="no-regroup" role="radio" aria-checked="false">
+              <span class="pick-badge" aria-hidden="true">&#10003;</span>
+              <span class="pick-name">No Regrouping</span>
+              <span class="pick-sub">Add without regrouping</span>
+            </button>
+            <button type="button" class="pick-card skill-regroup" data-skill="regroup" role="radio" aria-checked="false">
+              <span class="pick-badge" aria-hidden="true">10 &rarr; 1</span>
+              <span class="pick-name">Regrouping</span>
+              <span class="pick-sub">Practice carrying to the next place</span>
+            </button>
+            <button type="button" class="pick-card skill-mixed" data-skill="mixed" role="radio" aria-checked="false">
+              <span class="pick-badge" aria-hidden="true">+</span>
+              <span class="pick-name">Mixed</span>
+              <span class="pick-sub">A mix of both skills</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Wizard step 2: number size -->
+        <div class="wiz-step" id="wiz-step-2" hidden>
+          <h2 class="wiz-title">How big should the numbers be?</h2>
+          <p class="wiz-sub" id="size-context"></p>
+          <div class="card-grid size-grid" role="radiogroup" aria-label="Number size">
+            <button type="button" class="pick-card size-card size-2" data-size="2" role="radio" aria-checked="false">
+              <span class="size-example" aria-hidden="true"><span class="se-row">47</span><span class="se-row se-bottom"><span class="se-plus">+</span>32</span></span>
+              <span class="size-label">2 Digits</span>
+            </button>
+            <button type="button" class="pick-card size-card size-3" data-size="3" role="radio" aria-checked="false">
+              <span class="size-example" aria-hidden="true"><span class="se-row">347</span><span class="se-row se-bottom"><span class="se-plus">+</span>286</span></span>
+              <span class="size-label">3 Digits</span>
+            </button>
+            <button type="button" class="pick-card size-card size-4" data-size="4" role="radio" aria-checked="false">
+              <span class="size-example" aria-hidden="true"><span class="se-row">2,347</span><span class="se-row se-bottom"><span class="se-plus">+</span>1,586</span></span>
+              <span class="size-label">4 Digits</span>
+            </button>
+            <button type="button" class="pick-card size-card size-mix" data-size="mixed" role="radio" aria-checked="false">
+              <span class="size-example size-example-mixed" aria-hidden="true"><span class="se-chip">47</span><span class="se-dot">&bull;</span><span class="se-chip">347</span><span class="se-dot">&bull;</span><span class="se-chip">2,347</span></span>
+              <span class="size-label">Mixed</span>
+              <span class="pick-sub">A mix of 2, 3, and 4 digit numbers</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Wizard step 3: mode -->
+        <div class="wiz-step" id="wiz-step-3" hidden>
+          <h2 class="wiz-title">How do you want to work?</h2>
+          <div class="card-grid mode-grid">
+            <button type="button" class="pick-card mode-card mode-learn" data-mode="learn">
+              <span class="mode-icon" aria-hidden="true">&#127891;</span>
+              <span class="pick-name">Learn</span>
+              <span class="pick-sub">Teach me step by step</span>
+              <span class="mode-cta">Start Learning &rarr;</span>
+            </button>
+            <button type="button" class="pick-card mode-card mode-practice" data-mode="practice">
+              <span class="mode-icon" aria-hidden="true">&#9999;&#65039;</span>
+              <span class="pick-name">Practice</span>
+              <span class="pick-sub">Let me try with help</span>
+              <span class="mode-cta">Start Practice &rarr;</span>
+            </button>
+            <button type="button" class="pick-card mode-card mode-test" data-mode="test">
+              <span class="mode-icon" aria-hidden="true">&#127942;</span>
+              <span class="pick-name">Test</span>
+              <span class="pick-sub">Let me try on my own</span>
+              <span class="mode-cta">Start Test &rarr;</span>
+            </button>
+          </div>
+          <p class="method-strip" aria-label="The Add It method">
+            <span>Start right</span><span class="ms-arrow" aria-hidden="true">&rarr;</span>
+            <span>Add</span><span class="ms-arrow" aria-hidden="true">&rarr;</span>
+            <span>Regroup</span><span class="ms-arrow" aria-hidden="true">&rarr;</span>
+            <span>Move left</span><span class="ms-arrow" aria-hidden="true">&rarr;</span>
+            <span>Check it</span>
+          </p>
+        </div>
+
+        <!-- Wizard step 4: test length (Test only) -->
+        <div class="wiz-step" id="wiz-step-4" hidden>
+          <h2 class="wiz-title">How many questions?</h2>
+          <p class="wiz-sub">Pick a test length.</p>
+          <div class="card-grid length-grid" role="radiogroup" aria-label="Test length">
+            <button type="button" class="pick-card length-card length-10" data-length="10" role="radio" aria-checked="false">
+              <span class="pick-badge" aria-hidden="true">10</span>
+              <span class="pick-name">Quick Test</span>
+              <span class="pick-sub">10 questions</span>
+            </button>
+            <button type="button" class="pick-card length-card length-25" data-length="25" role="radio" aria-checked="false">
+              <span class="pick-badge" aria-hidden="true">25</span>
+              <span class="pick-name">Full Test</span>
+              <span class="pick-sub">25 questions</span>
+            </button>
+            <button type="button" class="pick-card length-card length-50" data-length="50" role="radio" aria-checked="false">
+              <span class="pick-badge" aria-hidden="true">50</span>
+              <span class="pick-name">Challenge</span>
+              <span class="pick-sub">50 questions</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= LEARN (placeholder) ================= -->
+    <section class="screen screen-learn" id="screen-learn" aria-labelledby="learn-heading" hidden>
+      <header class="app-header header-learn">
+        <div class="ph-brand"><span class="ph-mark" aria-hidden="true"><span class="ph-mark-plus">+</span></span><span class="ph-name">Add It!</span></div>
+        <span class="ph-chip" id="learn-skill-chip"></span>
+        <span class="ph-chip" id="learn-size-chip"></span>
+        <span class="ph-mode-tag ph-mode-learn">Learn</span>
+        <span class="ph-spacer" aria-hidden="true"></span>
+        <button type="button" class="nav-btn nav-home" id="learn-home"><span aria-hidden="true">&#127968;</span> Home</button>
+      </header>
+
+      <div class="placeholder-body">
+        <div class="stage placeholder-stage">
+          <p class="placeholder-icon" aria-hidden="true">&#127891;</p>
+          <h2 id="learn-heading" class="placeholder-title">Learn</h2>
+          <div class="placeholder-chips">
+            <span class="setting-chip chip-skill" id="learn-ph-skill"></span>
+            <span class="setting-chip chip-size" id="learn-ph-size"></span>
+          </div>
+          <p class="placeholder-note">Learn mode is coming in Build 4.</p>
+        </div>
+      </div>
+
+      <footer class="activity-foot">
+        <button type="button" class="nav-btn nav-back" id="learn-back"><span aria-hidden="true">&larr;</span> Choose Another Mode</button>
+      </footer>
+    </section>
+
+    <!-- ================= PRACTICE (placeholder) ================= -->
+    <section class="screen screen-practice" id="screen-practice" aria-labelledby="practice-heading" hidden>
+      <header class="app-header header-practice">
+        <div class="ph-brand"><span class="ph-mark" aria-hidden="true"><span class="ph-mark-plus">+</span></span><span class="ph-name">Add It!</span></div>
+        <span class="ph-chip" id="practice-skill-chip"></span>
+        <span class="ph-chip" id="practice-size-chip"></span>
+        <span class="ph-mode-tag ph-mode-practice">Practice</span>
+        <span class="ph-spacer" aria-hidden="true"></span>
+        <button type="button" class="nav-btn nav-home" id="practice-home"><span aria-hidden="true">&#127968;</span> Home</button>
+      </header>
+
+      <div class="placeholder-body">
+        <div class="stage placeholder-stage">
+          <p class="placeholder-icon" aria-hidden="true">&#9999;&#65039;</p>
+          <h2 id="practice-heading" class="placeholder-title">Practice</h2>
+          <div class="placeholder-chips">
+            <span class="setting-chip chip-skill" id="practice-ph-skill"></span>
+            <span class="setting-chip chip-size" id="practice-ph-size"></span>
+          </div>
+          <p class="placeholder-note">Practice mode is coming in a later build.</p>
+        </div>
+      </div>
+
+      <footer class="activity-foot">
+        <button type="button" class="nav-btn nav-back" id="practice-back"><span aria-hidden="true">&larr;</span> Choose Another Mode</button>
+      </footer>
+    </section>
+
+    <!-- ================= TEST (placeholder) ================= -->
+    <section class="screen screen-test" id="screen-test" aria-labelledby="test-heading" hidden>
+      <header class="app-header header-test">
+        <div class="ph-brand"><span class="ph-mark" aria-hidden="true"><span class="ph-mark-plus">+</span></span><span class="ph-name">Add It!</span></div>
+        <span class="ph-chip" id="test-skill-chip"></span>
+        <span class="ph-chip" id="test-size-chip"></span>
+        <span class="ph-chip" id="test-length-chip"></span>
+        <span class="ph-mode-tag ph-mode-test">Test</span>
+        <span class="ph-spacer" aria-hidden="true"></span>
+        <button type="button" class="nav-btn nav-home" id="test-home"><span aria-hidden="true">&#127968;</span> Home</button>
+      </header>
+
+      <div class="placeholder-body">
+        <div class="stage placeholder-stage">
+          <p class="placeholder-icon" aria-hidden="true">&#127942;</p>
+          <h2 id="test-heading" class="placeholder-title">Test</h2>
+          <div class="placeholder-chips">
+            <span class="setting-chip chip-skill" id="test-ph-skill"></span>
+            <span class="setting-chip chip-size" id="test-ph-size"></span>
+            <span class="setting-chip chip-length" id="test-ph-length"></span>
+          </div>
+          <p class="placeholder-note">Test mode is coming in a later build.</p>
+        </div>
+      </div>
+
+      <footer class="activity-foot">
+        <button type="button" class="nav-btn nav-back" id="test-back"><span aria-hidden="true">&larr;</span> Choose Another Mode</button>
+      </footer>
+    </section>
+
+    <p class="build-badge" id="build-badge" aria-label="Application version"></p>
+
+  </div>
+
+  <script src="js/app.js"></script>
 </body>
 </html>
