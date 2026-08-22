@@ -392,6 +392,36 @@ h1,h2,h3{color:var(--navy);}
   .bt-vvisual{padding:5px;}
 }
 
+/* ---------- 7d. PRACTICE MODE (Build 5) ---------- */
+.practice-instruction{background:var(--soft-blue);border-color:#C6DAF6;}
+.pr-feedback{font-weight:800;margin:10px 0 0;border-radius:var(--radius-md);padding:8px 14px;}
+.pr-feedback.pr-ok{color:var(--green-dark);background:var(--soft-green);}
+.pr-feedback.pr-try{color:var(--orange-dark);background:var(--soft-orange);}
+.pr-feedback.pr-guided{color:var(--deep-blue);background:var(--soft-yellow);}
+.practice-hint{width:min(720px,100%);background:var(--soft-yellow);border:2px dashed var(--gold);border-radius:var(--radius-lg);padding:12px 16px;display:flex;flex-direction:column;align-items:center;gap:8px;animation:rise .25s ease;}
+.ph-hint-text{font-weight:800;color:var(--navy);margin:0;text-align:center;}
+
+.num-pad{display:grid;grid-template-columns:repeat(5,minmax(52px,72px));gap:10px;justify-content:center;margin-top:4px;}
+.pad-btn{font-family:var(--font-display);font-weight:800;font-size:1.35rem;color:var(--navy);background:#fff;border:3px solid var(--soft-blue);border-radius:14px;min-height:52px;box-shadow:var(--shadow-soft);transition:transform .1s ease,border-color .15s ease;}
+.pad-btn:hover:not(:disabled){transform:translateY(-2px);border-color:var(--sky-blue);}
+.pad-btn:active:not(:disabled){transform:translateY(0);}
+.pad-btn:disabled{opacity:.45;cursor:default;}
+.pad-zero{grid-column:3;}
+
+/* Student entries + interaction affordances on the board */
+.ab-answer.is-entered{border-color:var(--royal-blue);background:var(--soft-blue);color:var(--deep-blue);}
+.ab-regroup.is-entered{border-style:solid;border-color:var(--orange);background:var(--soft-orange);}
+.ab-cell.is-prompt{outline:3px solid var(--royal-blue);outline-offset:2px;border-radius:10px;animation:promptPulse 1.2s ease-in-out infinite;}
+.ab-regroup.ab-tap{border-color:var(--royal-blue);background:#fff;cursor:pointer;animation:promptPulse 1.2s ease-in-out infinite;}
+.ab-regroup.ab-tap:hover{background:var(--soft-blue);}
+@keyframes promptPulse{0%,100%{box-shadow:0 0 0 0 rgba(70,103,242,.35);}50%{box-shadow:0 0 0 7px rgba(70,103,242,0);}}
+#practice-board-done{margin:6px 0 14px;}
+
+@media (max-width:560px){
+  .num-pad{grid-template-columns:repeat(5,minmax(46px,1fr));gap:7px;width:100%;}
+  .pad-btn{min-height:48px;font-size:1.2rem;}
+}
+
 /* ---------- 8. BUILD BADGE ---------- */
 .build-badge{position:fixed;right:12px;bottom:10px;margin:0;z-index:40;font-family:var(--font-body);font-weight:800;font-size:.72rem;letter-spacing:.3px;color:var(--muted);background:rgba(255,255,255,.85);border:1px solid rgba(18,50,91,.1);border-radius:999px;padding:4px 12px;box-shadow:0 2px 8px rgba(18,50,91,.08);pointer-events:none;max-width:calc(100vw - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 

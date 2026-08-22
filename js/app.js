@@ -1,5 +1,15 @@
 /* =========================================================
-   Add It! — Build 4.3: Learn responsive composition
+   Add It! — Build 5: Practice Mode
+   Rebased on the owner's Build 4.3 (Learn responsive composition
+   + vertical base-ten rows + Before/After exchange panels), which
+   is preserved unchanged. New in Build 5 (SECTION E): guided
+   independent practice — number-pad digit entry, regroup-
+   destination tapping, a 3-level hint ladder with guided reveal,
+   misconception-targeted feedback, celebration + streak
+   encouragement (never scores/points). The board gains ADDITIVE
+   entry options (answerEntries, regroupEntries, tapRegroups,
+   promptCell); defaults keep Build 4.3 behavior identical.
+   Earlier header (Build 4.3): Learn responsive composition
    Frozen: Build 1 shell/wizard, Build 2 engine, Build 3 board.
    New in Build 4 (SECTION D):
      - buildLessonSteps(problem, meta): pure lesson engine that
@@ -33,7 +43,7 @@
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 4.3";
+  const BUILD_NUMBER = "Build 5";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -74,6 +84,7 @@
 
   /* ---------- Wizard ---------- */
   function startWizard() {
+    stopPractice();
     state.skill = null;
     state.size = null;
     state.mode = null;
@@ -166,10 +177,11 @@
 
   /* ---------- Placeholder destinations ---------- */
   function startLearn()    { stampChips("learn");    showScreen("learn");    startLearnSession(); }
-  function startPractice() { stampChips("practice"); showScreen("practice"); newPreviewProblem(); renderPreview(); }
+  function startPractice() { stampChips("practice"); showScreen("practice"); startPracticeSession(); }
   function startTest()     { stampChips("test");     showScreen("test");     newPreviewProblem(); renderPreview(); }
 
   function backToModeStep() {
+    stopPractice();
     state.mode = null;
     setWizardStep(3);
     showScreen("wizard");
@@ -623,6 +635,10 @@
       showAnswerValues: false,
       revealAnswerPlaces: [],    // ADDITIVE (Build 4): per-place answer reveal
       revealRegroupPlaces: [],   // ADDITIVE (Build 4): per-place interior regroup reveal
+      answerEntries: {},         // ADDITIVE (Build 5): student-entered answer digits (place -> "d")
+      regroupEntries: {},        // ADDITIVE (Build 5): student-entered regroup values (place -> "1")
+      tapRegroups: false,        // ADDITIVE (Build 5): affordance class on empty regroup cells
+      promptCell: null,          // ADDITIVE (Build 5): {row, place} cell awaiting input
       activePlace: null,
       highlightRegroupPlace: null,
       completedPlaces: [],
@@ -701,9 +717,21 @@
             && placeName === problem.finalCarryPlace) {
           regVal = String(finalRegroupValue);
         }
+        let entered = false;
+        if (opts.regroupEntries[placeName] !== undefined) {   // student-entered value
+          regVal = String(opts.regroupEntries[placeName]);
+          entered = true;
+        }
         const has = regVal !== "";
         const c = cell("regroup", 2, t, "ab-regroup" + (has ? " is-shown" : " is-empty"), regVal);
-        if (!has) c.classList.add("ab-blank-ok");
+        if (entered) c.classList.add("is-entered");
+        if (!has) {
+          c.classList.add("ab-blank-ok");
+          if (opts.tapRegroups) c.classList.add("ab-tap");
+        }
+        if (opts.promptCell && opts.promptCell.row === "regroup" && opts.promptCell.place === placeName) {
+          c.classList.add("is-prompt");
+        }
       }
       // Addend digits: string formatting only — never arithmetic.
       const topD = idx < topStr.length ? topStr[topStr.length - 1 - idx] : "";
@@ -715,11 +743,20 @@
 
       // Answer cells always exist as slots; digits appear only on reveal.
       let ansD = "";
+      let ansEntered = false;
       if (opts.showAnswerValues || opts.revealAnswerPlaces.indexOf(placeName) !== -1) {
         if (idx < problem.columns.length) ansD = String(problem.columns[idx].answerDigit);
         else if (problem.finalCarry > 0 && idx === problem.digitLength) ansD = String(problem.finalCarry);
       }
+      if (opts.answerEntries[placeName] !== undefined) {      // student-entered digit
+        ansD = String(opts.answerEntries[placeName]);
+        ansEntered = true;
+      }
       const ansCell = cell("answer", 6, t, "ab-answer" + (ansD !== "" ? " is-shown" : ""), ansD);
+      if (ansEntered) ansCell.classList.add("is-entered");
+      if (opts.promptCell && opts.promptCell.row === "answer" && opts.promptCell.place === placeName) {
+        ansCell.classList.add("is-prompt");
+      }
       if (idx === 3 && opts.showAnswerValues && problem.answerDigitLength >= 4 && ansD !== "") {
         ansCell.classList.add("cell-comma");
       }
@@ -1384,6 +1421,343 @@
   }
 
   /* =========================================================
+     SECTION E — PRACTICE MODE (Build 5)
+     Guided independent practice. The child works the algorithm
+     column by column on the real board: enter the answer digit
+     (number pad), then tap where the regrouped value goes.
+     Correctness comes ONLY from engine metadata (answerDigit,
+     carryPlace, finalCarry/finalCarryPlace) — this controller
+     never computes an answer. Wrong attempts climb a 3-level
+     hint ladder (gentle -> base-ten -> procedural) and then a
+     guided reveal so no child is ever stuck. Feedback is
+     supportive and specific; there are no scores or points.
+     ========================================================= */
+  const practice = {
+    active: false, problem: null, colIndex: 0,
+    phase: "digit",              // "digit" | "carry" | "final" | "complete"
+    attempts: 0,
+    answerEntries: {}, regroupEntries: {},
+    guidedThisProblem: false,
+    count: 0, streak: 0,
+    usedKeys: null,
+    lastFeedback: "", hintLevel: 0
+  };
+
+  function practiceCol() { return practice.problem.columns[practice.colIndex]; }
+
+  function startPracticeSession() {
+    practice.count = 0;
+    practice.streak = 0;
+    practice.usedKeys = new Set();
+    practice.active = true;
+    nextPracticeProblem();
+  }
+
+  // Load a fresh deduped problem (or, for audits/debug only, a supplied one).
+  function practiceLoadProblem(problem) {
+    if (!problem) {
+      for (let i = 0; i < 200; i++) {
+        const p = generateProblem({ skill: state.skill || "mixed", size: state.size || "mixed" });
+        const k = problemKey(p);
+        if (!practice.usedKeys.has(k)) { practice.usedKeys.add(k); problem = p; break; }
+        problem = p;
+      }
+    }
+    practice.problem = problem;
+    practice.colIndex = 0;
+    practice.phase = "digit";
+    practice.attempts = 0;
+    practice.hintLevel = 0;
+    practice.answerEntries = {};
+    practice.regroupEntries = {};
+    practice.guidedThisProblem = false;
+    practice.lastFeedback = "";
+    practice.count++;
+    renderPractice();
+  }
+  function nextPracticeProblem() { practiceLoadProblem(null); }
+
+  function practicePrompt() {
+    const p = practice.problem;
+    if (practice.phase === "complete") return { title: "", body: "" };
+    if (practice.phase === "final") {
+      const fp = p.finalCarryPlace;
+      return {
+        title: "One more digit!",
+        body: "The 1 " + unitWord(fp, 1) + " we regrouped becomes the first digit of the answer. " +
+              "What goes in the " + placeUpper(fp) + " place?"
+      };
+    }
+    const c = practiceCol();
+    if (practice.phase === "carry") {
+      return {
+        title: "Regroup!",
+        body: c.rawTotal + " " + unitWord(c.place, c.rawTotal) + " is 10 or more. " +
+              "Tap the box where the regrouped " + unitWord(c.carryPlace, 1) + " goes."
+      };
+    }
+    return {
+      title: (practice.colIndex === 0 ? "Start with the ONES" : "Now the " + placeUpper(c.place)),
+      body: "Add the " + placeUpper(c.place) + "." +
+            (c.carryIn > 0 ? " Remember the " + c.carryIn + " " + unitWord(c.place, c.carryIn) + " we regrouped!" : "") +
+            " What goes in the " + placeUpper(c.place) + " place?"
+    };
+  }
+
+  function practiceBoardOptions() {
+    const p = practice.problem;
+    let active = null, prompt = null, tap = false;
+    if (practice.phase === "digit") {
+      active = practiceCol().place;
+      prompt = { row: "answer", place: active };
+    } else if (practice.phase === "carry") {
+      active = practiceCol().place;
+      tap = true;
+    } else if (practice.phase === "final") {
+      active = p.finalCarryPlace;
+      prompt = { row: "answer", place: active };
+    }
+    // §39: while entering the final leading digit (and afterward), hide the
+    // tapped-in final regroup value so the child never records it twice.
+    const regroups = Object.assign({}, practice.regroupEntries);
+    if ((practice.phase === "final" || practice.phase === "complete") && p.finalCarryPlace) {
+      delete regroups[p.finalCarryPlace];
+    }
+    return {
+      activePlace: active,
+      promptCell: prompt,
+      tapRegroups: tap,
+      answerEntries: practice.answerEntries,
+      regroupEntries: regroups,
+      completedPlaces: Object.keys(practice.answerEntries)
+    };
+  }
+
+  /* ---------- Hint ladder (content from engine metadata only) ---------- */
+  function practiceHint() {
+    const lvl = practice.hintLevel;
+    if (lvl === 0) return null;
+    const p = practice.problem;
+    if (practice.phase === "final") {
+      return { level: lvl, text: "We regrouped 1 " + unitWord(p.finalCarryPlace, 1) +
+               ". Write that 1 in the " + placeUpper(p.finalCarryPlace) + " place.", baseTen: null };
+    }
+    const c = practiceCol();
+    const u = n => unitWord(c.place, n);
+    if (practice.phase === "carry") {
+      if (lvl === 1) return { level: 1, text: "The regrouped value moves one place to the LEFT.", baseTen: null };
+      return { level: lvl,
+        text: "10 " + u(10) + " make 1 " + unitWord(c.carryPlace, 1) + ". Tap the " +
+              placeUpper(c.carryPlace) + " box.",
+        baseTen: baseTenForColumn(p, practice.colIndex, "exchange") };
+    }
+    // digit phase
+    if (lvl === 1) {
+      return { level: 1,
+        text: "Look at the " + placeUpper(c.place) + " place again." +
+              (c.carryIn > 0 ? " Did you include the " + c.carryIn + " " + u(c.carryIn) + " we regrouped?" : ""),
+        baseTen: null };
+    }
+    if (lvl === 2) {
+      return { level: 2,
+        text: (c.carryIn > 0 ? c.carryIn + " " + u(c.carryIn) + " + " : "") +
+              c.topDigit + " " + u(c.topDigit) + " + " + c.bottomDigit + " " + u(c.bottomDigit) +
+              " = " + c.rawTotal + " " + u(c.rawTotal) + ". " +
+              (c.carryOut > 0 ? "That\u2019s 10 or more!" : "That\u2019s less than 10."),
+        baseTen: baseTenForColumn(p, practice.colIndex, "groups") };
+    }
+    return { level: 3,
+      text: c.carryOut > 0
+        ? c.rawTotal + " " + u(c.rawTotal) + " = " + c.carryOut + " " + unitWord(c.carryPlace, 1) +
+          (c.answerDigit > 0 ? " + " + c.answerDigit + " " + u(c.answerDigit) : "") +
+          ". Write the " + placeUpper(c.place) + " digit here; the " + unitWord(c.carryPlace, 1) + " moves left."
+        : "The total is " + c.rawTotal + " " + u(c.rawTotal) + ", so that digit goes in the " +
+          placeUpper(c.place) + " place.",
+      baseTen: c.carryOut > 0 ? baseTenForColumn(p, practice.colIndex, "exchange")
+                              : baseTenForColumn(p, practice.colIndex, "groups") };
+  }
+
+  /* ---------- Input handling (engine comparisons only) ---------- */
+  function practiceCorrectDigit() {
+    if (practice.phase === "final") return practice.problem.finalCarry;
+    return practiceCol().answerDigit;
+  }
+
+  function practiceHandleDigit(d) {
+    if (!practice.active || (practice.phase !== "digit" && practice.phase !== "final")) return;
+    d = Number(d);
+    if (!Number.isInteger(d) || d < 0 || d > 9) return;   // single digit 0-9 only
+    const p = practice.problem;
+    const correct = practiceCorrectDigit();
+    if (d === correct) {
+      if (practice.phase === "final") {
+        practice.answerEntries[p.finalCarryPlace] = String(d);
+        practice.lastFeedback = "";
+        practiceCompleteProblem();
+        return;
+      }
+      const c = practiceCol();
+      practice.answerEntries[c.place] = String(d);
+      practice.lastFeedback = "ok:" + ["Nice!", "Great!", "You got it!"][(practice.colIndex + practice.count) % 3];
+      practice.attempts = 0; practice.hintLevel = 0;
+      if (c.carryOut > 0) {
+        practice.phase = "carry";
+        renderPractice();
+      } else {
+        practiceAdvanceColumn();
+      }
+      return;
+    }
+    // Wrong: supportive, misconception-aware. Signatures are derived from
+    // engine fields and choose the MESSAGE only — never correctness.
+    practice.attempts++;
+    practice.hintLevel = Math.min(practice.attempts, 3);
+    const c = practice.phase === "final" ? null : practiceCol();
+    let msg = "Not quite \u2014 let\u2019s look again.";
+    if (c && c.carryIn > 0 && d === (c.rawTotal - c.carryIn) % 10 && d !== c.answerDigit) {
+      msg = "So close! Don\u2019t forget the " + c.carryIn + " " + unitWord(c.place, c.carryIn) + " we regrouped.";
+    } else if (c && c.carryOut > 0 && d === c.carryOut && d !== c.answerDigit) {
+      msg = "That\u2019s the part we regroup and move left \u2014 the digit that stays here is different.";
+    }
+    practice.lastFeedback = "try:" + msg;
+    if (practice.attempts >= 4) practiceGuidedReveal();
+    else renderPractice();
+  }
+
+  function practiceHandleRegroupTap(place) {
+    if (!practice.active || practice.phase !== "carry") return;
+    const c = practiceCol();
+    if (place === c.carryPlace) {
+      practice.regroupEntries[c.carryPlace] = String(c.carryOut);
+      practice.lastFeedback = "ok:That\u2019s right \u2014 one place to the left!";
+      practice.attempts = 0; practice.hintLevel = 0;
+      practiceAdvanceColumn();
+    } else {
+      practice.attempts++;
+      practice.hintLevel = Math.min(practice.attempts, 3);
+      practice.lastFeedback = "try:Not that box. The regrouped " + unitWord(c.carryPlace, 1) +
+        " moves one place to the LEFT of the " + placeUpper(c.place) + ".";
+      if (practice.attempts >= 4) practiceGuidedReveal();
+      else renderPractice();
+    }
+  }
+
+  // After 3 failed attempts + full hint ladder: show the move, explain, go on.
+  function practiceGuidedReveal() {
+    const p = practice.problem;
+    practice.guidedThisProblem = true;
+    if (practice.phase === "carry") {
+      const c = practiceCol();
+      practice.regroupEntries[c.carryPlace] = String(c.carryOut);
+      practice.lastFeedback = "guided:Here it is \u2014 the regrouped " + unitWord(c.carryPlace, 1) +
+        " goes above the " + placeUpper(c.carryPlace) + ". Let\u2019s keep going together.";
+      practice.attempts = 0; practice.hintLevel = 0;
+      practiceAdvanceColumn();
+      return;
+    }
+    if (practice.phase === "final") {
+      practice.answerEntries[p.finalCarryPlace] = String(p.finalCarry);
+      practice.lastFeedback = "";
+      practiceCompleteProblem();
+      return;
+    }
+    const c = practiceCol();
+    practice.answerEntries[c.place] = String(c.answerDigit);
+    practice.lastFeedback = "guided:The digit is " + c.answerDigit + " \u2014 " +
+      (c.carryIn > 0 ? "with the regrouped " + unitWord(c.place, 1) + " counted, " : "") +
+      "the total is " + c.rawTotal + ". Let\u2019s keep going together.";
+    practice.attempts = 0; practice.hintLevel = 0;
+    if (c.carryOut > 0) { practice.phase = "carry"; renderPractice(); }
+    else practiceAdvanceColumn();
+  }
+
+  function practiceAdvanceColumn() {
+    const p = practice.problem;
+    if (practice.colIndex < p.columns.length - 1) {
+      practice.colIndex++;
+      practice.phase = "digit";
+    } else if (p.finalCarry > 0) {
+      practice.phase = "final";
+    } else {
+      practiceCompleteProblem();
+      return;
+    }
+    renderPractice();
+  }
+
+  function practiceCompleteProblem() {
+    practice.phase = "complete";
+    if (practice.guidedThisProblem) practice.streak = 0;
+    else practice.streak++;
+    renderPractice();
+  }
+
+  /* ---------- Practice rendering ---------- */
+  function renderPractice() {
+    const p = practice.problem;
+    el("practice-count").textContent = "Problem " + practice.count;
+    const placeChip = el("practice-place");
+    if (practice.phase === "digit" || practice.phase === "carry") {
+      placeChip.textContent = placeUpper(practiceCol().place); placeChip.hidden = false;
+    } else if (practice.phase === "final") {
+      placeChip.textContent = placeUpper(p.finalCarryPlace); placeChip.hidden = false;
+    } else placeChip.hidden = true;
+
+    const work = el("practice-work");
+    const done = el("practice-complete");
+    if (practice.phase === "complete") {
+      work.hidden = true; done.hidden = false;
+      el("practice-celebrate").textContent =
+        "You did it! " + p.topNumber + " + " + p.bottomNumber + " = " + p.answer + ".";
+      el("practice-streak").textContent =
+        practice.guidedThisProblem
+          ? "We worked that one out together \u2014 the next one is all yours!"
+          : (practice.streak >= 2 ? "That\u2019s " + practice.streak + " in a row!" : "Keep it up!");
+      renderAdditionBoard(el("practice-board-done"), p, {
+        answerEntries: practice.answerEntries,
+        regroupEntries: (function () {
+          const r = Object.assign({}, practice.regroupEntries);
+          if (p.finalCarryPlace) delete r[p.finalCarryPlace];
+          return r;
+        })(),
+        completedPlaces: Object.keys(practice.answerEntries)
+      });
+      return;
+    }
+    work.hidden = false; done.hidden = true;
+
+    const pr = practicePrompt();
+    el("practice-title").textContent = pr.title;
+    el("practice-body").textContent = pr.body;
+
+    const fb = el("practice-feedback");
+    if (practice.lastFeedback) {
+      const kind = practice.lastFeedback.split(":")[0];
+      fb.textContent = practice.lastFeedback.slice(kind.length + 1);
+      fb.className = "pr-feedback pr-" + kind;
+      fb.hidden = false;
+    } else { fb.hidden = true; fb.textContent = ""; }
+
+    const hint = practiceHint();
+    const hintBox = el("practice-hint");
+    if (hint) {
+      el("practice-hint-text").textContent = hint.text;
+      renderBaseTenModel(el("practice-baseten"), hint.baseTen);
+      hintBox.hidden = false;
+    } else {
+      hintBox.hidden = true;
+      el("practice-baseten").innerHTML = "";
+    }
+
+    renderAdditionBoard(el("practice-board"), p, practiceBoardOptions());
+
+    const padOn = practice.phase === "digit" || practice.phase === "final";
+    Array.from(document.querySelectorAll("#practice-pad .pad-btn")).forEach(b => { b.disabled = !padOn; });
+  }
+
+  function stopPractice() { practice.active = false; }
+
+  /* =========================================================
      SECTION C — WIRE-UP
      ========================================================= */
   function init() {
@@ -1405,6 +1779,21 @@
     el("learn-home").addEventListener("click", startWizard);
     el("practice-home").addEventListener("click", startWizard);
     el("test-home").addEventListener("click", startWizard);
+
+    // Practice: number pad, regroup-tap delegation, next problem, keyboard
+    Array.from(document.querySelectorAll("#practice-pad .pad-btn")).forEach(b =>
+      b.addEventListener("click", () => practiceHandleDigit(b.dataset.digit)));
+    el("practice-board").addEventListener("click", e => {
+      const cellNode = e.target.closest('[data-row="regroup"]');
+      if (cellNode && practice.active && practice.phase === "carry") {
+        practiceHandleRegroupTap(cellNode.dataset.place);
+      }
+    });
+    el("practice-next").addEventListener("click", nextPracticeProblem);
+    document.addEventListener("keydown", e => {
+      if (!practice.active || el("screen-practice").hidden) return;
+      if (e.key >= "0" && e.key <= "9") practiceHandleDigit(e.key);
+    });
 
     el("learn-prev").addEventListener("click", learnPrev);
     el("learn-next").addEventListener("click", learnNext);
@@ -1443,6 +1832,10 @@
     renderBaseTenModel,
     baseTenForColumn,
     learn,
+    practice,
+    practiceLoadProblem,
+    practiceHandleDigit,
+    practiceHandleRegroupTap,
     config: { SKILLS, SIZES, MODES, TEST_LENGTHS, PLACE_NAMES, ENGINE_SIZES }
   };
 })();

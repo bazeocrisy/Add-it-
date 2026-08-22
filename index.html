@@ -209,7 +209,7 @@
       </footer>
     </section>
 
-    <!-- ================= PRACTICE (placeholder) ================= -->
+    <!-- ================= PRACTICE (Build 5) ================= -->
     <section class="screen screen-practice" id="screen-practice" aria-labelledby="practice-heading" hidden>
       <header class="app-header header-practice">
         <div class="ph-brand"><span class="ph-mark" aria-hidden="true"><span class="ph-mark-plus">+</span></span><span class="ph-name">Add It!</span></div>
@@ -221,24 +221,47 @@
       </header>
 
       <div class="placeholder-body">
-        <div class="stage placeholder-stage">
-          <h2 id="practice-heading" class="placeholder-title"><span aria-hidden="true">&#9999;&#65039;</span> Practice</h2>
-          <div class="placeholder-chips">
+        <div class="stage learn-stage practice-stage">
+          <div class="learn-progress">
+            <span class="lp-example" id="practice-count"></span>
             <span class="setting-chip chip-skill" id="practice-ph-skill"></span>
             <span class="setting-chip chip-size" id="practice-ph-size"></span>
+            <span class="setting-chip chip-place" id="practice-place" hidden></span>
           </div>
-          <section class="board-preview" aria-label="Addition Board Preview">
-            <p class="bp-title">Addition Board Preview</p>
-            <div class="board-host" data-board-host="practice"></div>
-            <p class="bp-status" data-bp-status aria-live="polite"></p>
-            <div class="bp-controls" data-bp-controls>
-              <button type="button" class="nav-btn bp-btn" data-bp="new">New Preview Problem</button>
-              <button type="button" class="nav-btn bp-btn" data-bp="regroup">Show Regrouping</button>
-              <button type="button" class="nav-btn bp-btn" data-bp="answer">Show Answer</button>
-              <button type="button" class="nav-btn bp-btn" data-bp="reset">Reset Board</button>
+
+          <div id="practice-work" class="learn-lesson">
+            <div class="learn-instruction practice-instruction" aria-live="polite">
+              <h2 class="li-title" id="practice-heading"><span id="practice-title"></span></h2>
+              <p class="li-body" id="practice-body"></p>
+              <p class="pr-feedback" id="practice-feedback" hidden></p>
             </div>
-            <p class="bp-note">Interactive work begins in a later build.</p>
-          </section>
+            <div class="practice-hint" id="practice-hint" hidden>
+              <p class="ph-hint-text" id="practice-hint-text"></p>
+              <div id="practice-baseten"></div>
+            </div>
+            <div class="learn-board" id="practice-board" data-board-host="practice"></div>
+            <div class="num-pad" id="practice-pad" aria-label="Number pad">
+              <button type="button" class="pad-btn" data-digit="1">1</button>
+              <button type="button" class="pad-btn" data-digit="2">2</button>
+              <button type="button" class="pad-btn" data-digit="3">3</button>
+              <button type="button" class="pad-btn" data-digit="4">4</button>
+              <button type="button" class="pad-btn" data-digit="5">5</button>
+              <button type="button" class="pad-btn" data-digit="6">6</button>
+              <button type="button" class="pad-btn" data-digit="7">7</button>
+              <button type="button" class="pad-btn" data-digit="8">8</button>
+              <button type="button" class="pad-btn" data-digit="9">9</button>
+              <button type="button" class="pad-btn pad-zero" data-digit="0">0</button>
+            </div>
+          </div>
+
+          <div id="practice-complete" class="learn-complete" hidden>
+            <h2 class="placeholder-title">&#127881; <span id="practice-celebrate"></span></h2>
+            <p class="lc-recap" id="practice-streak"></p>
+            <div class="learn-board" id="practice-board-done"></div>
+            <div class="lc-buttons">
+              <button type="button" class="nav-btn learn-next-btn" id="practice-next">Next Problem <span aria-hidden="true">&rarr;</span></button>
+            </div>
+          </div>
         </div>
       </div>
 
