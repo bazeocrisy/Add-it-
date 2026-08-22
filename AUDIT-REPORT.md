@@ -109,3 +109,21 @@ Technical and instructional correctness both demonstrated: the words, blocks, an
 ### Current decision — READY FOR MANUAL VISUAL REVIEW; DO NOT FREEZE YET
 
 The source/logic refinement passes the checks available here, but the changed child-facing layout must be manually opened in a real browser before re-freezing Build 4. Specifically verify: wrong-answer amber treatment; correct-answer green treatment; board-before-workspace hierarchy; ONES/TENS workspace labels; BEFORE/AFTER exchange clarity; subdivided tens rod; Back/Next restoration; and phone layout. If those screens are clear, a final browser forensic pass can close Build 4 before Practice begins.
+
+## Build 4 — Vertical Base-Ten Workspace Refinement (2026-08-22)
+
+**Purpose.** Manual review showed that the place-value workspace still used a horizontal block equation, forcing the child to translate between a vertical written algorithm and a horizontal manipulative model. This pass keeps Build 4 and the frozen arithmetic/board architecture intact while making the Base-Ten workspace mirror the school-style vertical addition structure.
+
+**Vocabulary.** The workspace now teaches formal addition terminology with child-friendly context: **First number (addend)**, **Second number (addend)**, and **Sum**. When a carried/regrouped value enters the current place, an additional **Regrouped amount** row appears above the two addends so the workspace mirrors the small regrouped value shown above the written problem.
+
+**Vertical manipulative layout.** Non-exchange Base-Ten states now render as a vertical stack. Each row places the verbal quantity and its Base-Ten representation side-by-side. The second addend carries a visible `+` operator and the Sum row carries `=` plus a strong horizontal separation, so the manipulative workspace visually parallels the vertical algorithm instead of introducing a second horizontal equation layout. The Sum row uses the existing engine `rawTotal`; no arithmetic was added to the renderer.
+
+**Regroup exchange layout.** Exchange states retain a distinct before/after explanation but now use dedicated **Before regrouping** and **After regrouping** panels. On phone widths these panels stack vertically with the transition arrow rotated downward. The exchange still reads only frozen engine metadata (`rawTotal`, `answerDigit`, `carryOut`, `carryPlace`).
+
+**Manipulative integrity.** Tens rods retain ten visible subdivisions and hundreds retain a visible grid. Individual blocks remain decorative for accessibility; the container carries one concise mathematical aria description. The new visible labels do not change the underlying accessible arithmetic statement.
+
+**Static/source checks completed.** `node --check js/app.js` passes after the refinement. Source inspection confirms the new workspace rows are populated from `topDigit`, `bottomDigit`, `carryIn`, and `rawTotal`; no addition arithmetic or carry-destination inference was introduced into the renderer. Build number remains **Build 4**.
+
+**Manual browser verification required.** Because the child-facing layout changed, Build 4 should remain in manual-review status until the revised workspace is viewed on the live GitHub Pages deployment. Verify at minimum: 2-digit ONES workspace, a regrouped TENS workspace with a `Regrouped amount` row, the 17-ones exchange, 3/4-digit layouts, and a phone-width view. Confirm the vertical stack is clearer than the prior horizontal equation and that the Base-Ten blocks remain readable without overflow.
+
+### Current decision — READY FOR MANUAL VISUAL REVIEW; DO NOT FREEZE YET

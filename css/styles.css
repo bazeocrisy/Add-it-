@@ -330,12 +330,27 @@ h1,h2,h3{color:var(--navy);}
 .lw-title{font-family:var(--font-display);font-weight:800;color:var(--navy);font-size:1.08rem;letter-spacing:.5px;margin:0 0 2px;}
 .lw-subtitle{font-weight:800;color:var(--muted);font-size:.92rem;margin:0 0 10px;}
 .learn-baseten{width:100%;display:flex;justify-content:center;}
-.baseten{background:#F9FCFF;border:2px solid #E3ECF7;border-radius:var(--radius-lg);padding:14px 16px 12px;max-width:100%;}
-.bt-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;}
-.bt-side{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;position:relative;padding-top:18px;}
-.bt-side::before{position:absolute;top:0;left:50%;transform:translateX(-50%);font-family:var(--font-display);font-weight:800;font-size:.68rem;letter-spacing:.5px;color:var(--muted);}
-.bt-side.bt-before::before{content:"BEFORE";}
-.bt-side.bt-after::before{content:"AFTER";}
+.baseten{background:#F9FCFF;border:2px solid #E3ECF7;border-radius:var(--radius-lg);padding:14px 16px 12px;width:min(650px,100%);max-width:100%;}
+
+/* Vertical base-ten stack intentionally mirrors the paper algorithm:
+   first addend, second addend, then sum.  The child sees the digit value
+   and its school-style manipulative on the same row. */
+.bt-vertical-stack{display:flex;flex-direction:column;width:100%;border:1px solid #DCE8F6;border-radius:14px;overflow:hidden;background:#fff;}
+.bt-vrow{display:grid;grid-template-columns:30px minmax(150px,210px) minmax(0,1fr);align-items:center;min-height:72px;border-bottom:1px solid #DCE8F6;}
+.bt-vrow:last-child{border-bottom:0;}
+.bt-vrow-sum{background:#F5FAFF;border-top:3px solid var(--navy);}
+.bt-vrow-regrouped{background:var(--soft-orange);}
+.bt-vop{font-family:var(--font-display);font-size:1.6rem;font-weight:900;color:var(--green-dark);text-align:center;}
+.bt-vlabel{display:flex;flex-direction:column;gap:2px;padding:8px 12px;text-align:left;color:var(--navy);}
+.bt-vlabel strong{font-family:var(--font-display);font-size:.9rem;color:var(--deep-blue);}
+.bt-vlabel span{font-family:var(--font-display);font-weight:800;font-size:1.05rem;}
+.bt-vvisual{display:flex;align-items:center;min-width:0;padding:8px 12px;border-left:1px solid #DCE8F6;}
+.bt-vvisual .bt-group{align-items:flex-start;}
+
+.bt-exchange{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;}
+.bt-exchange-panel{background:#fff;border:1px solid #DCE8F6;border-radius:12px;padding:10px;min-width:0;}
+.bt-exchange-panel h4{font-family:var(--font-display);font-weight:800;font-size:.78rem;letter-spacing:.35px;text-transform:uppercase;color:var(--muted);margin:0 0 8px;text-align:center;}
+.bt-exchange-line{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;}
 .bt-group{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;border-radius:10px;}
 .bt-group.bt-carried{background:var(--soft-orange);outline:2px dashed var(--orange);}
 .bt-group.bt-tengroup{background:var(--soft-blue);outline:2px dashed var(--royal-blue);}
@@ -359,8 +374,22 @@ h1,h2,h3{color:var(--navy);}
   .bt-hundreds{width:36px;height:36px;}
   .bt-thousands,.bt-ten-thousands{width:38px;height:38px;font-size:.52rem;}
   .baseten{padding:10px 8px 8px;}
+  .bt-vrow{grid-template-columns:26px minmax(118px,145px) minmax(0,1fr);min-height:62px;}
+  .bt-vlabel{padding:6px 8px;}
+  .bt-vlabel strong{font-size:.72rem;}
+  .bt-vlabel span{font-size:.9rem;}
+  .bt-vvisual{padding:6px 7px;}
+  .bt-exchange{grid-template-columns:1fr;gap:8px;}
+  .bt-arrow{transform:rotate(90deg);justify-self:center;}
   .bt-group{padding:4px;}
   .learn-controls .nav-btn{padding:9px 18px;font-size:.95rem;}
+}
+
+@media (max-width:380px){
+  .bt-vrow{grid-template-columns:24px 112px minmax(0,1fr);}
+  .bt-vlabel strong{font-size:.66rem;}
+  .bt-vlabel span{font-size:.84rem;}
+  .bt-vvisual{padding:5px;}
 }
 
 /* ---------- 8. BUILD BADGE ---------- */

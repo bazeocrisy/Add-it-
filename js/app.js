@@ -844,7 +844,7 @@
      renderBaseTenModel(container, state)
      state = {
        place,                  // unit place of the blocks ("ones"...)
-       groups: [{count, regrouped?}],  // addend groups (regrouped = carry-in)
+       rows: [{kind, label, count, operator}], // vertical addend/sum rows
        total,                  // engine rawTotal (caption/aria only)
        showExchange,           // false: groups view; true: 10-for-1 exchange
        exchange: { toPlace, toCount, remaining } | null,   // engine carry data
@@ -866,10 +866,12 @@
     blocks.className = "bt-blocks";
     for (let i = 0; i < count; i++) blocks.appendChild(blockEl(place));
     g.appendChild(blocks);
-    const cap = document.createElement("span");
-    cap.className = "bt-group-label";
-    cap.textContent = label;
-    g.appendChild(cap);
+    if (label) {
+      const cap = document.createElement("span");
+      cap.className = "bt-group-label";
+      cap.textContent = label;
+      g.appendChild(cap);
+    }
     return g;
   }
   function renderBaseTenModel(container, state) {
@@ -879,43 +881,82 @@
     wrap.className = "baseten";
     wrap.setAttribute("role", "img");
     wrap.setAttribute("aria-label", state.ariaText || state.caption || "");
-    const row = document.createElement("div");
-    row.className = "bt-row";
-    row.setAttribute("aria-hidden", "true");
 
     if (!state.showExchange) {
-      state.groups.forEach(function (grp, i) {
-        if (i > 0) { const p = document.createElement("span"); p.className = "bt-op"; p.textContent = "+"; row.appendChild(p); }
-        row.appendChild(blockGroup(state.place, grp.count,
-          grp.regrouped ? "bt-carried" : "",
-          grp.count + " " + unitWord(state.place, grp.count) + (grp.regrouped ? " (regrouped)" : "")));
+      // Mirror the paper algorithm vertically so the child does not have to
+      // translate between a horizontal block equation and a vertical sum.
+      const stack = document.createElement("div");
+      stack.className = "bt-vertical-stack";
+      stack.setAttribute("aria-hidden", "true");
+
+      (state.rows || []).forEach(function (item) {
+        const r = document.createElement("div");
+        r.className = "bt-vrow bt-vrow-" + item.kind;
+
+        const op = document.createElement("span");
+        op.className = "bt-vop";
+        op.textContent = item.operator || "";
+        r.appendChild(op);
+
+        const text = document.createElement("span");
+        text.className = "bt-vlabel";
+        const name = document.createElement("strong");
+        name.textContent = item.label;
+        const amount = document.createElement("span");
+        amount.textContent = item.count + " " + unitWord(state.place, item.count);
+        text.appendChild(name);
+        text.appendChild(amount);
+        r.appendChild(text);
+
+        const visual = document.createElement("span");
+        visual.className = "bt-vvisual";
+        visual.appendChild(blockGroup(state.place, item.count,
+          item.kind === "regrouped" ? "bt-carried" : "", ""));
+        r.appendChild(visual);
+        stack.appendChild(r);
       });
+      wrap.appendChild(stack);
     } else {
       const ex = state.exchange;
-      // Left: the ten-group being traded + the remaining units
-      const left = document.createElement("span");
-      left.className = "bt-side bt-before";
-      left.appendChild(blockGroup(state.place, 10, "bt-tengroup", "10 " + unitWord(state.place, 10)));
+      const exchange = document.createElement("div");
+      exchange.className = "bt-exchange";
+      exchange.setAttribute("aria-hidden", "true");
+
+      const before = document.createElement("section");
+      before.className = "bt-exchange-panel bt-before";
+      const bh = document.createElement("h4");
+      bh.textContent = "Before regrouping";
+      before.appendChild(bh);
+      const beforeLine = document.createElement("div");
+      beforeLine.className = "bt-exchange-line";
+      beforeLine.appendChild(blockGroup(state.place, 10, "bt-tengroup", "10 " + unitWord(state.place, 10)));
       if (ex.remaining > 0) {
-        left.appendChild(blockGroup(state.place, ex.remaining, "",
-          ex.remaining + " " + unitWord(state.place, ex.remaining)));
+        beforeLine.appendChild(blockGroup(state.place, ex.remaining, "", ex.remaining + " " + unitWord(state.place, ex.remaining)));
       }
-      row.appendChild(left);
-      const arrow = document.createElement("span");
-      arrow.className = "bt-arrow"; arrow.textContent = "→";
-      row.appendChild(arrow);
-      // Right: the new next-place block + the same remaining units
-      const right = document.createElement("span");
-      right.className = "bt-side bt-after";
-      right.appendChild(blockGroup(ex.toPlace, ex.toCount, "bt-new",
-        ex.toCount + " " + unitWord(ex.toPlace, ex.toCount)));
+      before.appendChild(beforeLine);
+      exchange.appendChild(before);
+
+      const arrow = document.createElement("div");
+      arrow.className = "bt-arrow";
+      arrow.textContent = "→";
+      exchange.appendChild(arrow);
+
+      const after = document.createElement("section");
+      after.className = "bt-exchange-panel bt-after";
+      const ah = document.createElement("h4");
+      ah.textContent = "After regrouping";
+      after.appendChild(ah);
+      const afterLine = document.createElement("div");
+      afterLine.className = "bt-exchange-line";
+      afterLine.appendChild(blockGroup(ex.toPlace, ex.toCount, "bt-new", ex.toCount + " " + unitWord(ex.toPlace, ex.toCount)));
       if (ex.remaining > 0) {
-        right.appendChild(blockGroup(state.place, ex.remaining, "",
-          ex.remaining + " " + unitWord(state.place, ex.remaining)));
+        afterLine.appendChild(blockGroup(state.place, ex.remaining, "", ex.remaining + " " + unitWord(state.place, ex.remaining)));
       }
-      row.appendChild(right);
+      after.appendChild(afterLine);
+      exchange.appendChild(after);
+      wrap.appendChild(exchange);
     }
-    wrap.appendChild(row);
+
     if (state.caption) {
       const cap = document.createElement("p");
       cap.className = "bt-caption";
@@ -925,6 +966,7 @@
     container.appendChild(wrap);
     return wrap;
   }
+
   // Derive a base-ten state from engine column metadata (no arithmetic).
   function baseTenForColumn(problem, indexFromRight, view) {
     const c = problem.columns[indexFromRight];
@@ -940,16 +982,21 @@
                   unitWord(c.carryPlace, 1) + (c.answerDigit > 0 ? ", leaving " + c.answerDigit + " " + u(c.answerDigit) : "") + "."
       };
     }
-    const groups = [];
-    if (c.carryIn > 0) groups.push({ count: c.carryIn, regrouped: true });
-    groups.push({ count: c.topDigit });
-    groups.push({ count: c.bottomDigit });
+    const rows = [];
+    if (c.carryIn > 0) {
+      rows.push({ kind: "regrouped", label: "Regrouped amount", count: c.carryIn, operator: "" });
+    }
+    rows.push({ kind: "first-addend", label: "First number (addend)", count: c.topDigit, operator: "" });
+    rows.push({ kind: "second-addend", label: "Second number (addend)", count: c.bottomDigit, operator: "+" });
+    rows.push({ kind: "sum", label: "Sum", count: c.rawTotal, operator: "=" });
     const eq = (c.carryIn > 0 ? c.carryIn + " " + u(c.carryIn) + " + " : "") +
                c.topDigit + " " + u(c.topDigit) + " + " + c.bottomDigit + " " + u(c.bottomDigit) +
                " = " + c.rawTotal + " " + u(c.rawTotal);
     return {
-      place: c.place, groups, total: c.rawTotal, showExchange: false, exchange: null,
-      caption: eq, ariaText: eq + "."
+      place: c.place, rows, total: c.rawTotal, showExchange: false, exchange: null,
+      caption: eq, ariaText: eq + ". First number (addend): " + c.topDigit + " " + u(c.topDigit) +
+        ". Second number (addend): " + c.bottomDigit + " " + u(c.bottomDigit) +
+        ". Sum: " + c.rawTotal + " " + u(c.rawTotal) + "."
     };
   }
 
