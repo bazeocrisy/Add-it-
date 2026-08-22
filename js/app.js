@@ -188,7 +188,10 @@
 
   /* ---------- Core column engine ----------
      calculateAddition(topNumber, bottomNumber)
-     Pure function. Processes columns right to left:
+     Pure function. Valid addends are POSITIVE WHOLE-NUMBER INTEGERS
+     (>= 1). Number.isInteger rejects decimals, NaN, Infinity,
+     strings, null, and undefined outright — nothing is coerced;
+     invalid input throws. Processes columns right to left:
        rawTotal    = topDigit + bottomDigit + carryIn
        answerDigit = rawTotal % 10
        carryOut    = Math.floor(rawTotal / 10)
@@ -200,8 +203,8 @@
     if (!Number.isInteger(topNumber) || !Number.isInteger(bottomNumber)) {
       throw new Error("calculateAddition: addends must be integers");
     }
-    if (topNumber < 0 || bottomNumber < 0) {
-      throw new Error("calculateAddition: addends must be positive whole numbers");
+    if (topNumber <= 0 || bottomNumber <= 0) {
+      throw new Error("calculateAddition: addends must be positive whole numbers (>= 1)");
     }
 
     const topStr = String(topNumber);
@@ -262,7 +265,8 @@
   // "no-regroup": build digits directly so that EVERY column obeys
   // topDigit + bottomDigit < 10 (carry-in therefore always 0).
   // Leading digits are both >= 1 and still sum below 10.
-  // Constructive, then validated — never generate-and-hope.
+  // Constructive by design — never generate-and-hope. (Audits verify
+  // independently via validateProblem plus external recomputation.)
   function generateNoRegroupAddends(len) {
     let top = "", bottom = "";
     for (let i = 0; i < len; i++) {
@@ -315,7 +319,10 @@
     return skill;
   }
 
-  // generateProblem({ skill, size }) -> one fully calculated, validated problem.
+  // generateProblem({ skill, size })
+  // Returns one fully calculated problem matching the selected constraints.
+  // (Runtime code does not re-validate each problem; validateProblem exists
+  // for audits and debugging via window.__addit.)
   // skill: "no-regroup" | "regroup" | "mixed"
   // size:  "2" | "3" | "4" | "mixed"
   function generateProblem(opts) {
@@ -351,14 +358,19 @@
   /* ---------- Problem set generator (logic only in Build 2) ----------
      buildProblemSet({ skill, size, length }) -> array of problems.
      - exact requested length (10 / 25 / 50)
-     - no duplicate normalized keys
+     - NO duplicate normalized keys, ever (reversed pairs count as
+       duplicates; there is no duplicate-acceptance path)
      - deliberate distribution, then shuffle:
          mixed skill -> half no-regroup / half regroup (odd lengths
                         give the extra slot to regroup)
          mixed size  -> lengths dealt round-robin across 2/3/4 digits
                         so every size appears in any 10+ set
-     - bounded loops; falls back to accepting a rare duplicate rather
-       than ever risking an infinite loop (flagged via meta). */
+     - bounded failure behavior, documented phases:
+         PHASE 1  primary generation attempts (length x 40 budget)
+         PHASE 2  secondary fresh generation phase (new length x 40
+                  budget for any slot Phase 1 could not fill)
+         then     throw an explicit generation Error
+       No path hangs and no path silently accepts a duplicate. */
   function buildProblemSet(opts) {
     opts = opts || {};
     const skill = opts.skill || "mixed";
@@ -366,6 +378,9 @@
     const length = TEST_LENGTHS.indexOf(Number(opts.length)) !== -1 ? Number(opts.length) : 10;
     if (!SKILLS[skill]) throw new Error("buildProblemSet: unknown skill " + skill);
     if (!SIZES[size]) throw new Error("buildProblemSet: unknown size " + size);
+    // Audit/debug-only seam: lets the automated audit shrink the unique
+    // pool to prove the bounded failure path. Never used by the app.
+    const gen = opts.auditGenerator || generateProblem;
 
     // Deliberate slot plan (then shuffled) instead of raw randomness.
     const slots = [];
@@ -382,41 +397,57 @@
 
     const used = new Set();
     const problems = [];
-    let duplicateFallbacks = 0;
-    const maxAttempts = length * SET_MAX_ATTEMPTS_FACTOR;
+    const phaseBudget = length * SET_MAX_ATTEMPTS_FACTOR;
     let attempts = 0;
+    let phasesUsed = 1;
 
-    for (let s = 0; s < slots.length; s++) {
-      let placed = false;
-      while (!placed && attempts < maxAttempts) {
+    function tryFillSlot(slot, budgetEnd) {
+      while (attempts < budgetEnd) {
         attempts++;
-        const p = generateProblem({
+        const p = gen({
           skill: skill, size: size,
-          forceLength: slots[s].len,
-          forceSkillType: slots[s].skillType
+          forceLength: slot.len,
+          forceSkillType: slot.skillType
         });
         const key = problemKey(p);
         if (!used.has(key)) {
           used.add(key);
-          problems.push(p);
-          placed = true;
+          return p;
         }
       }
-      if (!placed) {
-        // Bounded-loop safety valve (practically unreachable given the
-        // problem space; recorded so audits would surface it).
-        duplicateFallbacks++;
-        problems.push(generateProblem({
-          skill: skill, size: size,
-          forceLength: slots[s].len,
-          forceSkillType: slots[s].skillType
-        }));
+      return null;
+    }
+
+    // PHASE 1 — primary generation attempts (shared bounded budget)
+    const unfilled = [];
+    for (let s = 0; s < slots.length; s++) {
+      const p = tryFillSlot(slots[s], phaseBudget);
+      if (p) problems.push(p);
+      else unfilled.push(slots[s]);
+    }
+
+    // PHASE 2 — secondary fresh generation phase (fresh bounded budget)
+    if (unfilled.length) {
+      phasesUsed = 2;
+      const secondaryEnd = attempts + phaseBudget;
+      for (let s = 0; s < unfilled.length; s++) {
+        const p = tryFillSlot(unfilled[s], secondaryEnd);
+        if (p) problems.push(p);
+        else {
+          // Explicit controlled failure — never a silent duplicate.
+          throw new Error(
+            "buildProblemSet: could not generate " + length +
+            " unique problems for skill=" + skill + " size=" + size +
+            " within bounded attempts (" + attempts + "); unique pool too small"
+          );
+        }
       }
+      shuffle(problems);   // re-shuffle so late fills aren't clustered at the end
     }
 
     problems.meta = {
       skill: skill, size: size, length: length,
-      attempts: attempts, duplicateFallbacks: duplicateFallbacks
+      attempts: attempts, phasesUsed: phasesUsed
     };
     return problems;
   }
