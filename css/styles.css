@@ -201,15 +201,95 @@ h1,h2,h3{color:var(--navy);}
 /* ---------- 7. PLACEHOLDER SCREENS ---------- */
 .placeholder-body{flex:1;display:flex;flex-direction:column;margin-top:16px;}
 .stage{background:#fff;border-radius:var(--radius-xl);box-shadow:var(--shadow-card);padding:22px clamp(20px,3vw,40px) 26px;display:flex;flex-direction:column;align-items:center;}
-.placeholder-stage{flex:1;justify-content:center;text-align:center;min-height:340px;animation:rise .3s ease;}
-.placeholder-icon{font-size:3.4rem;margin:0 0 4px;}
-.placeholder-title{font-family:var(--font-display);font-weight:800;font-size:clamp(1.9rem,4vw,2.6rem);margin:0 0 16px;}
-.placeholder-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:22px;}
+.placeholder-stage{flex:1;justify-content:flex-start;text-align:center;min-height:340px;animation:rise .3s ease;}
+.placeholder-title{font-family:var(--font-display);font-weight:800;font-size:clamp(1.7rem,4vw,2.3rem);margin:0 0 12px;}
+.placeholder-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:18px;}
 .setting-chip{font-family:var(--font-display);font-weight:800;font-size:1.05rem;border-radius:999px;padding:8px 22px;white-space:nowrap;}
 .chip-skill{background:var(--soft-blue);color:var(--deep-blue);border:2px solid #C6DAF6;}
 .chip-size{background:var(--soft-green);color:var(--green-dark);border:2px solid #B5E4C8;}
 .chip-length{background:var(--soft-purple);color:var(--purple-dark);border:2px solid #DAC8F7;}
-.placeholder-note{font-weight:800;color:var(--muted);font-size:1.1rem;margin:0;}
+
+
+/* ---------- 7b. ADDITION BOARD ----------
+   One grid component for every problem: column 1 is the plus-sign
+   gutter; columns 2..N+1 are the place-value tracks. Every row
+   (labels, regroup, addends, rule, answer) lives in the SAME grid,
+   so alignment is structural — no per-row centering, no pixel
+   offsets, no separate 2/3/4-digit layouts. Tracks shrink together
+   via minmax(); they can never wrap. */
+.addition-board{display:flex;justify-content:center;width:100%;}
+.ab-grid{
+  display:grid;
+  grid-template-columns:minmax(22px,34px) repeat(var(--tracks,3), minmax(30px,64px));
+  grid-template-rows:auto auto auto auto auto auto;
+  column-gap:clamp(4px,1.4vw,12px);
+  row-gap:2px;
+  justify-content:center;
+  align-items:center;
+  background:var(--soft-blue);
+  border:3px solid #C6DAF6;
+  border-radius:var(--radius-lg);
+  padding:14px clamp(10px,2vw,22px) 16px;
+  max-width:100%;
+}
+.ab-cell{min-width:0;text-align:center;font-variant-numeric:tabular-nums;position:relative;}
+.ab-label{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(.4rem,1.05vw,.52rem);letter-spacing:.2px;
+  color:var(--muted);line-height:1.1;padding-bottom:4px;align-self:end;
+  overflow-wrap:normal;word-break:keep-all;   /* TEN THOUSANDS wraps at its
+                                                 space; single words never split */
+}
+.ab-regroup{
+  height:clamp(24px,6vw,34px);
+  border:2px dashed #9DBDE8;border-radius:8px;background:rgba(255,255,255,.6);
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(.85rem,3vw,1.15rem);color:var(--c-regroup);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 4px;width:min(100%,44px);
+}
+.ab-regroup.is-shown{border-style:solid;border-color:var(--orange);background:var(--soft-orange);}
+.ab-digit{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(1.25rem,5.4vw,2rem);color:var(--navy);line-height:1.25;
+}
+.ab-plus{
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(1.1rem,4.6vw,1.7rem);color:var(--green-dark);
+  align-self:center;
+}
+.ab-rule{height:4px;background:var(--navy);border-radius:2px;margin:6px 0 8px;align-self:center;}
+.ab-answer{
+  height:clamp(34px,8.5vw,48px);
+  border:2px solid #C6DAF6;border-radius:10px;background:#fff;
+  font-family:var(--font-display);font-weight:800;
+  font-size:clamp(1.15rem,4.8vw,1.7rem);color:var(--green-dark);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto;width:min(100%,52px);
+}
+.ab-answer.is-shown{border-color:var(--green);background:var(--soft-green);}
+/* Decorative comma: absolutely positioned so it can never become a
+   grid track or shift a digit's center. */
+.cell-comma::after{
+  content:",";position:absolute;right:-.28em;bottom:.05em;
+  font-family:var(--font-display);font-weight:800;
+  font-size:.8em;color:var(--muted);pointer-events:none;
+}
+.ab-answer.cell-comma::after{bottom:.12em;}
+/* Future-state hooks (Build 4+): kept minimal but real so later
+   builds only toggle classes, never restructure. */
+.ab-cell.is-active{outline:3px solid var(--yellow);outline-offset:2px;border-radius:8px;}
+.ab-cell.is-highlighted{outline:3px solid var(--orange);outline-offset:2px;border-radius:8px;}
+.ab-cell.is-completed{opacity:.85;}
+
+/* Board Preview (temporary Build 3 inspection UI) */
+.board-preview{width:100%;display:flex;flex-direction:column;align-items:center;}
+.bp-title{font-family:var(--font-display);font-weight:800;color:var(--muted);font-size:.95rem;letter-spacing:.4px;text-transform:uppercase;margin:0 0 10px;}
+.board-host{width:100%;display:flex;justify-content:center;}
+.bp-status{min-height:1.4em;font-weight:800;color:var(--orange-dark);margin:8px 0 2px;}
+.bp-controls{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:6px 0 10px;}
+.bp-btn{border-color:var(--soft-blue);}
+.bp-note{font-weight:800;color:var(--muted);font-size:.95rem;margin:2px 0 0;}
 
 /* ---------- 8. BUILD BADGE ---------- */
 .build-badge{position:fixed;right:12px;bottom:10px;margin:0;z-index:40;font-family:var(--font-body);font-weight:800;font-size:.72rem;letter-spacing:.3px;color:var(--muted);background:rgba(255,255,255,.85);border:1px solid rgba(18,50,91,.1);border-radius:999px;padding:4px 12px;box-shadow:0 2px 8px rgba(18,50,91,.08);pointer-events:none;max-width:calc(100vw - 24px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -227,6 +307,11 @@ h1,h2,h3{color:var(--navy);}
   .ph-spacer{display:none;}
 }
 @media (max-width:560px){
+  /* Labels shrink with track count so THOUSANDS / HUNDREDS never
+     overlap neighboring tracks on narrow phones. */
+  .ab-t4 .ab-label{font-size:.44rem;letter-spacing:0;}
+  .ab-t5 .ab-label{font-size:.38rem;letter-spacing:0;}
+  .ab-grid{column-gap:4px;padding:12px 8px 14px;}
   body{font-size:16px;}
   .screen-wizard{border-radius:0;margin:0;min-height:100vh;}
   .size-grid{grid-template-columns:minmax(0,320px);}

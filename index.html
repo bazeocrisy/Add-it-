@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Add It! — Start right. Add it. Regroup it.</title>
   <meta name="description" content="Add It! teaches third-grade whole-number addition with place value, regrouping, guided learning, practice, and independent testing.">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -160,13 +161,23 @@
 
       <div class="placeholder-body">
         <div class="stage placeholder-stage">
-          <p class="placeholder-icon" aria-hidden="true">&#127891;</p>
-          <h2 id="learn-heading" class="placeholder-title">Learn</h2>
+          <h2 id="learn-heading" class="placeholder-title"><span aria-hidden="true">&#127891;</span> Learn</h2>
           <div class="placeholder-chips">
             <span class="setting-chip chip-skill" id="learn-ph-skill"></span>
             <span class="setting-chip chip-size" id="learn-ph-size"></span>
           </div>
-          <p class="placeholder-note">Learn mode is coming in Build 4.</p>
+          <section class="board-preview" aria-label="Addition Board Preview">
+            <p class="bp-title">Addition Board Preview</p>
+            <div class="board-host" data-board-host="learn"></div>
+            <p class="bp-status" data-bp-status aria-live="polite"></p>
+            <div class="bp-controls" data-bp-controls>
+              <button type="button" class="nav-btn bp-btn" data-bp="new">New Preview Problem</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="regroup">Show Regrouping</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="answer">Show Answer</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="reset">Reset Board</button>
+            </div>
+            <p class="bp-note">Interactive work begins in a later build.</p>
+          </section>
         </div>
       </div>
 
@@ -188,13 +199,23 @@
 
       <div class="placeholder-body">
         <div class="stage placeholder-stage">
-          <p class="placeholder-icon" aria-hidden="true">&#9999;&#65039;</p>
-          <h2 id="practice-heading" class="placeholder-title">Practice</h2>
+          <h2 id="practice-heading" class="placeholder-title"><span aria-hidden="true">&#9999;&#65039;</span> Practice</h2>
           <div class="placeholder-chips">
             <span class="setting-chip chip-skill" id="practice-ph-skill"></span>
             <span class="setting-chip chip-size" id="practice-ph-size"></span>
           </div>
-          <p class="placeholder-note">Practice mode is coming in a later build.</p>
+          <section class="board-preview" aria-label="Addition Board Preview">
+            <p class="bp-title">Addition Board Preview</p>
+            <div class="board-host" data-board-host="practice"></div>
+            <p class="bp-status" data-bp-status aria-live="polite"></p>
+            <div class="bp-controls" data-bp-controls>
+              <button type="button" class="nav-btn bp-btn" data-bp="new">New Preview Problem</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="regroup">Show Regrouping</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="answer">Show Answer</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="reset">Reset Board</button>
+            </div>
+            <p class="bp-note">Interactive work begins in a later build.</p>
+          </section>
         </div>
       </div>
 
@@ -217,14 +238,24 @@
 
       <div class="placeholder-body">
         <div class="stage placeholder-stage">
-          <p class="placeholder-icon" aria-hidden="true">&#127942;</p>
-          <h2 id="test-heading" class="placeholder-title">Test</h2>
+          <h2 id="test-heading" class="placeholder-title"><span aria-hidden="true">&#127942;</span> Test</h2>
           <div class="placeholder-chips">
             <span class="setting-chip chip-skill" id="test-ph-skill"></span>
             <span class="setting-chip chip-size" id="test-ph-size"></span>
             <span class="setting-chip chip-length" id="test-ph-length"></span>
           </div>
-          <p class="placeholder-note">Test mode is coming in a later build.</p>
+          <section class="board-preview" aria-label="Addition Board Preview">
+            <p class="bp-title">Addition Board Preview</p>
+            <div class="board-host" data-board-host="test"></div>
+            <p class="bp-status" data-bp-status aria-live="polite"></p>
+            <div class="bp-controls" data-bp-controls>
+              <button type="button" class="nav-btn bp-btn" data-bp="new">New Preview Problem</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="regroup">Show Regrouping</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="answer">Show Answer</button>
+              <button type="button" class="nav-btn bp-btn" data-bp="reset">Reset Board</button>
+            </div>
+            <p class="bp-note">Interactive work begins in a later build.</p>
+          </section>
         </div>
       </div>
 

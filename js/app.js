@@ -1,25 +1,23 @@
 /* =========================================================
-   Add It! — Build 2: Addition Engine
-   Build 1 shell + wizard preserved unchanged.
-   New in Build 2 (logic only, no student-facing UI change):
-     - calculateAddition(top, bottom): pure column-by-column
-       engine producing a complete problem object
-     - generateProblem({skill, size}): guaranteed-valid
-       no-regroup / regroup / mixed generation for 2/3/4/mixed
-     - problemKey(problem): normalized commutative dedup key
-     - buildProblemSet({skill, size, length}): balanced,
-       duplicate-free 10/25/50 sets (logic only)
-     - validateProblem(problem, skill, size): independent
-       recalculation used by the automated audit
-   Terminology: the app teaches REGROUPING (10 ones -> 1 ten).
-   Internal fields keep the conventional carryIn/carryOut names
-   for the math model; instructional copy says "regroup".
+   Add It! — Build 3: Vertical Addition Board
+   Build 1 shell + wizard and the frozen Build 2 engine are
+   preserved. New in Build 3:
+     - renderAdditionBoard(container, problem, options):
+       reusable place-value grid board. CONSUMES the Build 2
+       problem object; contains NO second addition engine and
+       never invents a digit.
+     - getBoardColumns(container): audit helper reading the
+       rendered tracks back out of the DOM.
+     - Read-only Board Preview inside the Learn / Practice /
+       Test placeholders with temporary inspection controls
+       (New Preview Problem / Show Regrouping / Show Answer /
+       Reset Board). Interactive work begins in a later build.
    ========================================================= */
 
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 2";
+  const BUILD_NUMBER = "Build 3";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -151,9 +149,9 @@
   }
 
   /* ---------- Placeholder destinations ---------- */
-  function startLearn()    { stampChips("learn");    showScreen("learn"); }
-  function startPractice() { stampChips("practice"); showScreen("practice"); }
-  function startTest()     { stampChips("test");     showScreen("test"); }
+  function startLearn()    { stampChips("learn");    showScreen("learn");    newPreviewProblem(); renderPreview(); }
+  function startPractice() { stampChips("practice"); showScreen("practice"); newPreviewProblem(); renderPreview(); }
+  function startTest()     { stampChips("test");     showScreen("test");     newPreviewProblem(); renderPreview(); }
 
   function backToModeStep() {
     state.mode = null;
@@ -555,6 +553,219 @@
   }
 
   /* =========================================================
+     SECTION B2 — VERTICAL ADDITION BOARD (Build 3)
+     The renderer READS the frozen Build 2 problem object and
+     renders it. It performs no arithmetic: every digit, carry
+     value, place name, and the final carry come from engine
+     metadata (columns[], carryPlace, finalCarry, answer).
+     One CSS-grid component handles 2 through 5 tracks; every
+     row shares the same tracks, so alignment is structural.
+     ========================================================= */
+
+  // Visual track count = addend columns plus the extra leading
+  // answer track only when the engine reports a final carry.
+  function boardTrackCount(problem) {
+    return Math.max(problem.digitLength, problem.answerDigitLength);
+  }
+
+  function placeLabelText(placeName) {
+    return String(placeName).replace(/-/g, " ").toUpperCase();
+  }
+
+  /* renderAdditionBoard(container, problem, options)
+     options:
+       showPlaceLabels   (true)  place-name header row
+       showRegroupRow    (true)  empty regroup cells above columns
+       showRegroupValues (false) reveal true regroup values over their
+                                 DESTINATION place (from carryPlace);
+                                 the final carry is NOT shown here —
+                                 it is the leading answer digit
+       showAnswerValues  (false) reveal answer digits by place value
+       activePlace / highlightRegroupPlace / completedPlaces:
+                                 state hooks for future builds
+       interactive       (false) reserved for Build 4+
+     Cells carry data-row / data-place / data-track attributes
+     (no IDs), so rerendering can never duplicate an ID and the
+     cells can later become inputs without changing the layout. */
+  function renderAdditionBoard(container, problem, options) {
+    const opts = Object.assign({
+      showPlaceLabels: true,
+      showRegroupRow: true,
+      showRegroupValues: false,
+      showAnswerValues: false,
+      activePlace: null,
+      highlightRegroupPlace: null,
+      completedPlaces: [],
+      interactive: false
+    }, options || {});
+
+    const tracks = boardTrackCount(problem);
+    const topStr = String(problem.topNumber);
+    const botStr = String(problem.bottomNumber);
+
+    // Regroup value shown over a destination place index (from the
+    // engine's carryPlace). The leftmost carry-out is the final
+    // carry: it becomes the leading ANSWER digit and is deliberately
+    // excluded here so the child never sees it twice.
+    const regroupAt = {};
+    problem.columns.forEach(function (c) {
+      if (c.carryOut > 0 && c.indexFromRight + 1 < problem.digitLength) {
+        regroupAt[c.indexFromRight + 1] = c.carryOut;
+      }
+    });
+
+    container.innerHTML = "";
+    const board = document.createElement("div");
+    board.className = "addition-board";
+    board.setAttribute("role", "img");
+    let label = "Vertical addition problem: " + problem.topNumber + " plus " + problem.bottomNumber + ".";
+    if (opts.showRegroupValues && problem.regroupCount > 0) label += " Regrouping shown.";
+    if (opts.showAnswerValues) label += " The answer is " + problem.answer + ".";
+    board.setAttribute("aria-label", label);
+
+    const grid = document.createElement("div");
+    grid.className = "ab-grid ab-t" + tracks;
+    grid.setAttribute("aria-hidden", "true");   // the role=img label carries meaning
+    grid.style.setProperty("--tracks", tracks);
+
+    function cell(row, gridRow, track, cls, text) {
+      const div = document.createElement("div");
+      div.className = "ab-cell " + cls;
+      div.dataset.row = row;
+      if (track !== null) {
+        const idx = tracks - 1 - track;           // place index from right
+        div.dataset.track = String(track);
+        div.dataset.place = PLACE_NAMES[idx];
+        div.style.gridColumn = String(track + 2); // col 1 is the plus/sign gutter
+        if (opts.activePlace === PLACE_NAMES[idx]) div.classList.add("is-active");
+        if (opts.highlightRegroupPlace === PLACE_NAMES[idx]) div.classList.add("is-highlighted");
+        if (opts.completedPlaces.indexOf(PLACE_NAMES[idx]) !== -1) div.classList.add("is-completed");
+      }
+      div.style.gridRow = String(gridRow);
+      if (text !== undefined && text !== "") div.textContent = text;
+      grid.appendChild(div);
+      return div;
+    }
+
+    for (let t = 0; t < tracks; t++) {
+      const idx = tracks - 1 - t;
+
+      if (opts.showPlaceLabels) {
+        cell("label", 1, t, "ab-label", placeLabelText(PLACE_NAMES[idx]));
+      }
+      if (opts.showRegroupRow) {
+        const has = opts.showRegroupValues && regroupAt[idx] !== undefined;
+        const c = cell("regroup", 2, t, "ab-regroup" + (has ? " is-shown" : " is-empty"),
+                       has ? String(regroupAt[idx]) : "");
+        if (!has) c.classList.add("ab-blank-ok");
+      }
+      // Addend digits: string formatting only — never arithmetic.
+      const topD = idx < topStr.length ? topStr[topStr.length - 1 - idx] : "";
+      const botD = idx < botStr.length ? botStr[botStr.length - 1 - idx] : "";
+      const topCell = cell("top", 3, t, "ab-digit ab-top", topD);
+      const botCell = cell("bottom", 4, t, "ab-digit ab-bottom", botD);
+      if (idx === 3 && topStr.length >= 4 && topD !== "") topCell.classList.add("cell-comma");
+      if (idx === 3 && botStr.length >= 4 && botD !== "") botCell.classList.add("cell-comma");
+
+      // Answer cells always exist as slots; digits appear only on reveal.
+      let ansD = "";
+      if (opts.showAnswerValues) {
+        if (idx < problem.columns.length) ansD = String(problem.columns[idx].answerDigit);
+        else if (problem.finalCarry > 0 && idx === problem.digitLength) ansD = String(problem.finalCarry);
+      }
+      const ansCell = cell("answer", 6, t, "ab-answer" + (ansD !== "" ? " is-shown" : ""), ansD);
+      if (idx === 3 && opts.showAnswerValues && problem.answerDigitLength >= 4 && ansD !== "") {
+        ansCell.classList.add("cell-comma");
+      }
+    }
+
+    // Plus sign: a gutter cell, never a place-value track.
+    const plus = document.createElement("div");
+    plus.className = "ab-cell ab-plus";
+    plus.dataset.row = "plus";
+    plus.style.gridColumn = "1";
+    plus.style.gridRow = "4";
+    plus.textContent = "+";
+    grid.appendChild(plus);
+
+    // Addition rule spanning the workspace.
+    const rule = document.createElement("div");
+    rule.className = "ab-rule";
+    rule.dataset.row = "rule";
+    rule.style.gridColumn = "1 / -1";
+    rule.style.gridRow = "5";
+    grid.appendChild(rule);
+
+    board.appendChild(grid);
+    container.appendChild(board);
+    return board;
+  }
+
+  // Audit helper: read the rendered board back out of the DOM.
+  function getBoardColumns(container) {
+    const grid = container.querySelector(".ab-grid");
+    if (!grid) return null;
+    const tracks = Number(grid.style.getPropertyValue("--tracks"));
+    const out = [];
+    for (let t = 0; t < tracks; t++) {
+      const pick = row => {
+        const n = grid.querySelector('[data-row="' + row + '"][data-track="' + t + '"]');
+        return n ? n.textContent : null;
+      };
+      const anyCell = grid.querySelector('[data-track="' + t + '"]');
+      out.push({
+        track: t,
+        place: anyCell ? anyCell.dataset.place : null,
+        label: pick("label"),
+        regroup: pick("regroup"),
+        top: pick("top"),
+        bottom: pick("bottom"),
+        answer: pick("answer")
+      });
+    }
+    return out;
+  }
+
+  /* ---------- Board Preview (temporary Build 3 inspection) ---------- */
+  const preview = { problem: null, showRegroup: false, showAnswer: false };
+
+  function activeModeScreen() {
+    return ["learn", "practice", "test"].find(s => !el("screen-" + s).hidden) || null;
+  }
+
+  function newPreviewProblem() {
+    preview.problem = generateProblem({
+      skill: state.skill || "mixed",
+      size: state.size || "mixed"
+    });
+    preview.showRegroup = false;
+    preview.showAnswer = false;
+  }
+
+  function renderPreview() {
+    const mode = activeModeScreen();
+    if (!mode || !preview.problem) return;
+    const screen = el("screen-" + mode);
+    const host = screen.querySelector("[data-board-host]");
+    renderAdditionBoard(host, preview.problem, {
+      showRegroupValues: preview.showRegroup,
+      showAnswerValues: preview.showAnswer
+    });
+    const status = screen.querySelector("[data-bp-status]");
+    status.textContent = (preview.showRegroup && preview.problem.regroupCount === 0)
+      ? "No regrouping needed for this problem."
+      : "";
+  }
+
+  function handlePreviewAction(action) {
+    if (action === "new") newPreviewProblem();
+    else if (action === "regroup") preview.showRegroup = true;
+    else if (action === "answer") preview.showAnswer = true;
+    else if (action === "reset") { preview.showRegroup = false; preview.showAnswer = false; }
+    renderPreview();
+  }
+
+  /* =========================================================
      SECTION C — WIRE-UP
      ========================================================= */
   function init() {
@@ -577,6 +788,14 @@
     el("practice-home").addEventListener("click", startWizard);
     el("test-home").addEventListener("click", startWizard);
 
+    // Board Preview controls: one delegated listener per control strip,
+    // bound exactly once at init — rerenders never re-attach listeners.
+    Array.from(document.querySelectorAll("[data-bp-controls]")).forEach(strip =>
+      strip.addEventListener("click", e => {
+        const btn = e.target.closest("[data-bp]");
+        if (btn) handlePreviewAction(btn.dataset.bp);
+      }));
+
     renderBuildBadge();
     startWizard();
   }
@@ -592,6 +811,9 @@
     buildProblemSet,
     problemKey,
     validateProblem,
+    renderAdditionBoard,
+    getBoardColumns,
+    boardTrackCount,
     config: { SKILLS, SIZES, MODES, TEST_LENGTHS, PLACE_NAMES, ENGINE_SIZES }
   };
 })();
