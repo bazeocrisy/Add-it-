@@ -457,3 +457,239 @@ h1,h2,h3{color:var(--navy);}
   .placeholder-chips{gap:8px;}
   .setting-chip{white-space:normal;}
 }
+
+
+/* ============================================================
+   BUILD 4.2 — RESPONSIVE INSTRUCTIONAL LAYOUT
+   Responsive means instructionally usable, not merely fitting.
+   Phone: stacked. Tablet: adaptive. Laptop/Desktop/TV: board
+   and active-place workspace stay visible together when space allows.
+   ============================================================ */
+
+:root{
+  --learn-content-max: 1180px;
+  --learn-board-col: minmax(270px, 0.85fr);
+  --learn-work-col: minmax(390px, 1.35fr);
+}
+
+/* Keep lesson content readable on very large monitors / school displays. */
+#screen-learn .screen-inner,
+.learn-shell,
+.learn-lesson,
+.learn-content{
+  width: min(100%, var(--learn-content-max));
+  margin-inline: auto;
+}
+
+/* The existing board and Base-Ten workspace remain the same components.
+   At laptop+ widths, the stage becomes a two-column teaching surface. */
+@media (min-width: 900px){
+  .learn-responsive-stage{
+    display: grid !important;
+    grid-template-columns: var(--learn-board-col) var(--learn-work-col);
+    grid-template-areas:
+      "board workspace"
+      "nav nav";
+    align-items: center;
+    justify-content: center;
+    column-gap: clamp(24px, 3vw, 52px);
+    row-gap: 16px;
+    width: min(100%, var(--learn-content-max));
+    margin-inline: auto;
+  }
+
+  /* Support the class names used by the Build 4 lesson renderer. */
+  .learn-responsive-stage > .addition-board-wrap,
+  .learn-responsive-stage > .learn-board-wrap,
+  .learn-responsive-stage > .lesson-board-wrap,
+  .learn-responsive-stage > .ab-wrap{
+    grid-area: board;
+    align-self: center;
+    justify-self: end;
+    margin: 0 !important;
+  }
+
+  .learn-responsive-stage > .base-ten-workspace,
+  .learn-responsive-stage > .bt-workspace,
+  .learn-responsive-stage > .place-workspace,
+  .learn-responsive-stage > .learn-workspace{
+    grid-area: workspace;
+    align-self: stretch;
+    justify-self: stretch;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .learn-responsive-stage > .learn-nav,
+  .learn-responsive-stage > .lesson-nav,
+  .learn-responsive-stage > .learn-controls{
+    grid-area: nav;
+  }
+
+  /* If the board/workspace are nested in a common visual region, make that
+     region itself the responsive two-column surface. */
+  .learn-responsive-stage .learn-visuals,
+  .learn-responsive-stage .lesson-visuals,
+  .learn-responsive-stage .instructional-visuals{
+    display: grid;
+    grid-template-columns: var(--learn-board-col) var(--learn-work-col);
+    align-items: center;
+    gap: clamp(24px, 3vw, 52px);
+    width: 100%;
+  }
+
+  /* The vertical Base-Ten rows use available width instead of growing taller. */
+  .base-ten-workspace .bt-vertical-row,
+  .bt-workspace .bt-vertical-row,
+  .place-workspace .bt-vertical-row{
+    grid-template-columns: minmax(145px, .75fr) minmax(180px, 1.25fr);
+  }
+}
+
+/* 1366x768 school-laptop target: reduce decorative vertical whitespace,
+   not instructional content. */
+@media (min-width: 900px) and (max-height: 800px){
+  #screen-learn{
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  #screen-learn .app-header,
+  #screen-learn .topbar{
+    margin-bottom: 10px;
+  }
+
+  #screen-learn .lesson-card,
+  #screen-learn .learn-card{
+    padding-top: clamp(12px, 2vh, 20px);
+    padding-bottom: clamp(12px, 2vh, 20px);
+  }
+
+  #screen-learn .instruction-panel,
+  #screen-learn .learn-instruction{
+    margin-bottom: 12px;
+    padding-block: 12px;
+  }
+
+  .learn-responsive-stage{
+    row-gap: 10px;
+  }
+
+  .base-ten-workspace,
+  .bt-workspace,
+  .place-workspace{
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+}
+
+/* Tablet portrait / smaller landscape: stack intentionally with comfortable
+   reading sizes. Do not force two narrow columns. */
+@media (min-width: 600px) and (max-width: 899px){
+  .learn-responsive-stage,
+  .learn-responsive-stage .learn-visuals,
+  .learn-responsive-stage .lesson-visuals,
+  .learn-responsive-stage .instructional-visuals{
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .base-ten-workspace,
+  .bt-workspace,
+  .place-workspace,
+  .learn-workspace{
+    width: min(100%, 680px);
+  }
+}
+
+/* Phone: one clear downward lesson. The child should never need horizontal
+   scrolling or tiny Base-Ten manipulatives. */
+@media (max-width: 599px){
+  .learn-responsive-stage,
+  .learn-responsive-stage .learn-visuals,
+  .learn-responsive-stage .lesson-visuals,
+  .learn-responsive-stage .instructional-visuals{
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+  }
+
+  #screen-learn .lesson-card,
+  #screen-learn .learn-card{
+    padding-inline: 10px;
+  }
+
+  .base-ten-workspace,
+  .bt-workspace,
+  .place-workspace,
+  .learn-workspace{
+    width: 100%;
+    max-width: none;
+    padding: 12px 10px;
+  }
+
+  /* Vertical addend rows remain vertical in meaning, but labels and blocks
+     receive enough room to stay readable at 320–390px. */
+  .base-ten-workspace .bt-vertical-row,
+  .bt-workspace .bt-vertical-row,
+  .place-workspace .bt-vertical-row{
+    grid-template-columns: minmax(118px, .9fr) minmax(120px, 1.1fr);
+    gap: 8px;
+  }
+
+  .base-ten-workspace .bt-row-label,
+  .bt-workspace .bt-row-label,
+  .place-workspace .bt-row-label{
+    font-size: clamp(.72rem, 3.5vw, .86rem);
+  }
+
+  .base-ten-workspace .bt-blocks,
+  .bt-workspace .bt-blocks,
+  .place-workspace .bt-blocks{
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  /* Navigation remains close to the current lesson state. */
+  #screen-learn .learn-nav,
+  #screen-learn .lesson-nav,
+  #screen-learn .learn-controls{
+    position: static;
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+
+/* Large classroom display / TV: cap line length but scale the math and key
+   instructional labels so they remain legible at a distance. */
+@media (min-width: 1800px) and (min-height: 900px){
+  :root{
+    --learn-content-max: 1380px;
+    --learn-board-col: minmax(330px, .9fr);
+    --learn-work-col: minmax(520px, 1.3fr);
+  }
+
+  #screen-learn .instruction-panel h2,
+  #screen-learn .learn-instruction h2{
+    font-size: clamp(1.7rem, 1.8vw, 2.25rem);
+  }
+
+  #screen-learn .instruction-panel p,
+  #screen-learn .learn-instruction p,
+  .base-ten-workspace,
+  .bt-workspace,
+  .place-workspace{
+    font-size: 1.08rem;
+  }
+
+  .addition-board,
+  .ab-board{
+    transform: scale(1.08);
+    transform-origin: center;
+  }
+}
