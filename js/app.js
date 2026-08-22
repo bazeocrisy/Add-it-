@@ -1,5 +1,21 @@
 /* =========================================================
-   Add It! — Build 3: Vertical Addition Board
+   Add It! — Build 4: Learn Mode
+   Frozen: Build 1 shell/wizard, Build 2 engine, Build 3 board.
+   New in Build 4 (SECTION D):
+     - buildLessonSteps(problem, meta): pure lesson engine that
+       derives every instructional state from problem.columns +
+       finalCarry/finalCarryPlace (no hardcoded step counts)
+     - renderBaseTenModel(container, state) + baseTenForColumn():
+       reusable base-ten visual (Concrete) reusable by Practice
+       hints later; consumes engine metadata only
+     - Learn session UI: 4-example guided lesson with Back/Next,
+       guided choices with supportive correction, progressive
+       per-place answer reveal, synchronized board control
+   Build 3 board gains two ADDITIVE options for §40 progressive
+   reveal (documented in the audit report): revealAnswerPlaces
+   and revealRegroupPlaces. Defaults keep Build 3 behavior
+   byte-identical.
+   Earlier build header (Build 3):
    Build 1 shell + wizard and the frozen Build 2 engine are
    preserved. New in Build 3:
      - renderAdditionBoard(container, problem, options):
@@ -17,7 +33,7 @@
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 3";
+  const BUILD_NUMBER = "Build 4";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -149,7 +165,7 @@
   }
 
   /* ---------- Placeholder destinations ---------- */
-  function startLearn()    { stampChips("learn");    showScreen("learn");    newPreviewProblem(); renderPreview(); }
+  function startLearn()    { stampChips("learn");    showScreen("learn");    startLearnSession(); }
   function startPractice() { stampChips("practice"); showScreen("practice"); newPreviewProblem(); renderPreview(); }
   function startTest()     { stampChips("test");     showScreen("test");     newPreviewProblem(); renderPreview(); }
 
@@ -605,6 +621,8 @@
       showRegroupValues: false,
       showFinalRegroupValue: false,
       showAnswerValues: false,
+      revealAnswerPlaces: [],    // ADDITIVE (Build 4): per-place answer reveal
+      revealRegroupPlaces: [],   // ADDITIVE (Build 4): per-place interior regroup reveal
       activePlace: null,
       highlightRegroupPlace: null,
       completedPlaces: [],
@@ -675,7 +693,8 @@
       }
       if (opts.showRegroupRow) {
         let regVal = "";
-        if (opts.showRegroupValues && regroupAtPlace[placeName] !== undefined) {
+        if ((opts.showRegroupValues || opts.revealRegroupPlaces.indexOf(placeName) !== -1)
+            && regroupAtPlace[placeName] !== undefined) {
           regVal = String(regroupAtPlace[placeName]);
         }
         if (opts.showFinalRegroupValue && finalRegroupValue > 0
@@ -696,7 +715,7 @@
 
       // Answer cells always exist as slots; digits appear only on reveal.
       let ansD = "";
-      if (opts.showAnswerValues) {
+      if (opts.showAnswerValues || opts.revealAnswerPlaces.indexOf(placeName) !== -1) {
         if (idx < problem.columns.length) ansD = String(problem.columns[idx].answerDigit);
         else if (problem.finalCarry > 0 && idx === problem.digitLength) ansD = String(problem.finalCarry);
       }
@@ -793,6 +812,506 @@
   }
 
   /* =========================================================
+     SECTION D — LEARN MODE (Build 4)
+     Concrete (base-ten blocks) -> Representational (place-value
+     regrouping) -> Abstract (the written board). Every state is
+     derived from the frozen Build 2 problem object; nothing here
+     recalculates addition.
+     ========================================================= */
+
+  /* ---------- Wording helpers (formatting only) ---------- */
+  const UNIT_WORDS = {
+    "ones": ["one", "ones"], "tens": ["ten", "tens"],
+    "hundreds": ["hundred", "hundreds"], "thousands": ["thousand", "thousands"],
+    "ten-thousands": ["ten-thousand", "ten-thousands"]
+  };
+  function unitWord(place, n) { const w = UNIT_WORDS[place]; return n === 1 ? w[0] : w[1]; }
+  function placeUpper(place) { return placeLabelText(place); }
+  // "114 means 1 hundred, 1 ten, and 4 ones." — reads engine digits only.
+  function decomposeByPlace(nStr) {
+    const parts = [];
+    for (let i = 0; i < nStr.length; i++) {
+      const d = nStr.charCodeAt(i) - 48;
+      const place = PLACE_NAMES[nStr.length - 1 - i];
+      if (d > 0) parts.push(d + " " + unitWord(place, d));
+    }
+    if (parts.length === 0) return "0 ones";
+    if (parts.length === 1) return parts[0];
+    return parts.slice(0, -1).join(", ") + (parts.length > 2 ? "," : "") + " and " + parts[parts.length - 1];
+  }
+
+  /* ---------- Base-Ten Visual (reusable; Practice hints later) ----------
+     renderBaseTenModel(container, state)
+     state = {
+       place,                  // unit place of the blocks ("ones"...)
+       groups: [{count, regrouped?}],  // addend groups (regrouped = carry-in)
+       total,                  // engine rawTotal (caption/aria only)
+       showExchange,           // false: groups view; true: 10-for-1 exchange
+       exchange: { toPlace, toCount, remaining } | null,   // engine carry data
+       caption, ariaText
+     }
+     Blocks are decorative (aria-hidden); the container carries one
+     meaningful description — no "block block block" screen-reader noise. */
+  function blockEl(place) {
+    const b = document.createElement("span");
+    b.className = "bt-block bt-" + place;
+    if (place === "thousands") b.textContent = "1000";
+    if (place === "ten-thousands") b.textContent = "10,000";
+    return b;
+  }
+  function blockGroup(place, count, cls, label) {
+    const g = document.createElement("span");
+    g.className = "bt-group " + (cls || "");
+    const blocks = document.createElement("span");
+    blocks.className = "bt-blocks";
+    for (let i = 0; i < count; i++) blocks.appendChild(blockEl(place));
+    g.appendChild(blocks);
+    const cap = document.createElement("span");
+    cap.className = "bt-group-label";
+    cap.textContent = label;
+    g.appendChild(cap);
+    return g;
+  }
+  function renderBaseTenModel(container, state) {
+    container.innerHTML = "";
+    if (!state) return;
+    const wrap = document.createElement("div");
+    wrap.className = "baseten";
+    wrap.setAttribute("role", "img");
+    wrap.setAttribute("aria-label", state.ariaText || state.caption || "");
+    const row = document.createElement("div");
+    row.className = "bt-row";
+    row.setAttribute("aria-hidden", "true");
+
+    if (!state.showExchange) {
+      state.groups.forEach(function (grp, i) {
+        if (i > 0) { const p = document.createElement("span"); p.className = "bt-op"; p.textContent = "+"; row.appendChild(p); }
+        row.appendChild(blockGroup(state.place, grp.count,
+          grp.regrouped ? "bt-carried" : "",
+          grp.count + " " + unitWord(state.place, grp.count) + (grp.regrouped ? " (regrouped)" : "")));
+      });
+    } else {
+      const ex = state.exchange;
+      // Left: the ten-group being traded + the remaining units
+      const left = document.createElement("span");
+      left.className = "bt-side";
+      left.appendChild(blockGroup(state.place, 10, "bt-tengroup", "10 " + unitWord(state.place, 10)));
+      if (ex.remaining > 0) {
+        left.appendChild(blockGroup(state.place, ex.remaining, "",
+          ex.remaining + " " + unitWord(state.place, ex.remaining)));
+      }
+      row.appendChild(left);
+      const arrow = document.createElement("span");
+      arrow.className = "bt-arrow"; arrow.textContent = "→";
+      row.appendChild(arrow);
+      // Right: the new next-place block + the same remaining units
+      const right = document.createElement("span");
+      right.className = "bt-side bt-after";
+      right.appendChild(blockGroup(ex.toPlace, ex.toCount, "bt-new",
+        ex.toCount + " " + unitWord(ex.toPlace, ex.toCount)));
+      if (ex.remaining > 0) {
+        right.appendChild(blockGroup(state.place, ex.remaining, "",
+          ex.remaining + " " + unitWord(state.place, ex.remaining)));
+      }
+      row.appendChild(right);
+    }
+    wrap.appendChild(row);
+    if (state.caption) {
+      const cap = document.createElement("p");
+      cap.className = "bt-caption";
+      cap.textContent = state.caption;
+      wrap.appendChild(cap);
+    }
+    container.appendChild(wrap);
+    return wrap;
+  }
+  // Derive a base-ten state from engine column metadata (no arithmetic).
+  function baseTenForColumn(problem, indexFromRight, view) {
+    const c = problem.columns[indexFromRight];
+    const u = n => unitWord(c.place, n);
+    if (view === "exchange" && c.carryOut > 0) {
+      return {
+        place: c.place,
+        groups: [], total: c.rawTotal, showExchange: true,
+        exchange: { toPlace: c.carryPlace, toCount: c.carryOut, remaining: c.answerDigit },
+        caption: c.rawTotal + " " + u(c.rawTotal) + " = " + c.carryOut + " " +
+                 unitWord(c.carryPlace, c.carryOut) + (c.answerDigit > 0 ? " + " + c.answerDigit + " " + u(c.answerDigit) : ""),
+        ariaText: c.rawTotal + " " + u(c.rawTotal) + ". Ten " + u(10) + " are regrouped as one " +
+                  unitWord(c.carryPlace, 1) + (c.answerDigit > 0 ? ", leaving " + c.answerDigit + " " + u(c.answerDigit) : "") + "."
+      };
+    }
+    const groups = [];
+    if (c.carryIn > 0) groups.push({ count: c.carryIn, regrouped: true });
+    groups.push({ count: c.topDigit });
+    groups.push({ count: c.bottomDigit });
+    const eq = (c.carryIn > 0 ? c.carryIn + " " + u(c.carryIn) + " + " : "") +
+               c.topDigit + " " + u(c.topDigit) + " + " + c.bottomDigit + " " + u(c.bottomDigit) +
+               " = " + c.rawTotal + " " + u(c.rawTotal);
+    return {
+      place: c.place, groups, total: c.rawTotal, showExchange: false, exchange: null,
+      caption: eq, ariaText: eq + "."
+    };
+  }
+
+  /* ---------- Lesson step engine (pure) ----------
+     buildLessonSteps(problem, meta) -> ordered array of declarative
+     steps. Each step is a complete snapshot: instruction text, an
+     optional guided interaction, an optional base-ten state, and
+     the full board options. Back/Next just move an index, so a
+     prior state is reproduced exactly and no problem is ever
+     regenerated. Step count adapts to the problem's columns —
+     nothing is hardcoded to "5 screens". */
+  function buildLessonSteps(problem, meta) {
+    meta = meta || {};
+    const steps = [];
+    const topStr = String(problem.topNumber);
+    const botStr = String(problem.bottomNumber);
+    // running reveal state (cloned into each step)
+    let revealAnswers = [], revealRegroups = [], completed = [], finalShown = false;
+    function board(active) {
+      return {
+        activePlace: active || null,
+        revealAnswerPlaces: revealAnswers.slice(),
+        revealRegroupPlaces: revealRegroups.slice(),
+        showFinalRegroupValue: finalShown,
+        completedPlaces: completed.slice()
+      };
+    }
+    function push(step) { step.board = step.board || board(step.activePlace); steps.push(step); }
+
+    // Intro: place value + vertical alignment (Objectives 1 & 2)
+    push({
+      phase: "intro", place: null,
+      title: "Let\u2019s add " + problem.topNumber + " + " + problem.bottomNumber,
+      body: problem.topNumber + " means " + decomposeByPlace(topStr) + ". " +
+            problem.bottomNumber + " means " + decomposeByPlace(botStr) + ".",
+      note: "Line up the digits by place value: ONES under ONES, TENS under TENS" +
+            (problem.digitLength >= 3 ? ", HUNDREDS under HUNDREDS" : "") +
+            (problem.digitLength >= 4 ? ", THOUSANDS under THOUSANDS" : "") + ".",
+      board: board(null)
+    });
+
+    // Guided choice: where do we start? (Objective 3) — first example only
+    if (meta.exampleNumber === 1) {
+      const other = problem.columns[problem.columns.length - 1].place;
+      push({
+        phase: "start-choice", place: "ones",
+        title: "Where do we start?",
+        body: "In addition we always start on the right.",
+        interaction: {
+          question: "Which place do we start with?",
+          choices: [{ label: "ONES", value: "ones" }, { label: placeUpper(other), value: other }],
+          correct: "ones",
+          correction: "Addition starts on the right. Let\u2019s begin with the ONES."
+        },
+        board: board(null)
+      });
+    }
+
+    problem.columns.forEach(function (c, i) {
+      const place = c.place, P = placeUpper(place);
+      const u = n => unitWord(place, n);
+      const isFinalRegroup = c.carryOut > 0 && c.carryPlace === problem.finalCarryPlace;
+      const nextU = c.carryOut > 0 ? unitWord(c.carryPlace, 1) : null;
+
+      // A. Identify the place (Objectives 3 & 4; carry-in reminder = Objective 12)
+      push({
+        phase: "focus", place,
+        title: i === 0 ? "Start with the ONES" : "Move left to the " + P,
+        body: (i === 0 ? "Addition starts on the right, in the ONES place. Work one place at a time."
+                       : "Now move one place to the left.") +
+              (c.carryIn > 0 ? " Don\u2019t forget the " + c.carryIn + " " + u(c.carryIn) + " we regrouped!" : ""),
+        board: board(place)
+      });
+
+      // B. Add the values in that place (words + base-ten agree)
+      const eq = (c.carryIn > 0 ? c.carryIn + " " + u(c.carryIn) + " + " : "") +
+                 c.topDigit + " " + u(c.topDigit) + " + " + c.bottomDigit + " " + u(c.bottomDigit) +
+                 " = " + c.rawTotal + " " + u(c.rawTotal);
+      push({
+        phase: "add", place,
+        title: "Add the " + P,
+        body: eq + ".",
+        baseTen: baseTenForColumn(problem, i, "groups"),
+        board: board(place)
+      });
+
+      // C. Decide whether regrouping is needed (guided choice on first column)
+      if (i === 0) {
+        push({
+          phase: "decide", place,
+          title: "Do we need to regroup?",
+          body: "A place can only hold 0\u20139 in a written number.",
+          interaction: {
+            question: "Do we need to regroup " + c.rawTotal + " " + u(c.rawTotal) + "?",
+            choices: [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }],
+            correct: c.carryOut > 0 ? "yes" : "no",
+            correction: c.carryOut > 0
+              ? c.rawTotal + " is 10 or more, so we do need to regroup."
+              : c.rawTotal + " is less than 10, so no regrouping is needed."
+          },
+          baseTen: baseTenForColumn(problem, i, "groups"),
+          board: board(place)
+        });
+      } else {
+        push({
+          phase: "decide", place,
+          title: c.carryOut > 0 ? "Regroup!" : "No regrouping needed",
+          body: c.carryOut > 0
+            ? c.rawTotal + " " + u(c.rawTotal) + " is 10 or more, so we regroup."
+            : c.rawTotal + " " + u(c.rawTotal) + " is less than 10, so it stays in the " + P + " place.",
+          baseTen: baseTenForColumn(problem, i, "groups"),
+          board: board(place)
+        });
+      }
+
+      // D. Show the regrouping visually (Objectives 5, 8-10; "why" = Objective 42)
+      if (c.carryOut > 0) {
+        push({
+          phase: "regroup", place,
+          title: "Regroup 10 " + u(10) + " as 1 " + nextU,
+          body: c.rawTotal + " " + u(c.rawTotal) + " = " + c.carryOut + " " + nextU +
+                (c.answerDigit > 0 ? " + " + c.answerDigit + " " + u(c.answerDigit) : "") + "." +
+                (isFinalRegroup ? " We made a new " + nextU + "!" : ""),
+          why: "Why do we regroup? A place can only hold 0\u20139. When we make 10 " + u(10) +
+               ", we trade them for 1 " + nextU + ".",
+          baseTen: baseTenForColumn(problem, i, "exchange"),
+          board: board(place)
+        });
+      }
+
+      // E/F. Connect to the board and record the answer digit (Objective 11)
+      revealAnswers.push(place);
+      if (c.carryOut > 0) {
+        if (isFinalRegroup) finalShown = true;
+        else revealRegroups.push(c.carryPlace);
+      }
+      completed.push(place);
+      push({
+        phase: "record", place,
+        title: "Write it down",
+        body: "Write " + c.answerDigit + " in the " + P + " place." +
+              (c.carryOut > 0 ? " Move the new " + nextU + " to the " + placeUpper(c.carryPlace) + " place." : ""),
+        baseTen: c.carryOut > 0 ? baseTenForColumn(problem, i, "exchange") : null,
+        board: board(c.carryOut > 0 ? c.carryPlace : place)
+      });
+    });
+
+    // Final carry becomes the leading answer digit (Objective 14) — §39 transition
+    if (problem.finalCarry > 0) {
+      const fp = problem.finalCarryPlace, fU = unitWord(fp, 1);
+      finalShown = false;
+      revealAnswers.push(fp);
+      completed.push(fp);
+      push({
+        phase: "final", place: fp,
+        title: "The new " + fU,
+        body: "The 1 " + fU + " we made becomes the first digit of the answer. That\u2019s why " +
+              problem.answer + " has more digits than " + problem.topNumber + " or " + problem.bottomNumber + ".",
+        board: board(fp)
+      });
+    }
+
+    // Summary: read the answer by place value (Objectives 1 & 15)
+    push({
+      phase: "summary", place: null,
+      title: problem.topNumber + " + " + problem.bottomNumber + " = " + problem.answer,
+      body: problem.answer + " means " + decomposeByPlace(String(problem.answer)) + ".",
+      note: "You started with the ONES and added one place at a time" +
+            (problem.regroupCount > 0 ? ", regrouping when you made 10 or more." : ". No regrouping was needed."),
+      board: {
+        activePlace: null,
+        revealAnswerPlaces: revealAnswers.slice(),
+        revealRegroupPlaces: revealRegroups.slice(),
+        showFinalRegroupValue: false,
+        completedPlaces: completed.slice()
+      }
+    });
+
+    steps.forEach(function (st, n) { st.index = n; st.total = steps.length; });
+    return steps;
+  }
+
+  /* ---------- Learn example selection ----------
+     Four-example progression (respects the wizard Skill + Size):
+       1 no-regroup (place value / alignment / start right)  [skill!=regroup]
+       2 single regroup (introduce the exchange)
+       3 later-column and/or consecutive regroup
+       4 final carry (a new leading place)
+     For "no-regroup" skill all four stay no-regroup (never inject
+     a regrouping problem); for "regroup" all four regroup. Bounded
+     predicate search with safe fallback; commutative dedup. */
+  function pickLearnProblem(skillWant, size, pred, usedKeys) {
+    let fallback = null;
+    for (let i = 0; i < 400; i++) {
+      const p = generateProblem({ skill: skillWant, size: size });
+      const key = problemKey(p);
+      if (usedKeys.has(key)) continue;
+      if (!fallback) fallback = p;
+      if (!pred || pred(p)) { usedKeys.add(key); return p; }
+    }
+    usedKeys.add(problemKey(fallback));
+    return fallback;
+  }
+  function hasConsecutiveRegroup(p) {
+    for (let i = 0; i + 1 < p.columns.length; i++) {
+      if (p.columns[i].regrouped && p.columns[i + 1].regrouped) return true;
+    }
+    return p.finalCarry > 0 && p.columns[p.columns.length - 1].regrouped;
+  }
+  function buildLearnExamples(skill, size) {
+    const used = new Set();
+    const sizeFor = i => size === "mixed" ? ["2", "3", "4", "mixed"][i] : size;
+    if (skill === "no-regroup") {
+      return [0, 1, 2, 3].map(i => pickLearnProblem("no-regroup", sizeFor(i), null, used));
+    }
+    const skills = skill === "mixed"
+      ? ["no-regroup", "regroup", "regroup", "regroup"]
+      : ["regroup", "regroup", "regroup", "regroup"];
+    const preds = [
+      skill === "mixed" ? null : (p => p.regroupCount === 1),
+      p => p.regroupCount === 1 && p.finalCarry === 0,
+      p => (p.regroupPlaces[0] !== "ones" || hasConsecutiveRegroup(p)),
+      p => p.finalCarry > 0
+    ];
+    return [0, 1, 2, 3].map(i => pickLearnProblem(skills[i], sizeFor(i), preds[i], used));
+  }
+
+  /* ---------- Learn session (UI controller) ---------- */
+  const learn = {
+    active: false, examples: [], exampleIndex: 0,
+    steps: [], stepIndex: 0, answered: {}, complete: false
+  };
+  function learnKey() { return learn.exampleIndex + ":" + learn.stepIndex; }
+
+  function startLearnSession() {
+    learn.examples = buildLearnExamples(state.skill || "mixed", state.size || "mixed");
+    learn.exampleIndex = 0;
+    learn.steps = buildLessonSteps(learn.examples[0], { exampleNumber: 1, totalExamples: 4 });
+    learn.stepIndex = 0;
+    learn.answered = {};
+    learn.complete = false;
+    learn.active = true;
+    renderLearnStep();
+  }
+
+  function currentLearnStep() { return learn.steps[learn.stepIndex]; }
+
+  function renderLearnStep() {
+    const screen = el("screen-learn");
+    const done = el("learn-complete");
+    const lesson = el("learn-lesson");
+    if (learn.complete) {
+      lesson.hidden = true; done.hidden = false;
+      el("learn-recap").textContent =
+        "Start right. Add one place at a time. Regroup when you make 10 or more. Move left.";
+      return;
+    }
+    lesson.hidden = false; done.hidden = true;
+    const st = currentLearnStep();
+    const p = learn.examples[learn.exampleIndex];
+
+    el("learn-progress-example").textContent = "Example " + (learn.exampleIndex + 1) + " of 4";
+    el("learn-progress-step").textContent = "Step " + (st.index + 1) + " of " + st.total;
+    const placeChip = el("learn-progress-place");
+    placeChip.textContent = st.place ? placeUpper(st.place) : "";
+    placeChip.hidden = !st.place;
+
+    el("learn-title").textContent = st.title;
+    el("learn-body").textContent = st.body || "";
+    const note = el("learn-note");
+    note.textContent = st.note || ""; note.hidden = !st.note;
+    const why = el("learn-why");
+    why.textContent = st.why || ""; why.hidden = !st.why;
+
+    // Guided interaction (supportive, never scored)
+    const choices = el("learn-choices");
+    const correction = el("learn-correction");
+    choices.innerHTML = ""; correction.hidden = true; correction.textContent = "";
+    const answered = !!learn.answered[learnKey()];
+    if (st.interaction) {
+      const q = document.createElement("p");
+      q.className = "li-question";
+      q.textContent = st.interaction.question;
+      choices.appendChild(q);
+      st.interaction.choices.forEach(function (ch) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "nav-btn li-choice";
+        b.textContent = ch.label;
+        b.dataset.value = ch.value;
+        if (answered && ch.value === st.interaction.correct) b.classList.add("li-correct");
+        b.addEventListener("click", function () { answerLearnChoice(ch.value); });
+        choices.appendChild(b);
+      });
+      if (answered) {
+        // restored state: show as already answered
+        Array.from(choices.querySelectorAll(".li-choice")).forEach(b => b.disabled = true);
+      }
+    }
+
+    renderBaseTenModel(el("learn-baseten"), st.baseTen || null);
+    renderAdditionBoard(el("learn-board"), p, st.board);
+
+    el("learn-prev").disabled = (learn.exampleIndex === 0 && learn.stepIndex === 0);
+    el("learn-next").disabled = !!(st.interaction && !answered);
+    el("learn-next").textContent =
+      (learn.stepIndex === learn.steps.length - 1)
+        ? (learn.exampleIndex === 3 ? "Finish \u2192" : "Next Example \u2192")
+        : "Next \u2192";
+  }
+
+  function answerLearnChoice(value) {
+    const st = currentLearnStep();
+    if (!st.interaction || learn.answered[learnKey()]) return;
+    const correction = el("learn-correction");
+    if (value === st.interaction.correct) {
+      learn.answered[learnKey()] = true;
+      correction.textContent = "That\u2019s right! " + st.interaction.correction.replace(/^Addition starts/, "Addition always starts");
+      correction.hidden = false;
+    } else {
+      learn.answered[learnKey()] = true;   // supportive: teach, then continue
+      correction.textContent = st.interaction.correction;
+      correction.hidden = false;
+    }
+    // mark + lock choices, highlight the correct one
+    Array.from(el("learn-choices").querySelectorAll(".li-choice")).forEach(function (b) {
+      b.disabled = true;
+      if (b.dataset.value === st.interaction.correct) b.classList.add("li-correct");
+    });
+    el("learn-next").disabled = false;
+  }
+
+  function learnNext() {
+    if (learn.complete) return;
+    const st = currentLearnStep();
+    if (st.interaction && !learn.answered[learnKey()]) return;
+    if (learn.stepIndex < learn.steps.length - 1) {
+      learn.stepIndex++;
+    } else if (learn.exampleIndex < 3) {
+      learn.exampleIndex++;
+      learn.steps = buildLessonSteps(learn.examples[learn.exampleIndex],
+        { exampleNumber: learn.exampleIndex + 1, totalExamples: 4 });
+      learn.stepIndex = 0;
+    } else {
+      learn.complete = true;
+    }
+    renderLearnStep();
+  }
+  function learnPrev() {
+    if (learn.complete) { learn.complete = false; renderLearnStep(); return; }
+    if (learn.stepIndex > 0) {
+      learn.stepIndex--;
+    } else if (learn.exampleIndex > 0) {
+      learn.exampleIndex--;
+      learn.steps = buildLessonSteps(learn.examples[learn.exampleIndex],
+        { exampleNumber: learn.exampleIndex + 1, totalExamples: 4 });
+      learn.stepIndex = learn.steps.length - 1;
+    }
+    renderLearnStep();
+  }
+
+  /* =========================================================
      SECTION C — WIRE-UP
      ========================================================= */
   function init() {
@@ -814,6 +1333,12 @@
     el("learn-home").addEventListener("click", startWizard);
     el("practice-home").addEventListener("click", startWizard);
     el("test-home").addEventListener("click", startWizard);
+
+    el("learn-prev").addEventListener("click", learnPrev);
+    el("learn-next").addEventListener("click", learnNext);
+    el("learn-again").addEventListener("click", startLearnSession);
+    el("learn-done-home").addEventListener("click", startWizard);
+    el("learn-done-mode").addEventListener("click", backToModeStep);
 
     // Board Preview controls: one delegated listener per control strip,
     // bound exactly once at init — rerenders never re-attach listeners.
@@ -841,6 +1366,11 @@
     renderAdditionBoard,
     getBoardColumns,
     boardTrackCount,
+    buildLessonSteps,
+    buildLearnExamples,
+    renderBaseTenModel,
+    baseTenForColumn,
+    learn,
     config: { SKILLS, SIZES, MODES, TEST_LENGTHS, PLACE_NAMES, ENGINE_SIZES }
   };
 })();
