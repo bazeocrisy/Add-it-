@@ -574,24 +574,36 @@
 
   /* renderAdditionBoard(container, problem, options)
      options:
-       showPlaceLabels   (true)  place-name header row
-       showRegroupRow    (true)  empty regroup cells above columns
-       showRegroupValues (false) reveal true regroup values over their
-                                 DESTINATION place (from carryPlace);
-                                 the final carry is NOT shown here —
-                                 it is the leading answer digit
-       showAnswerValues  (false) reveal answer digits by place value
+       showPlaceLabels      (true)  place-name header row
+       showRegroupRow       (true)  empty regroup cells above columns
+       showRegroupValues    (false) reveal interior regroup values over
+                                    their DESTINATION place, looked up BY
+                                    NAME from the engine's columns[].carryPlace
+       showFinalRegroupValue(false) additionally reveal the engine's
+                                    finalCarry in the regroup row at
+                                    problem.finalCarryPlace — the
+                                    instructional "11 tens = 1 hundred +
+                                    1 ten" state Build 4 Learn will show
+                                    BEFORE revealing the final answer
+                                    digit. Works with the answer hidden.
+       showAnswerValues     (false) reveal answer digits by place value
+                                    (the final carry appears here as the
+                                    leading answer digit)
        activePlace / highlightRegroupPlace / completedPlaces:
-                                 state hooks for future builds
-       interactive       (false) reserved for Build 4+
-     Cells carry data-row / data-place / data-track attributes
-     (no IDs), so rerendering can never duplicate an ID and the
-     cells can later become inputs without changing the layout. */
+                                    state hooks for future builds
+       interactive          (false) reserved for Build 4+
+     The normal preview keeps showFinalRegroupValue false, so the final
+     carry is never displayed twice by accident; showing both the final
+     regroup and the final answer digit is an explicit developer choice.
+     Cells carry data-row / data-place / data-track attributes (no IDs),
+     so rerendering can never duplicate an ID and the cells can later
+     become inputs without changing the layout. */
   function renderAdditionBoard(container, problem, options) {
     const opts = Object.assign({
       showPlaceLabels: true,
       showRegroupRow: true,
       showRegroupValues: false,
+      showFinalRegroupValue: false,
       showAnswerValues: false,
       activePlace: null,
       highlightRegroupPlace: null,
@@ -603,14 +615,20 @@
     const topStr = String(problem.topNumber);
     const botStr = String(problem.bottomNumber);
 
-    // Regroup value shown over a destination place index (from the
-    // engine's carryPlace). The leftmost carry-out is the final
-    // carry: it becomes the leading ANSWER digit and is deliberately
-    // excluded here so the child never sees it twice.
-    const regroupAt = {};
+    // SOURCE OF TRUTH: destinations come from the frozen engine's
+    // carryPlace / finalCarryPlace PLACE NAMES — never inferred from
+    // index arithmetic. A carry whose destination is finalCarryPlace
+    // is the final regroup (its own optional state); every other
+    // carryPlace is an interior regroup destination.
+    const regroupAtPlace = {};           // place name -> regroup value
+    let finalRegroupValue = 0;
     problem.columns.forEach(function (c) {
-      if (c.carryOut > 0 && c.indexFromRight + 1 < problem.digitLength) {
-        regroupAt[c.indexFromRight + 1] = c.carryOut;
+      if (c.carryOut > 0) {
+        if (problem.finalCarryPlace !== null && c.carryPlace === problem.finalCarryPlace) {
+          finalRegroupValue = c.carryOut;
+        } else {
+          regroupAtPlace[c.carryPlace] = c.carryOut;
+        }
       }
     });
 
@@ -619,7 +637,8 @@
     board.className = "addition-board";
     board.setAttribute("role", "img");
     let label = "Vertical addition problem: " + problem.topNumber + " plus " + problem.bottomNumber + ".";
-    if (opts.showRegroupValues && problem.regroupCount > 0) label += " Regrouping shown.";
+    if ((opts.showRegroupValues && problem.regroupCount > 0)
+        || (opts.showFinalRegroupValue && finalRegroupValue > 0)) label += " Regrouping shown.";
     if (opts.showAnswerValues) label += " The answer is " + problem.answer + ".";
     board.setAttribute("aria-label", label);
 
@@ -649,14 +668,22 @@
 
     for (let t = 0; t < tracks; t++) {
       const idx = tracks - 1 - t;
+      const placeName = PLACE_NAMES[idx];   // resolved name; lookups below are by name
 
       if (opts.showPlaceLabels) {
-        cell("label", 1, t, "ab-label", placeLabelText(PLACE_NAMES[idx]));
+        cell("label", 1, t, "ab-label", placeLabelText(placeName));
       }
       if (opts.showRegroupRow) {
-        const has = opts.showRegroupValues && regroupAt[idx] !== undefined;
-        const c = cell("regroup", 2, t, "ab-regroup" + (has ? " is-shown" : " is-empty"),
-                       has ? String(regroupAt[idx]) : "");
+        let regVal = "";
+        if (opts.showRegroupValues && regroupAtPlace[placeName] !== undefined) {
+          regVal = String(regroupAtPlace[placeName]);
+        }
+        if (opts.showFinalRegroupValue && finalRegroupValue > 0
+            && placeName === problem.finalCarryPlace) {
+          regVal = String(finalRegroupValue);
+        }
+        const has = regVal !== "";
+        const c = cell("regroup", 2, t, "ab-regroup" + (has ? " is-shown" : " is-empty"), regVal);
         if (!has) c.classList.add("ab-blank-ok");
       }
       // Addend digits: string formatting only — never arithmetic.
