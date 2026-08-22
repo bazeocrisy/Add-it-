@@ -1,5 +1,16 @@
 /* =========================================================
-   Add It! — Build 5: Practice Mode
+   Add It! — Build 5.1: Learn real-device refinement
+   Base: Build 5 (Practice Mode preserved in full). Build 5.1
+   applies owner iPhone findings to Learn only:
+     - regroup DECISION at every applicable column (add -> check ->
+       regroup -> record -> move left is now the same loop in ONES,
+       TENS, HUNDREDS and above)
+     - focus+add consolidated into one "add" state (step efficiency)
+     - shorter opening alignment line; tighter "Where do we start?"
+     - side-by-side Yes/No choices on phones
+     - per-example celebration + stronger final Learn completion
+   Practice, the engine, the board, and the base-ten renderer are
+   unchanged. Earlier header (Build 5): Practice Mode
    Rebased on the owner's Build 4.3 (Learn responsive composition
    + vertical base-ten rows + Before/After exchange panels), which
    is preserved unchanged. New in Build 5 (SECTION E): guided
@@ -43,7 +54,7 @@
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 5";
+  const BUILD_NUMBER = "Build 5.1";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -900,7 +911,9 @@
     const g = document.createElement("span");
     g.className = "bt-group " + (cls || "");
     const blocks = document.createElement("span");
-    blocks.className = "bt-blocks";
+    // Build 5.1: place-aware class so larger units (hundreds flats, thousand
+    // blocks) can wrap into fewer columns on phones instead of overflowing.
+    blocks.className = "bt-blocks bt-blocks-" + place;
     for (let i = 0; i < count; i++) blocks.appendChild(blockEl(place));
     g.appendChild(blocks);
     if (label) {
@@ -1069,9 +1082,7 @@
       title: "Let\u2019s add " + problem.topNumber + " + " + problem.bottomNumber,
       body: problem.topNumber + " means " + decomposeByPlace(topStr) + ". " +
             problem.bottomNumber + " means " + decomposeByPlace(botStr) + ".",
-      note: "Line up the digits by place value: ONES under ONES, TENS under TENS" +
-            (problem.digitLength >= 3 ? ", HUNDREDS under HUNDREDS" : "") +
-            (problem.digitLength >= 4 ? ", THOUSANDS under THOUSANDS" : "") + ".",
+      note: "Line up digits with the same place value.",
       board: board(null)
     });
 
@@ -1083,9 +1094,9 @@
       push({
         phase: "start-choice", place: "ones",
         title: "Where do we start?",
-        body: "In addition we always start on the right.",
+        body: "Start on the right.",
         interaction: {
-          question: "Which place do we start with?",
+          question: "Which place do we add first?",
           choices: startChoices,
           correct: "ones",
           correction: "Addition starts on the right. Let\u2019s begin with the ONES."
@@ -1100,58 +1111,42 @@
       const isFinalRegroup = c.carryOut > 0 && c.carryPlace === problem.finalCarryPlace;
       const nextU = c.carryOut > 0 ? unitWord(c.carryPlace, 1) : null;
 
-      // A. Identify the place (Objectives 3 & 4; carry-in reminder = Objective 12)
-      push({
-        phase: "focus", place,
-        title: i === 0 ? "Start with the ONES" : "Move left to the " + P,
-        body: (i === 0 ? "Addition starts on the right, in the ONES place. Work one place at a time."
-                       : "Now move one place to the left.") +
-              (c.carryIn > 0 ? " Don\u2019t forget the " + c.carryIn + " " + u(c.carryIn) + " we regrouped!" : ""),
-        board: board(place)
-      });
-
-      // B. Add the values in that place (words + base-ten agree)
+      // ADD (consolidated: identify the place + add it). Build 5.1 merges the
+      // former separate "focus" state into this one — naming the place and
+      // adding it is a single idea, and the merge pays for the new CHECK
+      // decision now asked at every column.
       const eq = (c.carryIn > 0 ? c.carryIn + " " + u(c.carryIn) + " + " : "") +
                  c.topDigit + " " + u(c.topDigit) + " + " + c.bottomDigit + " " + u(c.bottomDigit) +
                  " = " + c.rawTotal + " " + u(c.rawTotal);
       push({
         phase: "add", place,
-        title: "Add the " + P,
-        body: eq + ".",
+        title: i === 0 ? "Start with the ONES" : "Move left to the " + P,
+        body: (c.carryIn > 0
+                ? "Don\u2019t forget the " + c.carryIn + " " + u(c.carryIn) + " we regrouped. "
+                : "") + eq + ".",
         baseTen: baseTenForColumn(problem, i, "groups"),
         board: board(place)
       });
 
-      // C. Decide whether regrouping is needed (guided choice on first column)
-      if (i === 0) {
-        push({
-          phase: "decide", place,
-          title: "Do we need to regroup?",
-          body: "A place can only hold 0\u20139 in a written number.",
-          interaction: {
-            question: "Do we need to regroup " + c.rawTotal + " " + u(c.rawTotal) + "?",
-            choices: [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }],
-            correct: c.carryOut > 0 ? "yes" : "no",
-            correction: c.carryOut > 0
-              ? c.rawTotal + " is 10 or more, so we do need to regroup."
-              : c.rawTotal + " is less than 10, so no regrouping is needed."
-          },
-          baseTen: baseTenForColumn(problem, i, "groups"),
-          board: board(place)
-        });
-      } else {
-        push({
-          phase: "decide", place,
-          title: c.carryOut > 0 ? "Regroup!" : "No regrouping needed",
-          body: c.carryOut > 0
+      // CHECK — the child makes the regroup decision at EVERY column, not
+      // just the ones. Correct answer comes from engine metadata (carryOut).
+      push({
+        phase: "decide", place,
+        title: "Check the " + P,
+        body: "A place can only hold 0\u20139.",
+        interaction: {
+          question: "Do we need to regroup " + c.rawTotal + " " + u(c.rawTotal) + "?",
+          choices: [{ label: "Yes", value: "yes" }, { label: "No", value: "no" }],
+          correct: c.carryOut > 0 ? "yes" : "no",
+          correction: c.carryOut > 0
             ? c.rawTotal + " " + u(c.rawTotal) + " is 10 or more, so we regroup."
-            : c.rawTotal + " " + u(c.rawTotal) + " is less than 10, so it stays in the " + P + " place.",
-          baseTen: baseTenForColumn(problem, i, "groups"),
-          board: board(place)
-        });
-      }
+            : "Right \u2014 " + c.rawTotal + " can stay in the " + P + " place."
+        },
+        baseTen: baseTenForColumn(problem, i, "groups"),
+        board: board(place)
+      });
 
-      // D. Show the regrouping visually (Objectives 5, 8-10; "why" = Objective 42)
+      // REGROUP — Before/After base-ten exchange (only when it truly happens)
       if (c.carryOut > 0) {
         push({
           phase: "regroup", place,
@@ -1166,18 +1161,20 @@
         });
       }
 
-      // E/F. Connect to the board and record the answer digit (Objective 11)
+      // RECORD (+ MOVE LEFT cue)
       revealAnswers.push(place);
       if (c.carryOut > 0) {
         if (isFinalRegroup) finalShown = true;
         else revealRegroups.push(c.carryPlace);
       }
       completed.push(place);
+      const isLastCol = (i === problem.columns.length - 1);
       push({
         phase: "record", place,
         title: "Write it down",
         body: "Write " + c.answerDigit + " in the " + P + " place." +
-              (c.carryOut > 0 ? " Move the new " + nextU + " to the " + placeUpper(c.carryPlace) + " place." : ""),
+              (c.carryOut > 0 ? " Move the new " + nextU + " to the " + placeUpper(c.carryPlace) + " place." : "") +
+              (!isLastCol ? " Then move left." : ""),
         baseTen: c.carryOut > 0 ? baseTenForColumn(problem, i, "exchange") : null,
         board: board(c.carryOut > 0 ? c.carryPlace : place)
       });
@@ -1201,10 +1198,12 @@
     // Summary: read the answer by place value (Objectives 1 & 15)
     push({
       phase: "summary", place: null,
-      title: problem.topNumber + " + " + problem.bottomNumber + " = " + problem.answer,
-      body: problem.answer + " means " + decomposeByPlace(String(problem.answer)) + ".",
-      note: "You started with the ONES and added one place at a time" +
-            (problem.regroupCount > 0 ? ", regrouping when you made 10 or more." : ". No regrouping was needed."),
+      celebrate: true,
+      title: "Great work!",
+      body: "You solved " + problem.topNumber + " + " + problem.bottomNumber + " = " + problem.answer + ".",
+      note: "You added one place at a time" +
+            (problem.regroupCount > 0 ? " and regrouped when you made 10 or more." : ". No regrouping was needed.") +
+            " " + problem.answer + " means " + decomposeByPlace(String(problem.answer)) + ".",
       board: {
         activePlace: null,
         revealAnswerPlaces: revealAnswers.slice(),
@@ -1287,13 +1286,16 @@
     const screen = el("screen-learn");
     const done = el("learn-complete");
     const lesson = el("learn-lesson");
+    const progress = document.querySelector("#screen-learn .learn-progress");
     if (learn.complete) {
       lesson.hidden = true; done.hidden = false;
-      el("learn-recap").textContent =
-        "Start right. Add one place at a time. Regroup when you make 10 or more. Move left.";
+      // The finished lesson is its own moment — drop the mid-lesson step counter.
+      if (progress) progress.hidden = true;
+      el("learn-recap").textContent = "You finished the regrouping lesson.";
       return;
     }
     lesson.hidden = false; done.hidden = true;
+    if (progress) progress.hidden = false;
     const st = currentLearnStep();
     const p = learn.examples[learn.exampleIndex];
 
@@ -1302,6 +1304,12 @@
     const placeChip = el("learn-progress-place");
     placeChip.textContent = st.place ? placeUpper(st.place) : "";
     placeChip.hidden = !st.place;
+
+    // Build 5.1: per-example celebration styling on the summary state
+    const panel = document.querySelector("#learn-lesson .learn-instruction");
+    if (panel) panel.classList.toggle("is-celebration", !!st.celebrate);
+    const star = el("learn-celebrate-mark");
+    if (star) star.hidden = !st.celebrate;
 
     el("learn-title").textContent = st.title;
     el("learn-body").textContent = st.body || "";
@@ -1319,7 +1327,9 @@
     correction.classList.remove("is-correct", "is-corrective");
     const answeredValue = learn.answered[learnKey()];
     const answered = answeredValue !== undefined;
+    choices.classList.remove("li-choices-2", "li-choices-3", "li-choices-4");
     if (st.interaction) {
+      choices.classList.add("li-choices-" + Math.min(st.interaction.choices.length, 4));
       const q = document.createElement("p");
       q.className = "li-question";
       q.textContent = st.interaction.question;
@@ -1798,6 +1808,10 @@
     el("learn-prev").addEventListener("click", learnPrev);
     el("learn-next").addEventListener("click", learnNext);
     el("learn-again").addEventListener("click", startLearnSession);
+    el("learn-to-practice").addEventListener("click", function () {
+      state.mode = "practice";
+      startPractice();
+    });
     el("learn-done-home").addEventListener("click", startWizard);
     el("learn-done-mode").addEventListener("click", backToModeStep);
 

@@ -308,8 +308,26 @@ h1,h2,h3{color:var(--navy);}
 .li-question{font-family:var(--font-display);font-weight:800;color:var(--navy);margin:10px 0 8px;}
 .li-choices{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
 .li-choice{min-width:88px;}
+/* Build 5.1: a two-option decision must read as ONE decision — the Yes/No pair
+   stays on a single row at every phone width using resilient grid tracks
+   (no absolute positioning, no shrink-to-unreadable). */
+.li-choices.li-choices-2,
+.li-choices.li-choices-3{display:grid;justify-content:center;align-items:stretch;width:100%;}
+.li-choices.li-choices-2{grid-template-columns:repeat(2,minmax(0,150px));}
+.li-choices.li-choices-3{grid-template-columns:repeat(3,minmax(0,140px));}
+.li-choices.li-choices-2 .li-question,
+.li-choices.li-choices-3 .li-question{grid-column:1 / -1;}
+.li-choices.li-choices-2 .li-choice,
+.li-choices.li-choices-3 .li-choice{min-width:0;width:100%;min-height:48px;
+  display:inline-flex;align-items:center;justify-content:center;padding:10px 8px;}
 .li-choice.li-correct{border-color:var(--green);background:var(--soft-green);color:var(--green-dark);}
 .li-choice:disabled{cursor:default;opacity:.85;transform:none;}
+.lc-mark{font-size:2rem;margin:0 0 2px;line-height:1;animation:btPop .4s ease;}
+.lc-mark-big{font-size:3rem;margin-bottom:6px;}
+.learn-instruction.is-celebration{background:var(--soft-green);border-color:var(--green);}
+.lc-checklist{list-style:none;padding:0;margin:0 auto 20px;max-width:340px;text-align:left;font-weight:800;color:var(--navy);}
+.lc-checklist li{padding:5px 0 5px 28px;position:relative;}
+.lc-checklist li::before{content:"\2713";position:absolute;left:4px;color:var(--green-dark);font-weight:800;}
 .li-correction{font-weight:800;margin:10px 0 0;padding:9px 12px;border-radius:12px;}
 .li-correction.is-correct{color:var(--green-dark);background:var(--soft-green);border:2px solid var(--green);}
 .li-correction.is-corrective{color:var(--orange-dark);background:var(--soft-orange);border:2px solid var(--orange);}
@@ -355,7 +373,11 @@ h1,h2,h3{color:var(--navy);}
 .bt-group.bt-carried{background:var(--soft-orange);outline:2px dashed var(--orange);}
 .bt-group.bt-tengroup{background:var(--soft-blue);outline:2px dashed var(--royal-blue);}
 .bt-group.bt-new{background:var(--soft-green);outline:2px solid var(--green);animation:btPop .35s ease;}
-.bt-blocks{display:grid;grid-template-columns:repeat(5,auto);gap:3px;justify-content:center;}
+.bt-blocks{display:grid;grid-template-columns:repeat(5,auto);gap:3px;justify-content:center;max-width:100%;}
+/* Build 5.1: bigger units need fewer per row so a large group (12 hundreds,
+   16 tens) stays inside its panel and remains countable. */
+.bt-blocks-hundreds{grid-template-columns:repeat(3,auto);}
+.bt-blocks-thousands,.bt-blocks-ten-thousands{grid-template-columns:repeat(2,auto);}
 .bt-group-label{font-family:var(--font-display);font-weight:800;font-size:.78rem;color:var(--navy);white-space:nowrap;}
 .bt-op{font-family:var(--font-display);font-weight:800;font-size:1.3rem;color:var(--green-dark);}
 .bt-arrow{font-family:var(--font-display);font-weight:800;font-size:1.5rem;color:var(--gold-dark);}
@@ -371,7 +393,9 @@ h1,h2,h3{color:var(--navy);}
   .learn-instruction{padding:12px 12px;}
   .bt-ones{width:10px;height:10px;}
   .bt-tens{width:12px;height:42px;}
-  .bt-hundreds{width:36px;height:36px;}
+  .bt-hundreds{width:32px;height:32px;}
+  .bt-blocks-hundreds{grid-template-columns:repeat(3,auto);gap:2px;}
+  .bt-blocks-thousands,.bt-blocks-ten-thousands{grid-template-columns:repeat(2,auto);gap:2px;}
   .bt-thousands,.bt-ten-thousands{width:38px;height:38px;font-size:.52rem;}
   .baseten{padding:10px 8px 8px;}
   .bt-vrow{grid-template-columns:26px minmax(118px,145px) minmax(0,1fr);min-height:62px;}
@@ -472,6 +496,12 @@ h1,h2,h3{color:var(--navy);}
   .setting-chip{font-size:.95rem;padding:7px 16px;}
   .activity-foot{flex-wrap:wrap;}
   .build-badge{position:static;display:block;width:max-content;max-width:100%;margin:8px auto 10px;box-shadow:none;}
+}
+@media (max-width:360px){
+  /* Build 5.1: at the narrowest supported width the hundreds flats drop to two
+     per row so a 12-flat group stays inside the workspace panel. */
+  .bt-hundreds{width:28px;height:28px;}
+  .bt-blocks-hundreds{grid-template-columns:repeat(2,auto);}
 }
 @media (max-width:400px){
   .skill-grid .pick-card{column-gap:10px;padding:12px 12px;}
@@ -756,6 +786,15 @@ h1,h2,h3{color:var(--navy);}
   #screen-learn .li-body{font-size:1rem;}
   #screen-learn .li-choices{gap:8px;margin-top:2px;}
   #screen-learn .li-choice{min-width:82px;padding:9px 12px;}
+  /* Keep the decision on one row on real phones; only relax at 320px if a
+     label would otherwise be squeezed below a readable size. */
+  #screen-learn .li-choices.li-choices-2{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  #screen-learn .li-choices.li-choices-3{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;}
+  #screen-learn .li-choices.li-choices-3 .li-choice{font-size:.88rem;padding:10px 4px;letter-spacing:0;}
+  #screen-learn .li-choices-2 .li-choice,
+  #screen-learn .li-choices-3 .li-choice{min-width:0;}
+  .lc-mark{font-size:1.7rem;}
+  .lc-mark-big{font-size:2.4rem;}
   #screen-learn .learn-responsive-stage{gap:10px;}
   #screen-learn .learn-workspace{padding:10px 8px;border-radius:20px;}
   #screen-learn .lw-subtitle{margin-bottom:7px;}

@@ -172,6 +172,7 @@
           <div id="learn-lesson" class="learn-lesson">
             <div class="learn-instruction" aria-live="polite">
               <h2 class="li-title" id="learn-title"></h2>
+              <p class="lc-mark" id="learn-celebrate-mark" hidden><span aria-hidden="true">&#11088;</span></p>
               <p class="li-body" id="learn-body"></p>
               <p class="li-note" id="learn-note" hidden></p>
               <div class="li-choices" id="learn-choices"></div>
@@ -193,12 +194,21 @@
           </div>
 
           <div id="learn-complete" class="learn-complete" hidden>
-            <h2 id="learn-heading" class="placeholder-title">You learned how addition works!</h2>
+            <p class="lc-mark lc-mark-big" aria-hidden="true">&#127881;</p>
+            <h2 id="learn-heading" class="placeholder-title">You did it!</h2>
             <p class="lc-recap" id="learn-recap"></p>
+            <ul class="lc-checklist">
+              <li>Start on the right.</li>
+              <li>Add one place at a time.</li>
+              <li>Check if the total is 10 or more.</li>
+              <li>Regroup when needed.</li>
+              <li>Move left.</li>
+            </ul>
             <div class="lc-buttons">
-              <button type="button" class="nav-btn" id="learn-done-home"><span aria-hidden="true">&#127968;</span> Home</button>
+              <button type="button" class="nav-btn learn-next-btn" id="learn-to-practice">Practice This Skill <span aria-hidden="true">&rarr;</span></button>
               <button type="button" class="nav-btn" id="learn-again">Learn Again</button>
-              <button type="button" class="nav-btn" id="learn-done-mode">Choose a Mode</button>
+              <button type="button" class="nav-btn" id="learn-done-mode">Choose Another Mode</button>
+              <button type="button" class="nav-btn" id="learn-done-home"><span aria-hidden="true">&#127968;</span> Home</button>
             </div>
           </div>
         </div>
