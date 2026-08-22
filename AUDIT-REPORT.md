@@ -142,3 +142,9 @@ Build 4.2 establishes the permanent Add It! responsive teaching targets:
 The responsive requirement is instructional usability, not merely CSS fit. The child should not have to scroll back and forth to reconnect the vertical algorithm with the Base-Ten representation. Build 4.2 therefore uses a two-column teaching surface at >=900px and a deliberate stacked lesson below that breakpoint.
 
 This refinement does not alter the Build 2 arithmetic engine, Build 3 board arithmetic contract, carryPlace metadata, lesson sequencing, or Base-Ten values.
+
+
+### Build badge correction
+The runtime `BUILD_NUMBER` constant was explicitly updated to `Build 4.2`.
+The bottom-right badge is populated from this constant and should render:
+`Add It! — Build 4.2`.

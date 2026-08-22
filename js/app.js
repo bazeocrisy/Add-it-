@@ -1,5 +1,5 @@
 /* =========================================================
-   Add It! — Build 4: Learn Mode
+   Add It! — Build 4.2: Learn Mode
    Frozen: Build 1 shell/wizard, Build 2 engine, Build 3 board.
    New in Build 4 (SECTION D):
      - buildLessonSteps(problem, meta): pure lesson engine that
@@ -33,7 +33,7 @@
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 4";
+  const BUILD_NUMBER = "Build 4.2";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -812,7 +812,7 @@
   }
 
   /* =========================================================
-     SECTION D — LEARN MODE (Build 4)
+     SECTION D — LEARN MODE (Build 4.2)
      Concrete (base-ten blocks) -> Representational (place-value
      regrouping) -> Abstract (the written board). Every state is
      derived from the frozen Build 2 problem object; nothing here
