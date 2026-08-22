@@ -93,12 +93,19 @@ An independent post-fix forensic audit re-attacked the corrected renderer. It di
 
 Technical and instructional correctness both demonstrated: the words, blocks, and board agree at every state; every regroup teaches 10-for-1 place-value exchange sourced from engine metadata; the frozen foundation is regression-clean.
 
-## Remaining Intentionally Unimplemented (Build 4+)
 
-Learn teaching sequence · interactive regroup/answer entry · Practice workflow · hints · scoring · Test answer entry · Results · Practice My Misses.
+## Build 4 — Instructional UX Refinement (2026-08-22)
 
----
+**Purpose.** This pass does not begin Build 5. It refines the child-facing Learn presentation after manual review identified two instructional UX problems: (1) corrective feedback could visually read as success because the correction text used the green success color, and (2) the Base-Ten representation competed with the vertical board rather than reading as a clearly separated place-value workspace.
 
-## PASS — Freeze Build 3
+**Changes made.** The vertical addition board now appears before the Base-Ten model so the written problem remains the anchor. Base-Ten content is contained in a dedicated, dynamically labeled `ONES / TENS / HUNDREDS / THOUSANDS WORKSPACE`, shown only on lesson states that actually use blocks. The workspace tells the child to look only at the active place for the current step. Exchange states are explicitly labeled **BEFORE** and **AFTER**. Tens rods now visibly contain ten subdivisions rather than appearing as an unexplained solid rectangle; hundreds flats use a clearer grid. The existing lesson engine and Build 2 arithmetic were not changed.
 
-Arithmetic representation, alignment (735 measurements ≤2px), regroup destination placement, final-carry handling (never duplicated), stale-state hygiene, 320px no-wrap behavior, the frozen Build 2 engine (3,000-problem Python recheck), the full Build 1 wizard suite, and the console are all verified clean from fresh browser loads. Any valid Build 2 problem can be placed in this component and every digit, regroup value, place label, and answer position can be trusted at 320px exactly as at desktop. Build 3 is ready to carry Build 4.
+**Feedback semantics defect — fixed.** Guided-answer state now records the actual selected value instead of only a boolean. Correct responses use the green `is-correct` treatment. Incorrect responses use an amber/orange `is-corrective` treatment and the child's incorrect button receives an amber `li-selected-wrong` state, while the mathematically correct choice is separately identified in green. Returning Back/Next to an answered state can now reconstruct whether the original response was correct or incorrect and restore the appropriate explanation instead of losing that distinction.
+
+**Logic/source audit performed in this environment.** `node --check js/app.js` passes. The Build 4 development hook loads in a DOM-stubbed Node VM and reports `Build 4`. Deterministic arithmetic/lesson generation passed for 23+14=37, 59+28=87, 182+190=372, 59+55=114, 589+476=1,065, 405+270=675, 1,008+2,091=3,099, and 9,999+9,999=19,998. An additional 1,200 generated problems across all 3 skills × all 4 size modes produced **0 arithmetic mismatches**; their lesson generation produced 1,096 regroup-exchange states without changing the frozen engine. Source inspection confirms regroup destinations continue to use `carryPlace` / `finalCarryPlace`; no `indexFromRight + 1` carry-destination inference was introduced.
+
+**Browser-audit limitation.** The execution environment used for this refinement blocks local/localhost pages in its Chromium policy, so a truthful interactive browser screenshot/viewport audit could not be completed here. No claim is made that the revised visual layout has been browser-verified at 320–1440 px in this pass. The previous Build 4 browser audit remains historical evidence for the pre-refinement version only.
+
+### Current decision — READY FOR MANUAL VISUAL REVIEW; DO NOT FREEZE YET
+
+The source/logic refinement passes the checks available here, but the changed child-facing layout must be manually opened in a real browser before re-freezing Build 4. Specifically verify: wrong-answer amber treatment; correct-answer green treatment; board-before-workspace hierarchy; ONES/TENS workspace labels; BEFORE/AFTER exchange clarity; subdivided tens rod; Back/Next restoration; and phone layout. If those screens are clear, a final browser forensic pass can close Build 4 before Practice begins.

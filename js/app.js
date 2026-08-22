@@ -894,7 +894,7 @@
       const ex = state.exchange;
       // Left: the ten-group being traded + the remaining units
       const left = document.createElement("span");
-      left.className = "bt-side";
+      left.className = "bt-side bt-before";
       left.appendChild(blockGroup(state.place, 10, "bt-tengroup", "10 " + unitWord(state.place, 10)));
       if (ex.remaining > 0) {
         left.appendChild(blockGroup(state.place, ex.remaining, "",
@@ -1227,8 +1227,12 @@
     // Guided interaction (supportive, never scored)
     const choices = el("learn-choices");
     const correction = el("learn-correction");
-    choices.innerHTML = ""; correction.hidden = true; correction.textContent = "";
-    const answered = !!learn.answered[learnKey()];
+    choices.innerHTML = "";
+    correction.hidden = true;
+    correction.textContent = "";
+    correction.classList.remove("is-correct", "is-corrective");
+    const answeredValue = learn.answered[learnKey()];
+    const answered = answeredValue !== undefined;
     if (st.interaction) {
       const q = document.createElement("p");
       q.className = "li-question";
@@ -1241,17 +1245,34 @@
         b.textContent = ch.label;
         b.dataset.value = ch.value;
         if (answered && ch.value === st.interaction.correct) b.classList.add("li-correct");
+        if (answered && ch.value === answeredValue && answeredValue !== st.interaction.correct) b.classList.add("li-selected-wrong");
         b.addEventListener("click", function () { answerLearnChoice(ch.value); });
         choices.appendChild(b);
       });
       if (answered) {
-        // restored state: show as already answered
         Array.from(choices.querySelectorAll(".li-choice")).forEach(b => b.disabled = true);
+        if (answeredValue === st.interaction.correct) {
+          correction.textContent = "That’s right! " + st.interaction.correction.replace(/^Addition starts/, "Addition always starts");
+          correction.classList.add("is-correct");
+        } else {
+          correction.textContent = "Almost. " + st.interaction.correction;
+          correction.classList.add("is-corrective");
+        }
+        correction.hidden = false;
       }
     }
 
-    renderBaseTenModel(el("learn-baseten"), st.baseTen || null);
     renderAdditionBoard(el("learn-board"), p, st.board);
+    const workspace = el("learn-workspace");
+    const hasBaseTen = !!st.baseTen;
+    workspace.hidden = !hasBaseTen;
+    if (hasBaseTen) {
+      el("learn-workspace-title").textContent = placeUpper(st.baseTen.place) + " WORKSPACE";
+      el("learn-workspace-subtitle").textContent = st.phase === "regroup" || st.phase === "record"
+        ? "See how the base-ten blocks regroup."
+        : "Look only at the " + placeUpper(st.baseTen.place) + " for this step.";
+    }
+    renderBaseTenModel(el("learn-baseten"), st.baseTen || null);
 
     el("learn-prev").disabled = (learn.exampleIndex === 0 && learn.stepIndex === 0);
     el("learn-next").disabled = !!(st.interaction && !answered);
@@ -1265,19 +1286,21 @@
     const st = currentLearnStep();
     if (!st.interaction || learn.answered[learnKey()]) return;
     const correction = el("learn-correction");
+    learn.answered[learnKey()] = value;
+    correction.classList.remove("is-correct", "is-corrective");
     if (value === st.interaction.correct) {
-      learn.answered[learnKey()] = true;
-      correction.textContent = "That\u2019s right! " + st.interaction.correction.replace(/^Addition starts/, "Addition always starts");
-      correction.hidden = false;
+      correction.textContent = "That’s right! " + st.interaction.correction.replace(/^Addition starts/, "Addition always starts");
+      correction.classList.add("is-correct");
     } else {
-      learn.answered[learnKey()] = true;   // supportive: teach, then continue
-      correction.textContent = st.interaction.correction;
-      correction.hidden = false;
+      correction.textContent = "Almost. " + st.interaction.correction;
+      correction.classList.add("is-corrective");
     }
-    // mark + lock choices, highlight the correct one
+    correction.hidden = false;
+    // Lock choices. Green marks the correct answer; amber marks the child's incorrect selection.
     Array.from(el("learn-choices").querySelectorAll(".li-choice")).forEach(function (b) {
       b.disabled = true;
       if (b.dataset.value === st.interaction.correct) b.classList.add("li-correct");
+      if (b.dataset.value === value && value !== st.interaction.correct) b.classList.add("li-selected-wrong");
     });
     el("learn-next").disabled = false;
   }
