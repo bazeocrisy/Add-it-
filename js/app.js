@@ -1,5 +1,5 @@
 /* =========================================================
-   Add It! — Build 4.2: Learn Mode
+   Add It! — Build 4.3: Learn responsive composition
    Frozen: Build 1 shell/wizard, Build 2 engine, Build 3 board.
    New in Build 4 (SECTION D):
      - buildLessonSteps(problem, meta): pure lesson engine that
@@ -33,7 +33,7 @@
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 4.2";
+  const BUILD_NUMBER = "Build 4.3";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -812,7 +812,7 @@
   }
 
   /* =========================================================
-     SECTION D — LEARN MODE (Build 4.2)
+     SECTION D — LEARN MODE (Build 4.3)
      Concrete (base-ten blocks) -> Representational (place-value
      regrouping) -> Abstract (the written board). Every state is
      derived from the frozen Build 2 problem object; nothing here
@@ -1040,14 +1040,16 @@
 
     // Guided choice: where do we start? (Objective 3) — first example only
     if (meta.exampleNumber === 1) {
-      const other = problem.columns[problem.columns.length - 1].place;
+      const startChoices = problem.columns.map(function (col) {
+        return { label: placeUpper(col.place), value: col.place };
+      });
       push({
         phase: "start-choice", place: "ones",
         title: "Where do we start?",
         body: "In addition we always start on the right.",
         interaction: {
           question: "Which place do we start with?",
-          choices: [{ label: "ONES", value: "ones" }, { label: placeUpper(other), value: other }],
+          choices: startChoices,
           correct: "ones",
           correction: "Addition starts on the right. Let\u2019s begin with the ONES."
         },

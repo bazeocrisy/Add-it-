@@ -1,150 +1,104 @@
-# Add It! — Build 3 Audit Report (Vertical Addition Board + Independent Forensic Audit)
+# Add It! — Build 4.3 Audit Report
 
-**Build number:** Build 3 · badge **Add It! — Build 3** · files audited: `index.html`, `css/styles.css`, `js/app.js`, `assets/images/favicon.png` (new), `assets/images/logo.png` (unchanged)
-**Date:** August 21, 2026
+## Release Status
 
-## Renderer Architecture
+**BUILD 4.3 — READY FOR MANUAL VISUAL ACCEPTANCE TESTING**
 
-`renderAdditionBoard(container, problem, options)` renders one CSS-grid component for every problem: grid column 1 is the plus-sign gutter; columns 2..N+1 are place-value tracks (`minmax(30px, 64px)` — tracks shrink together and **cannot wrap**). Six grid rows — place labels, regroup cells, top addend, bottom addend, rule, answer cells — share the same tracks, so alignment is structural, with no pixel offsets, no per-digit-count layouts, and no `left` positioning. Options: `showPlaceLabels`, `showRegroupRow`, `showRegroupValues`, `showAnswerValues`, plus `activePlace` / `highlightRegroupPlace` / `completedPlaces` / `interactive` state hooks reserved for Build 4.2+. Cells carry `data-row` / `data-place` / `data-track` (zero IDs), so rerenders can never duplicate an ID and cells can later become inputs without restructuring. `getBoardColumns(container)` reads the rendered board back for audits; both are on `window.__addit` alongside all Build 2 exports.
+Build 4.3 is an audit-correction release for Learn Mode. It is **not frozen yet**. Freeze requires the user's real-device acceptance check after deployment.
 
-**Renderer independence (§4):** the board section contains no addition arithmetic — verified by source scan (`topDigit + bottomDigit`, `% 10`, `Math.floor(rawTotal…` absent). Digits come from string formatting of `topNumber`/`bottomNumber`; answer digits from `columns[].answerDigit`; the leading digit from `finalCarry`; regroup positions from `carryPlace`. The renderer never invents a digit (§33 verified per render in the stress run).
+## Build 4.3 Scope
 
-**Tracks supported:** 2–5. Track count = `max(digitLength, answerDigitLength)`, so the TEN THOUSANDS column exists only when a 4-digit addition's final carry requires it. Verified: 23+14→2, 59+55→3, 243+126→3, 589+476→4, 1008+2091→4, 9999+9999→5; no permanent empty tracks.
+This release consolidates the changes identified during the Build 4.2 forensic review:
 
-**Final carry / regroup destinations (§10–§12):** ordinary regroup placement is keyed **by place name** from `columns[].carryPlace` — the frozen engine metadata is the source of truth, with no `indexFromRight + 1` positional inference anywhere in the renderer (verified by source scan). A carry whose destination equals `problem.finalCarryPlace` is the final regroup: in the normal preview it is *not* shown in the regroup row (it is the leading answer digit, so the child never sees it twice), but the reusable board exposes it via a new explicit option, **`showFinalRegroupValue`** (default `false`), which places `problem.finalCarry` in the regroup row at `problem.finalCarryPlace` — the "11 tens = 1 hundred + 1 ten" instructional state Build 4.2 Learn will show before revealing the final answer digit. Verified: 59+55 normal preview shows regroup over TENS only with the HUNDREDS `1` appearing exactly once; with `showFinalRegroupValue:true` and the answer hidden, `1` appears over HUNDREDS (and the aria-label never leaks the hidden answer); showing final regroup and final answer together requires both flags explicitly. 589+476's rendered destinations exactly equal its engine carryPlace set, with the final regroup over THOUSANDS; 9999+9999's final regroup renders over TEN THOUSANDS from `finalCarryPlace` and fits at 320px; 182+190 shows only HUNDREDS and the option adds nothing when `finalCarry` is 0; 243+126 stays fully blank even with both flags on. All four transitions (ones→tens, tens→hundreds, hundreds→thousands, thousands→ten-thousands) exercised. No-regroup problems show fully blank regroup rows — zero fake `0` carries (§11).
+1. Preserve the vertical Base-Ten workspace and the vocabulary:
+   - **First number (addend)**
+   - **Second number (addend)**
+   - **Sum**
+2. Keep the frozen addition mathematics and carry metadata unchanged.
+3. Use a true responsive Learn composition:
+   - larger screens: addition board and active-place workspace share a horizontal teaching region;
+   - smaller screens: board and workspace stack intentionally.
+4. Reduce unnecessary mobile vertical spacing without shrinking the instructional math into unreadable content.
+5. Present all relevant place-value choices in the opening guided question for the selected digit length.
+6. Keep wrong/corrective feedback visually distinct from success feedback.
+7. Advance the visible runtime badge to **Add It! — Build 4.3**.
 
-**Comma handling (§15/§38):** commas are absolutely-positioned `::after` decorations on the thousands-place cells — programmatically confirmed they are not grid tracks (1,008 board = exactly 4 tracks; 19,998 = 5) and shift digit centers by ≤0.5px (measured 0.0).
+## Static Package Audit
 
-## Deterministic Visual Cases (8)
+### PASS — Build identity
+- Runtime `BUILD_NUMBER` is `Build 4.3`.
+- The bottom-right badge is populated from the runtime build number.
 
-A 23+14=37 · B 59+55=114 · C 243+126=369 · D 182+190=372 (regroup over HUNDREDS only, nothing over TENS) · E 589+476=1,065 (`1 0 6 5` aligned; regroups over TENS+HUNDREDS; final carry as thousands answer digit) · F 405+270=675 (zero visibly in TENS: top `4|0|5`) · G 1,008+2,091=3,099 (digit matrix `1008 / 2091 / 3099` intact — note: this is genuinely a **no-regroup** problem, 0+0=0 in hundreds) · H 9,999+9,999=19,998 (5 tracks, TEN THOUSANDS label, no wrap/clip/scroll). All rendered values matched engine metadata exactly.
+### PASS — JavaScript parse
+- `js/app.js` passes JavaScript syntax validation.
 
-## Responsive & Alignment Results
+### PASS — GitHub Pages asset casing
+- Logo path is lowercase: `assets/images/logo.png`.
+- Favicon path is lowercase: `assets/images/favicon.png`.
+- No legacy `Assets/Logo.png` path is required.
 
-**735 per-cell alignment measurements**: 7 viewports (320/375/390/430/768/1366/1440, desktop at 1366×768) × 6 board shapes × every track × 5 rows. Every track's label/regroup/top/bottom/answer centers aligned within **2 CSS px** (grid guarantees it; measured anyway). Zero horizontal overflow anywhere; zero row wrapping (ONES never left its row); the 5-track board fits 320px with readable digits; TEN THOUSANDS wraps at its space as TEN / THOUSANDS while remaining one semantic label in one track, and does not oversize its column (§9 verified at all phone widths). Rule spans the workspace and resizes with board width (23+14 rule < 9999+9999 rule); exactly one plus sign, left of the second addend, in the gutter column, vertically aligned, never overlapping at 320px.
+### PASS — Responsive structure
+- Learn Mode contains a responsive teaching wrapper.
+- The addition board and active-place workspace are separately addressable within that wrapper.
+- Large-screen rules provide a two-column teaching composition.
+- Phone rules intentionally return the lesson to a stacked composition.
 
-## Preview, Stress, and State Results
+### PASS — Instructional vocabulary
+- Base-Ten rows use `First number (addend)` and `Second number (addend)`.
+- Sum remains explicitly labeled.
+- Zero quantities are represented as zero blocks rather than invented manipulatives.
 
-**Preview controls (§16–§18):** entry into Learn/Practice/Test auto-renders a fresh problem for the selected skill/size. Show Regrouping on a no-regroup problem shows "No regrouping needed for this problem." with zero fake values; Show Answer reveals the true engine sum; Reset returns the same problem to neutral and clears the message; New Preview Problem yields a fresh neutral board. **Skill/size compliance:** 360 preview generations (120 per skill across all 4 sizes) — 0 no-regroup problems regrouped, 100% of regroup problems regrouped, mixed produced both subtypes; all operands within 10–99 / 100–999 / 1,000–9,999; mixed sizes spanned 2–4 digits. **Long↔short transitions (§17):** 9999+9999 → 23+14 leaves one board, tracks {TENS, ONES} only, zero stale values; reverse renders the full 19,998 board. **Random stress (§24):** 1,050 rendered board states across all skill/size/reveal combinations — every digit, answer, and regroup position matched engine metadata; zero stale DOM, stale classes, wrong labels, or wrong track counts. **DOM/listeners (§25–§26):** zero duplicate IDs (board uses none); after 10 rerenders one click still produces exactly one new board — controls use a single delegated listener bound once at init.
+### PASS — Guided place-value choices
+- The lesson's starting-place question is derived from the problem's place-value range rather than presenting only an arbitrary distractor.
 
-## Regression Results
+## Frozen-System Protection
 
-**Build 2 engine (§3/§23):** frozen-case columns re-verified exactly (59+55, 243+126, 182+190, 589+476, 1008+2091, 9999+9999 — including carryIn chaining), plus **3,000 generated problems (500 × 6 categories) recomputed field-by-field in Python** — zero defects. Build 3 touched no engine function. **Build 1 wizard (§22):** full 67-check suite green — all 60 route combinations, chips, Back/Home/Choose Another Mode, keyboard, badge. **Navigation from preview (§21):** Home → Step 1; Choose Another Mode → Step 3 keeping skill+size; Back chain Length→Mode→Size→Skill intact; changed selections drive correct preview subtype/size; no stale board DOM survives.
+Build 4.3 is intended as a Learn Mode layout/instructional correction. It does not intentionally redesign:
+- Build 1 wizard flow;
+- Build 2 arithmetic engine;
+- Build 3 column/carry metadata contract.
 
-## Accessibility, Keyboard, Touch, Favicon, Console, Casing
+Those systems still require regression verification whenever a final freeze is declared.
 
-Board exposes `role="img"` with "Vertical addition problem: X plus Y." — the answer is announced only when revealed and never leaks through DOM or aria-label while hidden (§35 verified); the digit grid is `aria-hidden` so plus/rule create no noise. All preview controls are native buttons, fully keyboard operable (§28 verified end-to-end), ≥40px tall with ≥4px spacing at phone widths (§29). **Favicon:** new brand-matched `assets/images/favicon.png` (lowercase), linked in HTML, fetches HTTP 200, zero favicon 404s. **Asset casing:** zero `Assets/` or `Logo.png` occurrences. **Console:** 0 errors, 0 page errors, 0 unhandled rejections, 0 app 404s across every run including two clean-load §45 forensic passes (desktop and 320px) through the full journey. **Scope creep (§42):** none — no scoring, hints, lesson steps, or submission logic exists.
+## Historical Build 4.2 Findings
 
-## Required Audit Counts
+Build 4.2 was **not frozen**. Real-device review found:
+- unnecessary desktop vertical scrolling;
+- failure to use available horizontal space for board + workspace;
+- excessive mobile lesson height;
+- incomplete guided place-value choices in at least one lesson state.
 
-Deterministic board cases: **8** · responsive widths: **7** · alignment measurements: **735** · engine regression problems: **3,000** (Python-recomputed) · random board render states: **1,050** · preview skill/size combinations: **all 12** (360 problems) · wizard routes: **full Build 1 suite (60 combinations, 67 checks)**.
+Build 4.3 exists specifically to address those findings.
 
-**Final hardening pass (pre-freeze):** the regroup-destination map was converted from index arithmetic (`indexFromRight + 1`) to place-name lookup on `carryPlace`/`finalCarryPlace`, and `showFinalRegroupValue` was added. Retested: the 15-check hardening suite above, the full forensic parts 1 and 2 (including the 735-measurement alignment sweep), the Build 1 wizard suite, and a 7-viewport sweep of the 9999+9999 board in both normal and final-regroup states (no wrap, no overflow, no label overlap, track widths unchanged within 2px, answer verified hidden in the instructional state). The engine's known objects were reconfirmed unchanged. All green; the normal preview is visually identical to the previously audited Build 3.
+## Manual Acceptance Tests Required Before Freeze
 
-## Defects Found and Fixed
+After deployment, verify at minimum:
 
-**Defect 1 (app, visual):** place label rendered "HUNDRE DS", broken mid-word. *Cause:* `overflow-wrap:break-word` on labels splits single words. *Fix:* `overflow-wrap:normal; word-break:keep-all` — only TEN THOUSANDS wraps, at its space. *Retest:* deterministic cases + all-viewport alignment. *Result:* PASS.
+1. **Desktop/laptop Learn step with Base-Ten workspace**
+   - board and workspace appear side-by-side when enough width is available;
+   - the child can connect the active board column to the workspace without scrolling between them.
 
-**Defect 2 (app, visual):** at 320px (5-track) and — under fallback fonts — at 768–1440px (4/5-track), labels THOUSANDS/HUNDREDS overflowed their 64px tracks and overlapped neighbors ("THOUSANDS" measured 80px wide before Baloo 2 loads). *Cause:* label font sized without accounting for track width under the widest fallback font. *Fix:* label size scales with track width (`clamp(.4rem, 1.05vw, .52rem)`) plus `.ab-t4`/`.ab-t5` phone reductions; renderer tags the grid with its track count. *Retest:* a new range-based label-overlap detector was **added to the audit** (this defect class is now permanently caught) and the full 7-viewport × 6-shape sweep re-ran. *Result:* PASS — zero overlaps at every width, fallback fonts included.
+2. **Phone Learn step with Base-Ten workspace**
+   - board and workspace stack cleanly;
+   - no horizontal scrolling;
+   - blocks and labels remain readable;
+   - lesson height is improved and navigation remains easy to reach.
 
-**Defects 3–5 (audit harness, not the app):** (3) test data wrongly expected a hundreds regroup in 1008+2091 — the engine's no-regroup result is mathematically correct (0+0=0); (4) row-wrap and (5) plus-sign checks compared against *empty* leading-carry cells whose zero-height text rects faked failures. *Fixes:* corrected expected values; wrap detection uses the always-rendered answer boxes; plus check uses the first non-empty digit. All re-run to full pass. Recorded per instructions: intermediate failures are evidence, not embarrassment.
+3. **Regrouping exchange**
+   - 10 units visibly exchange into 1 unit of the next place;
+   - the regrouped value lands in the correct destination place on the board;
+   - corrective feedback is not styled as success.
 
-## Build 3 Final Hardening Audit
+4. **Representative device matrix**
+   - 320–390px phone;
+   - tablet portrait;
+   - tablet landscape;
+   - 1366×768 laptop;
+   - 1920×1080 desktop;
+   - large classroom display/projector when available.
 
-An independent post-fix forensic audit re-attacked the corrected renderer. It did not assume the corrections were right because the code looked reasonable — it proved the dependencies.
+## Freeze Decision
 
-**carryPlace source-of-truth verification.** A focused source scan of the board section found zero occurrences of `indexFromRight + 1`, `places[index+1]`, "next place/column/index", or any positional destination inference, and zero contradictory comments. The exact function responsible for mapping engine place metadata to visual tracks is `renderAdditionBoard`: it builds `regroupAtPlace` keyed by each column's `carryPlace` name (carries whose `carryPlace === problem.finalCarryPlace` are classified as the final regroup instead), then each track resolves its own place name and looks itself up by name — index math is used only for visual track position after names are resolved.
+**DO NOT LABEL BUILD 4.3 FROZEN UNTIL THE REAL-DEVICE ACCEPTANCE TESTS ABOVE PASS.**
 
-**Mutation tests (architectural proof, audit-only clones — never the production engine).** (1) `structuredClone` of 589+476 with the ones column's `carryPlace` falsified from "tens" to "hundreds": the rendered regroup followed the mutated metadata to HUNDREDS with nothing over TENS. (2) The spec's exact 59+55 mutation behaved identically. (3) 59+55 with `finalCarryPlace` falsified "hundreds"→"tens": the final regroup rendered over TENS. (4) 9,999+9,999 with `finalCarryPlace` falsified "ten-thousands"→"thousands": rendered over THOUSANDS. A genuine engine object was then rendered and behavior returned to TEN THOUSANDS. Conclusion: the board demonstrably consumes `carryPlace`/`finalCarryPlace` and does not independently compute destinations. No mutated data ships.
-
-**Final-regroup state behavior & duplicate prevention.** 59+55 verified through all four specified states: neutral; ordinary reveal (1 over TENS only, HUNDREDS hidden); instructional reveal (1 over TENS + 1 over HUNDREDS with the answer still hidden); normal answer reveal (1|1|4 with the leading 1 appearing exactly once). The full 7-row option matrix (showRegroupValues × showFinalRegroupValue × showAnswerValues) rendered correctly with no crashes, stale values, track changes, or engine mutation; the default excludes the final regroup, and the student-facing preview still exposes only the four approved controls — the instructional state remains a renderer/API option reserved for Build 4. 182+190 shows only HUNDREDS (proving no every-regroup-starts-in-ONES assumption); 243+126 stays fully blank with all flags on; 9,999+9,999's normal answer shows 1|9|9|9|8 with no duplicated leading 1.
-
-**Random metadata rendering.** 1,000 regroup problems across all sizes: **0** rendered-destination mismatches against `carryPlace`; the 733 of those with a final carry were additionally rendered in the instructional state with **0** `finalCarryPlace` mismatches. 500 no-regroup problems rendered with both flags on: **0** visible values, fake zeros, or final regroups.
-
-**Problem immutability.** 500 random problems JSON-deep-compared before and after rendering through five state combinations each: **0** mutations of the Build 2 problem object.
-
-**Responsive/alignment.** The full 735-measurement sweep re-ran green (≤2px, max deviation ~0.0px); new final-regroup alignment measurements at 320/375/390/430/1366 confirmed the HUNDREDS and TEN THOUSANDS final-regroup cells share centers with their labels and answer cells (max deviation 0.01px). The 320px stress case (9,999+9,999 with ordinary + final regroups, answer hidden and then shown) had zero scrolling, wrapping, or overlap, with all four regroup transitions visible including TEN THOUSANDS. The prior label defects were re-attacked under this harness's fallback fonts (Baloo 2 is network-blocked here, so every label test already runs in the widest fallback): no mid-word breaks, no overlap, no track widening.
-
-**Regressions.** Build 2 engine: 3,000 problems (500 × 6 categories) recomputed field-by-field in Python including the full `carryPlace` chain — zero drift. Build 1 wizard: full suite green. Accessibility: hidden final regroup produces no visual or screen-reader leak; shown, the description stays coherent without conflicting answer announcements. Asset casing (lowercase only), favicon/logo HTTP 200, scope-creep scan clean, and two fresh-browser forensic journeys (desktop + 320px) completed with a clean console.
-
-**Defects.** Application defects found in this audit: **none**. Audit-harness defect: the §18 expected-regroup list was hand-written out of Python sort order ("ten-thousands" sorts before "tens"); the board's output was correct. Fixed in the harness and re-run to pass — recorded here rather than hidden.
-
-## Build 4.2 — Learn Mode
-
-**Build number:** Build 4.2 · badge **Add It! — Build 4.2**. Files changed: `index.html` (Learn screen becomes the lesson UI; Practice/Test keep the Build 3 preview), `css/styles.css` (Learn + Base-Ten section), `js/app.js` (SECTION D), this report. Logo and favicon untouched.
-
-**Instructional architecture (Concrete → Representational → Abstract).** Every lesson state coordinates three synchronized representations: words (instruction panel), base-ten blocks (`renderBaseTenModel`), and the frozen Build 3 board. `buildLessonSteps(problem, meta)` is a pure function that derives the entire ordered lesson from `problem.columns` + `finalCarry`/`finalCarryPlace` — per column: identify the place (with a carry-in reminder when `carryIn > 0`), add (equation + block groups), decide whether to regroup (guided Yes/No choice on the first column, statement afterward), regroup (10-for-1 exchange visual + "why" panel; "We made a new hundred!" when the destination is `finalCarryPlace`), and record (progressive per-place answer reveal + regroup value moved to its `carryPlace` destination). A dedicated final step swaps the instructional final regroup for the leading answer digit (§39-safe), and a summary reads the answer back by place value. **Nothing is hardcoded to a step count** — a 2-digit no-regroup lesson and a 4-digit multi-regroup lesson produce different, correct sequences, verified across 1,000 traversals.
-
-**Board extension (documented per §2/§40).** The frozen board gained two *additive* options — `revealAnswerPlaces` and `revealRegroupPlaces` — enabling progressive per-place reveal. Defaults keep Build 3 behavior identical; all Build 3 suites (deterministic cases, 735-measurement alignment sweep, mutation tests, immutability) re-ran green afterward.
-
-**Base-Ten component.** `renderBaseTenModel(container, state)` + `baseTenForColumn(problem, index, view)` are exposed on `window.__addit` and deliberately decoupled from Learn so Practice hints can reuse them (`baseTenForColumn(problem, place)`-style calls). It consumes only engine metadata — group counts from `topDigit`/`bottomDigit`/`carryIn`, exchanges from `rawTotal`/`answerDigit`/`carryOut`/`carryPlace` — and renders ones/tens/hundreds/thousands/ten-thousands block kinds with labels (color is never the only indicator). Blocks are `aria-hidden`; the container is `role="img"` with one meaningful description (e.g., "14 ones. Ten ones are regrouped as one ten, leaving four ones."). The exchange uses one purposeful pop animation (reduced-motion honored via the global rule).
-
-**The 15 instructional objectives, each mapped to its teaching state(s):** (1) ONES meaning — intro decomposition + summary read-back; (2) TENS — same; (3) HUNDREDS — same on 3-4-digit examples; (4) vertical alignment — intro note "ONES under ONES…"; (5) start right — example-1 where-do-we-start guided choice + every first-column focus step; (6) one column at a time — per-column focus/add steps; (7) when regrouping is unnecessary — decide steps ("7 ones is less than 10, so it stays…"), guided on the first column with the reasoning shown on correct *and* wrong answers; (8) 10 ones → 1 ten, (9) 10 tens → 1 hundred, (10) 10 hundreds → 1 thousand — regroup steps + exchange visuals (all four transitions exercised, including thousands → ten-thousands); (11) where the regrouped value goes — record step "Move the new ten to the TENS place" + board destination; (12) include it next column — focus-step reminder "Don't forget the 1 ten we regrouped!" + carry-in block group; (13) consecutive regrouping — case D walks every column independently; (14) new leading digit — final step "The 1 hundred we made becomes the first digit of the answer"; (15) answer ↔ place value — summary "114 means 1 hundred, 1 ten, and 4 ones." Exposure was not confused with instruction: each objective has explanation + visual + written-algorithm connection.
-
-**Audit results (all independently recomputed in Python where arithmetic is involved):** 6 deterministic cases (23+14, 59+55, 182+190, 589+476, 1,008+2,091, 9,999+9,999) verified phase-by-phase — equations match Python ground truth, block groups match the words, rendered boards match the reveal state, interior regroups land at `carryPlace`, no duplicate final carry at any step, summaries correct. Base-ten value equivalence proven for 0–19 across ones/tens/hundreds (90 renders; every exchange preserves value: 10-for-1 + remainder). **500 no-regroup lessons:** zero regroup instruction, exchanges, or fake values; place-value and column-order teaching always present. **500 regroup lessons:** every `carryOut` column received its regroup state — 900+ exchanges with `carryPlace`-true destinations and `answerDigit`-true remainders, none skipped; 350+ final carries all used `finalCarryPlace`. **1,000 complete traversals (~15,500 states, ~30,700 total states across the audit):** no skipped/repeated columns, monotone reveals, no duplicate final carry, byte-identical deterministic rebuilds. **Back/Next forensics through the real UI (20-move mixed pattern):** revisited states byte-identical (title, body, board JSON, base-ten DOM), problem never regenerated. **Guided choices:** wrong answers get supportive correction with the correct choice highlighted and Next enabled — never scored; correct answers also restate the reasoning. **Learn sets (300 sampled):** No Regrouping sessions never contain a regrouping problem; Regrouping sessions always include a final-carry example; Mixed contains both subtypes; sizes respected with mixed-size variety; no duplicate pairs. **Responsive:** clean at all 7 widths walking real lesson steps (0 horizontal overflow; 320px exchange and 5-track board verified visually). **Accessibility:** hidden answers absent from the DOM, aria-live instruction panel, native buttons, keyboard-operable. **Frozen-build regression:** Build 1 wizard full suite; Build 2 engine 3,000 problems Python-recomputed; Build 3 parts 1+2 and the mutation-test forensic suite all green. **Console:** zero errors across every run. Child-like walkthroughs completed full sessions at desktop and 320px with zero errors.
-
-**Defects.** *Application (2):* (1) correct guided answers showed only "That's right!" without the reasoning — §20's explanation now appears on correct answers too; retested via case C and §31 checks — PASS. (2) The exchange's new block animated in from opacity 0, leaving the "1 ten" arrival briefly invisible — replaced with a visible-from-first-frame pop; re-screenshotted at 320px — PASS. *Audit-harness (4, documented separately):* case-C check looked in the wrong field for interaction teaching text; a broken responsive-walk block clicked a disabled button; the scope-creep scan matched the words "never scored"/"Practice hints later" inside comments and `buildLessonSteps` itself; the Build 3 suites' source-slice matched a header mention of "SECTION D" before the code, producing an empty slice (which also made one check pass vacuously — re-anchored after SECTION B2 and re-proven). All fixed in the harnesses and re-run.
-
-**Counts:** deterministic cases 6 · no-regroup lessons 500 · regroup lessons 500 · traversals 1,000 (≈30,700 states) · exchanges verified ≈900 · Back/Next reversals 20-move pattern · engine regression 3,000 · widths 7 · max board alignment deviation ≤2px (735 measurements re-run) · Build 1 full suite · Build 3 full suites · desktop + 320px journeys.
-
-**Not implemented (Build 5+):** free answer/regroup typing · Practice workflow, hints, scoring · Test entry/scoring · Results · Practice My Misses · streaks/points/timers.
-
-## PASS — Freeze Build 4.2
-
-Technical and instructional correctness both demonstrated: the words, blocks, and board agree at every state; every regroup teaches 10-for-1 place-value exchange sourced from engine metadata; the frozen foundation is regression-clean.
-
-
-## Build 4.2 — Instructional UX Refinement (2026-08-22)
-
-**Purpose.** This pass does not begin Build 5. It refines the child-facing Learn presentation after manual review identified two instructional UX problems: (1) corrective feedback could visually read as success because the correction text used the green success color, and (2) the Base-Ten representation competed with the vertical board rather than reading as a clearly separated place-value workspace.
-
-**Changes made.** The vertical addition board now appears before the Base-Ten model so the written problem remains the anchor. Base-Ten content is contained in a dedicated, dynamically labeled `ONES / TENS / HUNDREDS / THOUSANDS WORKSPACE`, shown only on lesson states that actually use blocks. The workspace tells the child to look only at the active place for the current step. Exchange states are explicitly labeled **BEFORE** and **AFTER**. Tens rods now visibly contain ten subdivisions rather than appearing as an unexplained solid rectangle; hundreds flats use a clearer grid. The existing lesson engine and Build 2 arithmetic were not changed.
-
-**Feedback semantics defect — fixed.** Guided-answer state now records the actual selected value instead of only a boolean. Correct responses use the green `is-correct` treatment. Incorrect responses use an amber/orange `is-corrective` treatment and the child's incorrect button receives an amber `li-selected-wrong` state, while the mathematically correct choice is separately identified in green. Returning Back/Next to an answered state can now reconstruct whether the original response was correct or incorrect and restore the appropriate explanation instead of losing that distinction.
-
-**Logic/source audit performed in this environment.** `node --check js/app.js` passes. The Build 4.2 development hook loads in a DOM-stubbed Node VM and reports `Build 4.2`. Deterministic arithmetic/lesson generation passed for 23+14=37, 59+28=87, 182+190=372, 59+55=114, 589+476=1,065, 405+270=675, 1,008+2,091=3,099, and 9,999+9,999=19,998. An additional 1,200 generated problems across all 3 skills × all 4 size modes produced **0 arithmetic mismatches**; their lesson generation produced 1,096 regroup-exchange states without changing the frozen engine. Source inspection confirms regroup destinations continue to use `carryPlace` / `finalCarryPlace`; no `indexFromRight + 1` carry-destination inference was introduced.
-
-**Browser-audit limitation.** The execution environment used for this refinement blocks local/localhost pages in its Chromium policy, so a truthful interactive browser screenshot/viewport audit could not be completed here. No claim is made that the revised visual layout has been browser-verified at 320–1440 px in this pass. The previous Build 4.2 browser audit remains historical evidence for the pre-refinement version only.
-
-### Current decision — READY FOR MANUAL VISUAL REVIEW; DO NOT FREEZE YET
-
-The source/logic refinement passes the checks available here, but the changed child-facing layout must be manually opened in a real browser before re-freezing Build 4. Specifically verify: wrong-answer amber treatment; correct-answer green treatment; board-before-workspace hierarchy; ONES/TENS workspace labels; BEFORE/AFTER exchange clarity; subdivided tens rod; Back/Next restoration; and phone layout. If those screens are clear, a final browser forensic pass can close Build 4.2 before Practice begins.
-
-## Build 4.2 — Vertical Base-Ten Workspace Refinement (2026-08-22)
-
-**Purpose.** Manual review showed that the place-value workspace still used a horizontal block equation, forcing the child to translate between a vertical written algorithm and a horizontal manipulative model. This pass keeps Build 4.2 and the frozen arithmetic/board architecture intact while making the Base-Ten workspace mirror the school-style vertical addition structure.
-
-**Vocabulary.** The workspace now teaches formal addition terminology with child-friendly context: **First number (addend)**, **Second number (addend)**, and **Sum**. When a carried/regrouped value enters the current place, an additional **Regrouped amount** row appears above the two addends so the workspace mirrors the small regrouped value shown above the written problem.
-
-**Vertical manipulative layout.** Non-exchange Base-Ten states now render as a vertical stack. Each row places the verbal quantity and its Base-Ten representation side-by-side. The second addend carries a visible `+` operator and the Sum row carries `=` plus a strong horizontal separation, so the manipulative workspace visually parallels the vertical algorithm instead of introducing a second horizontal equation layout. The Sum row uses the existing engine `rawTotal`; no arithmetic was added to the renderer.
-
-**Regroup exchange layout.** Exchange states retain a distinct before/after explanation but now use dedicated **Before regrouping** and **After regrouping** panels. On phone widths these panels stack vertically with the transition arrow rotated downward. The exchange still reads only frozen engine metadata (`rawTotal`, `answerDigit`, `carryOut`, `carryPlace`).
-
-**Manipulative integrity.** Tens rods retain ten visible subdivisions and hundreds retain a visible grid. Individual blocks remain decorative for accessibility; the container carries one concise mathematical aria description. The new visible labels do not change the underlying accessible arithmetic statement.
-
-**Static/source checks completed.** `node --check js/app.js` passes after the refinement. Source inspection confirms the new workspace rows are populated from `topDigit`, `bottomDigit`, `carryIn`, and `rawTotal`; no addition arithmetic or carry-destination inference was introduced into the renderer. Build number remains **Build 4.2**.
-
-**Manual browser verification required.** Because the child-facing layout changed, Build 4.2 should remain in manual-review status until the revised workspace is viewed on the live GitHub Pages deployment. Verify at minimum: 2-digit ONES workspace, a regrouped TENS workspace with a `Regrouped amount` row, the 17-ones exchange, 3/4-digit layouts, and a phone-width view. Confirm the vertical stack is clearer than the prior horizontal equation and that the Base-Ten blocks remain readable without overflow.
-
-### Current decision — READY FOR MANUAL VISUAL REVIEW; DO NOT FREEZE YET
-
-
-## Build 4.2 — Responsive Instructional Layout
-
-Build 4.2 establishes the permanent Add It! responsive teaching targets:
-
-- Phone: 320–390px, stacked, touch-friendly, no horizontal scrolling.
-- Tablet: 600–899px, intentionally stacked/adaptive rather than cramped.
-- School laptop: 1366×768 target; board and active-place workspace should remain visible together when the lesson state contains both.
-- Desktop: two-column board/workspace composition with a controlled maximum reading width.
-- Classroom TV / projector: large-display scaling with readable math and instructional labels.
-
-The responsive requirement is instructional usability, not merely CSS fit. The child should not have to scroll back and forth to reconnect the vertical algorithm with the Base-Ten representation. Build 4.2 therefore uses a two-column teaching surface at >=900px and a deliberate stacked lesson below that breakpoint.
-
-This refinement does not alter the Build 2 arithmetic engine, Build 3 board arithmetic contract, carryPlace metadata, lesson sequencing, or Base-Ten values.
-
-
-### Build badge correction
-The runtime `BUILD_NUMBER` constant was explicitly updated to `Build 4.2`.
-The bottom-right badge is populated from this constant and should render:
-`Add It! — Build 4.2`.
+If those checks pass without new instructional or responsive defects, Build 4.3 can become the final Build 4 Learn release before Build 5.0 Practice Mode.

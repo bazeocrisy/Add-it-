@@ -693,3 +693,47 @@ h1,h2,h3{color:var(--navy);}
     transform-origin: center;
   }
 }
+
+/* ============================================================
+   BUILD 4.3 — AUDIT CORRECTIONS
+   Real large-screen horizontal composition + compact phone lesson.
+   ============================================================ */
+@media (min-width: 900px){
+  #screen-learn .learn-lesson{width:min(100%,1180px);}
+  #screen-learn .learn-responsive-stage{
+    display:grid !important;
+    grid-template-columns:minmax(280px,.85fr) minmax(420px,1.35fr);
+    grid-template-areas:"board workspace";
+    align-items:center;
+    gap:clamp(22px,3vw,48px);
+    width:100%;
+  }
+  #screen-learn .learn-responsive-stage > .learn-board{grid-area:board;justify-self:end;width:auto;}
+  #screen-learn .learn-responsive-stage > .learn-workspace{grid-area:workspace;align-self:center;width:100%;margin:0;}
+  #screen-learn .learn-responsive-stage > .learn-workspace[hidden]{display:none !important;}
+  /* When a step has no workspace, let the board occupy the teaching surface. */
+  #screen-learn .learn-responsive-stage:has(.learn-workspace[hidden]){grid-template-columns:1fr;grid-template-areas:"board";}
+  #screen-learn .learn-responsive-stage:has(.learn-workspace[hidden]) > .learn-board{justify-self:center;}
+}
+
+@media (max-width: 599px){
+  #screen-learn .placeholder-body{padding-inline:0;}
+  #screen-learn .learn-stage{padding-inline:8px;}
+  #screen-learn .learn-lesson{gap:10px;}
+  #screen-learn .learn-progress{gap:7px 9px;margin-bottom:2px;}
+  #screen-learn .learn-instruction{padding:12px 10px;border-radius:22px;}
+  #screen-learn .li-title{font-size:1.3rem;}
+  #screen-learn .li-body{font-size:1rem;}
+  #screen-learn .li-choices{gap:8px;margin-top:2px;}
+  #screen-learn .li-choice{min-width:82px;padding:9px 12px;}
+  #screen-learn .learn-responsive-stage{gap:10px;}
+  #screen-learn .learn-workspace{padding:10px 8px;border-radius:20px;}
+  #screen-learn .lw-subtitle{margin-bottom:7px;}
+  #screen-learn .baseten{padding:8px;border-radius:18px;}
+  #screen-learn .bt-vrow{grid-template-columns:24px minmax(130px,.95fr) minmax(0,1.05fr);min-height:60px;}
+  #screen-learn .bt-vlabel{padding:6px 8px;}
+  #screen-learn .bt-vvisual{padding:6px 8px;}
+  #screen-learn .bt-caption{margin-top:6px;font-size:.88rem;}
+  #screen-learn .learn-controls{margin-top:0;}
+  #screen-learn .activity-foot{padding-top:10px;}
+}
