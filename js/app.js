@@ -1,5 +1,16 @@
 /* =========================================================
-   Add It! — Build 5.1: Learn real-device refinement
+   Add It! — Build 5.2: responsive + instructional remediation
+   Base: Build 5.1 (all Learn/Practice behaviour preserved).
+   5.2 addresses the Build 5.1 forensic audit:
+     A place-value labels legible (soft-hyphen wrapping, not shrinking)
+     B height-aware phone/landscape composition (Next discoverable)
+     C compact phone regroup composition (board + blocks co-visible)
+     D deliberate classroom/large-display treatment
+     E Practice session boundary (10 problems + completion)
+     F Test mode honesty (Coming Soon, no developer preview)
+     + opening decomposition on one line per addend, zeros included
+   Engine, board semantics, correctness and hint logic unchanged.
+   Earlier header (Build 5.1): Learn real-device refinement
    Base: Build 5 (Practice Mode preserved in full). Build 5.1
    applies owner iPhone findings to Learn only:
      - regroup DECISION at every applicable column (add -> check ->
@@ -54,7 +65,7 @@
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 5.1";
+  const BUILD_NUMBER = "Build 5.2";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -189,7 +200,7 @@
   /* ---------- Placeholder destinations ---------- */
   function startLearn()    { stampChips("learn");    showScreen("learn");    startLearnSession(); }
   function startPractice() { stampChips("practice"); showScreen("practice"); startPracticeSession(); }
-  function startTest()     { stampChips("test");     showScreen("test");     newPreviewProblem(); renderPreview(); }
+  function startTest()     { stampChips("test");     showScreen("test"); }
 
   function backToModeStep() {
     stopPractice();
@@ -607,8 +618,15 @@
     return Math.max(problem.digitLength, problem.answerDigitLength);
   }
 
+  // Build 5.2: labels keep their full place-value names but gain a soft-hyphen
+  // break opportunity so a narrow track wraps the word across two lines
+  // instead of forcing a tiny font. U+00AD is ignored by screen readers and
+  // by text matching that strips it (see getBoardColumns).
+  const SOFT = "\u00AD";
   function placeLabelText(placeName) {
-    return String(placeName).replace(/-/g, " ").toUpperCase();
+    const t = String(placeName).replace(/-/g, " ").toUpperCase();
+    return t.replace("HUNDREDS", "HUN" + SOFT + "DREDS")
+            .replace("THOUSANDS", "THOU" + SOFT + "SANDS");
   }
 
   /* renderAdditionBoard(container, problem, options)
@@ -804,7 +822,8 @@
     for (let t = 0; t < tracks; t++) {
       const pick = row => {
         const n = grid.querySelector('[data-row="' + row + '"][data-track="' + t + '"]');
-        return n ? n.textContent : null;
+        // strip soft hyphens so audits see the semantic label text
+        return n ? n.textContent.replace(/\u00AD/g, "") : null;
       };
       const anyCell = grid.querySelector('[data-track="' + t + '"]');
       out.push({
@@ -820,44 +839,12 @@
     return out;
   }
 
-  /* ---------- Board Preview (temporary Build 3 inspection) ---------- */
-  const preview = { problem: null, showRegroup: false, showAnswer: false };
-
-  function activeModeScreen() {
-    return ["learn", "practice", "test"].find(s => !el("screen-" + s).hidden) || null;
-  }
-
-  function newPreviewProblem() {
-    preview.problem = generateProblem({
-      skill: state.skill || "mixed",
-      size: state.size || "mixed"
-    });
-    preview.showRegroup = false;
-    preview.showAnswer = false;
-  }
-
-  function renderPreview() {
-    const mode = activeModeScreen();
-    if (!mode || !preview.problem) return;
-    const screen = el("screen-" + mode);
-    const host = screen.querySelector("[data-board-host]");
-    renderAdditionBoard(host, preview.problem, {
-      showRegroupValues: preview.showRegroup,
-      showAnswerValues: preview.showAnswer
-    });
-    const status = screen.querySelector("[data-bp-status]");
-    status.textContent = (preview.showRegroup && preview.problem.regroupCount === 0)
-      ? "No regrouping needed for this problem."
-      : "";
-  }
-
-  function handlePreviewAction(action) {
-    if (action === "new") newPreviewProblem();
-    else if (action === "regroup") preview.showRegroup = true;
-    else if (action === "answer") preview.showAnswer = true;
-    else if (action === "reset") { preview.showRegroup = false; preview.showAnswer = false; }
-    renderPreview();
-  }
+  /* ---------- Board Preview: REMOVED in Build 5.2 ----------
+     The Build 3 developer preview (New Preview Problem / Show Regrouping /
+     Show Answer / Reset Board) lived on the Test screen. A child choosing
+     "Let me try on my own" must not be handed a Show Answer button, so the
+     preview and its controls were removed with the Test Coming Soon screen.
+     renderAdditionBoard / getBoardColumns remain exported for audits. */
 
   /* =========================================================
      SECTION D — LEARN MODE (Build 4.3)
@@ -876,12 +863,15 @@
   function unitWord(place, n) { const w = UNIT_WORDS[place]; return n === 1 ? w[0] : w[1]; }
   function placeUpper(place) { return placeLabelText(place); }
   // "114 means 1 hundred, 1 ten, and 4 ones." — reads engine digits only.
-  function decomposeByPlace(nStr) {
+  // Build 5.2: zero places are INCLUDED ("807 means 8 hundreds, 0 tens, and
+  // 7 ones") because place value is the lesson. includeZeros=false is kept
+  // for the answer read-back where trailing zero places read awkwardly.
+  function decomposeByPlace(nStr, includeZeros) {
     const parts = [];
     for (let i = 0; i < nStr.length; i++) {
       const d = nStr.charCodeAt(i) - 48;
       const place = PLACE_NAMES[nStr.length - 1 - i];
-      if (d > 0) parts.push(d + " " + unitWord(place, d));
+      if (d > 0 || includeZeros) parts.push(d + " " + unitWord(place, d));
     }
     if (parts.length === 0) return "0 ones";
     if (parts.length === 1) return parts[0];
@@ -1080,8 +1070,13 @@
     push({
       phase: "intro", place: null,
       title: "Let\u2019s add " + problem.topNumber + " + " + problem.bottomNumber,
-      body: problem.topNumber + " means " + decomposeByPlace(topStr) + ". " +
-            problem.bottomNumber + " means " + decomposeByPlace(botStr) + ".",
+      // One line per addend so each explanation lines up with its row on the board.
+      bodyLines: [
+        problem.topNumber + " means " + decomposeByPlace(topStr, true) + ".",
+        problem.bottomNumber + " means " + decomposeByPlace(botStr, true) + "."
+      ],
+      body: problem.topNumber + " means " + decomposeByPlace(topStr, true) + ". " +
+            problem.bottomNumber + " means " + decomposeByPlace(botStr, true) + ".",
       note: "Line up digits with the same place value.",
       board: board(null)
     });
@@ -1312,7 +1307,22 @@
     if (star) star.hidden = !st.celebrate;
 
     el("learn-title").textContent = st.title;
-    el("learn-body").textContent = st.body || "";
+    const bodyEl = el("learn-body");
+    bodyEl.innerHTML = "";
+    if (st.bodyLines) {
+      // one <span> per addend so each decomposition sits on its own line,
+      // visually corresponding to the two rows of the written problem
+      st.bodyLines.forEach(function (line) {
+        const sp = document.createElement("span");
+        sp.className = "li-body-line";
+        sp.textContent = line;
+        bodyEl.appendChild(sp);
+      });
+      bodyEl.classList.add("li-body-stacked");
+    } else {
+      bodyEl.classList.remove("li-body-stacked");
+      bodyEl.textContent = st.body || "";
+    }
     const note = el("learn-note");
     note.textContent = st.note || ""; note.hidden = !st.note;
     const why = el("learn-why");
@@ -1401,6 +1411,19 @@
     el("learn-next").disabled = false;
   }
 
+  // Build 5.2: after an advance the panel re-renders, which drops focus to the
+  // body and forces keyboard users to tab from the top each step. Move focus to
+  // the next thing the child must act on: the choice if the step asks one,
+  // otherwise the Next button.
+  function refocusLearn() {
+    const choice = document.querySelector("#learn-choices .li-choice:not(:disabled)");
+    const target = choice || el("learn-next");
+    // preventScroll: move focus for keyboard users WITHOUT scrolling the page,
+    // which would otherwise push the Next control below the fold for everyone.
+    if (target && target.offsetParent !== null && !target.disabled) target.focus({ preventScroll: true });
+    else if (el("learn-prev") && el("learn-prev").offsetParent !== null) el("learn-prev").focus({ preventScroll: true });
+  }
+
   function learnNext() {
     if (learn.complete) return;
     const st = currentLearnStep();
@@ -1416,6 +1439,7 @@
       learn.complete = true;
     }
     renderLearnStep();
+    refocusLearn();
   }
   function learnPrev() {
     if (learn.complete) { learn.complete = false; renderLearnStep(); return; }
@@ -1428,6 +1452,7 @@
       learn.stepIndex = learn.steps.length - 1;
     }
     renderLearnStep();
+    refocusLearn();
   }
 
   /* =========================================================
@@ -1442,9 +1467,17 @@
      guided reveal so no child is ever stuck. Feedback is
      supportive and specific; there are no scores or points.
      ========================================================= */
+  const PRACTICE_SESSION_LENGTH = 10;   // Build 5.2: a session has a finish line
   const practice = {
     active: false, problem: null, colIndex: 0,
-    phase: "digit",              // "digit" | "carry" | "final" | "complete"
+    sessionLength: PRACTICE_SESSION_LENGTH, sessionDone: false,
+    // "digit" | "carry-dest" | "carry-value" | "final" | "complete"
+    // Build 5.2 correction: regrouping is now TWO child actions — choose the
+    // destination (carry-dest) and then ENTER the value (carry-value). The app
+    // validates both against engine metadata; it never writes either for them.
+    phase: "digit",
+    pendingCarryPlace: null,     // destination the child selected, awaiting its value
+    hintRequests: 0,             // student-requested hints for the current step
     attempts: 0,
     answerEntries: {}, regroupEntries: {},
     guidedThisProblem: false,
@@ -1459,7 +1492,20 @@
     practice.count = 0;
     practice.streak = 0;
     practice.usedKeys = new Set();
+    practice.sessionLength = PRACTICE_SESSION_LENGTH;
+    practice.sessionDone = false;
     practice.active = true;
+    nextPracticeProblem();
+  }
+
+  // Advance to the next problem, or end the session at the boundary.
+  // Never auto-starts a new session — the child chooses.
+  function practiceAdvanceSession() {
+    if (practice.count >= practice.sessionLength) {
+      practice.sessionDone = true;
+      renderPractice();
+      return;
+    }
     nextPracticeProblem();
   }
 
@@ -1476,8 +1522,10 @@
     practice.problem = problem;
     practice.colIndex = 0;
     practice.phase = "digit";
+    practice.pendingCarryPlace = null;
     practice.attempts = 0;
     practice.hintLevel = 0;
+    practice.hintRequests = 0;
     practice.answerEntries = {};
     practice.regroupEntries = {};
     practice.guidedThisProblem = false;
@@ -1499,11 +1547,17 @@
       };
     }
     const c = practiceCol();
-    if (practice.phase === "carry") {
+    if (practice.phase === "carry-dest") {
       return {
         title: "Regroup!",
         body: c.rawTotal + " " + unitWord(c.place, c.rawTotal) + " is 10 or more. " +
               "Tap the box where the regrouped " + unitWord(c.carryPlace, 1) + " goes."
+      };
+    }
+    if (practice.phase === "carry-value") {
+      return {
+        title: "Now write the regrouped " + unitWord(practice.pendingCarryPlace, 1),
+        body: "What do we regroup to the " + placeUpper(practice.pendingCarryPlace) + " place?"
       };
     }
     return {
@@ -1520,9 +1574,12 @@
     if (practice.phase === "digit") {
       active = practiceCol().place;
       prompt = { row: "answer", place: active };
-    } else if (practice.phase === "carry") {
+    } else if (practice.phase === "carry-dest") {
       active = practiceCol().place;
       tap = true;
+    } else if (practice.phase === "carry-value") {
+      active = practiceCol().place;
+      prompt = { row: "regroup", place: practice.pendingCarryPlace };
     } else if (practice.phase === "final") {
       active = p.finalCarryPlace;
       prompt = { row: "answer", place: active };
@@ -1554,7 +1611,21 @@
     }
     const c = practiceCol();
     const u = n => unitWord(c.place, n);
-    if (practice.phase === "carry") {
+    if (practice.phase === "carry-value") {
+      const dest = practice.pendingCarryPlace;
+      if (lvl === 1) return { level: 1,
+        text: "You are writing the regrouped amount above the " + placeUpper(dest) + ".", baseTen: null };
+      if (lvl === 2) return { level: 2,
+        text: c.rawTotal + " " + u(c.rawTotal) + " is more than 10. How many " +
+              unitWord(dest, 10) + " can we make from it?",
+        baseTen: baseTenForColumn(p, practice.colIndex, "groups") };
+      return { level: 3,
+        text: c.rawTotal + " " + u(c.rawTotal) + " = " + c.carryOut + " " + unitWord(dest, c.carryOut) +
+              (c.answerDigit > 0 ? " + " + c.answerDigit + " " + u(c.answerDigit) : "") +
+              ". Write the " + unitWord(dest, 1) + " amount above the " + placeUpper(dest) + ".",
+        baseTen: baseTenForColumn(p, practice.colIndex, "exchange") };
+    }
+    if (practice.phase === "carry-dest") {
       if (lvl === 1) return { level: 1, text: "The regrouped value moves one place to the LEFT.", baseTen: null };
       return { level: lvl,
         text: "10 " + u(10) + " make 1 " + unitWord(c.carryPlace, 1) + ". Tap the " +
@@ -1588,13 +1659,17 @@
   }
 
   /* ---------- Input handling (engine comparisons only) ---------- */
+  // Engine metadata is the only source of the expected value. No arithmetic here.
   function practiceCorrectDigit() {
     if (practice.phase === "final") return practice.problem.finalCarry;
+    if (practice.phase === "carry-value") return practiceCol().carryOut;
     return practiceCol().answerDigit;
   }
 
   function practiceHandleDigit(d) {
-    if (!practice.active || (practice.phase !== "digit" && practice.phase !== "final")) return;
+    if (!practice.active ||
+        (practice.phase !== "digit" && practice.phase !== "final" &&
+         practice.phase !== "carry-value")) return;
     d = Number(d);
     if (!Number.isInteger(d) || d < 0 || d > 9) return;   // single digit 0-9 only
     const p = practice.problem;
@@ -1607,11 +1682,21 @@
         return;
       }
       const c = practiceCol();
+      if (practice.phase === "carry-value") {
+        // The CHILD writes the regrouped amount; the app only validated it.
+        practice.regroupEntries[practice.pendingCarryPlace] = String(d);
+        practice.lastFeedback = "ok:That\u2019s it \u2014 " + d + " " +
+          unitWord(practice.pendingCarryPlace, d) + " regrouped.";
+        practice.pendingCarryPlace = null;
+        practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
+        practiceAdvanceColumn();
+        return;
+      }
       practice.answerEntries[c.place] = String(d);
       practice.lastFeedback = "ok:" + ["Nice!", "Great!", "You got it!"][(practice.colIndex + practice.count) % 3];
-      practice.attempts = 0; practice.hintLevel = 0;
+      practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
       if (c.carryOut > 0) {
-        practice.phase = "carry";
+        practice.phase = "carry-dest";
         renderPractice();
       } else {
         practiceAdvanceColumn();
@@ -1622,8 +1707,16 @@
     // engine fields and choose the MESSAGE only — never correctness.
     practice.attempts++;
     practice.hintLevel = Math.min(practice.attempts, 3);
-    const c = practice.phase === "final" ? null : practiceCol();
+    const c = (practice.phase === "final") ? null : practiceCol();
     let msg = "Not quite \u2014 let\u2019s look again.";
+    if (practice.phase === "carry-value" && c) {
+      msg = "Check what " + c.rawTotal + " " + unitWord(c.place, c.rawTotal) +
+            " becomes when you regroup.";
+      if (d === c.answerDigit) {
+        msg = "That digit stays in the " + placeUpper(c.place) +
+              " place. What moves to the " + placeUpper(c.carryPlace) + "?";
+      }
+    } else
     if (c && c.carryIn > 0 && d === (c.rawTotal - c.carryIn) % 10 && d !== c.answerDigit) {
       msg = "So close! Don\u2019t forget the " + c.carryIn + " " + unitWord(c.place, c.carryIn) + " we regrouped.";
     } else if (c && c.carryOut > 0 && d === c.carryOut && d !== c.answerDigit) {
@@ -1635,13 +1728,16 @@
   }
 
   function practiceHandleRegroupTap(place) {
-    if (!practice.active || practice.phase !== "carry") return;
+    if (!practice.active || practice.phase !== "carry-dest") return;
     const c = practiceCol();
     if (place === c.carryPlace) {
-      practice.regroupEntries[c.carryPlace] = String(c.carryOut);
-      practice.lastFeedback = "ok:That\u2019s right \u2014 one place to the left!";
-      practice.attempts = 0; practice.hintLevel = 0;
-      practiceAdvanceColumn();
+      // Correct DESTINATION only. The app does not write the value — the child
+      // must now enter it (two distinct skills: where, then what).
+      practice.pendingCarryPlace = c.carryPlace;
+      practice.phase = "carry-value";
+      practice.lastFeedback = "ok:That\u2019s right \u2014 one place to the left. Now write it.";
+      practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
+      renderPractice();
     } else {
       practice.attempts++;
       practice.hintLevel = Math.min(practice.attempts, 3);
@@ -1656,12 +1752,25 @@
   function practiceGuidedReveal() {
     const p = practice.problem;
     practice.guidedThisProblem = true;
-    if (practice.phase === "carry") {
+    if (practice.phase === "carry-dest") {
       const c = practiceCol();
-      practice.regroupEntries[c.carryPlace] = String(c.carryOut);
-      practice.lastFeedback = "guided:Here it is \u2014 the regrouped " + unitWord(c.carryPlace, 1) +
-        " goes above the " + placeUpper(c.carryPlace) + ". Let\u2019s keep going together.";
-      practice.attempts = 0; practice.hintLevel = 0;
+      practice.pendingCarryPlace = c.carryPlace;
+      practice.phase = "carry-value";
+      practice.lastFeedback = "guided:The regrouped " + unitWord(c.carryPlace, 1) +
+        " goes above the " + placeUpper(c.carryPlace) + ". Now write it there together.";
+      practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
+      renderPractice();
+      return;
+    }
+    if (practice.phase === "carry-value") {
+      const c = practiceCol();
+      practice.regroupEntries[practice.pendingCarryPlace] = String(c.carryOut);
+      practice.lastFeedback = "guided:" + c.rawTotal + " " + unitWord(c.place, c.rawTotal) + " = " +
+        c.carryOut + " " + unitWord(c.carryPlace, c.carryOut) +
+        (c.answerDigit > 0 ? " + " + c.answerDigit + " " + unitWord(c.place, c.answerDigit) : "") +
+        ". Let\u2019s keep going together.";
+      practice.pendingCarryPlace = null;
+      practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
       practiceAdvanceColumn();
       return;
     }
@@ -1677,12 +1786,27 @@
       (c.carryIn > 0 ? "with the regrouped " + unitWord(c.place, 1) + " counted, " : "") +
       "the total is " + c.rawTotal + ". Let\u2019s keep going together.";
     practice.attempts = 0; practice.hintLevel = 0;
-    if (c.carryOut > 0) { practice.phase = "carry"; renderPractice(); }
+    if (c.carryOut > 0) { practice.phase = "carry-dest"; renderPractice(); }
     else practiceAdvanceColumn();
+  }
+
+  /* ---------- Student-controlled Hint (Build 5.2 correction) ----------
+     Wrong-answer feedback responds to something the child TRIED; a hint is
+     support the child ASKS for. A child must never have to fail on purpose to
+     get help. Requests walk the same 3-level ladder; a 4th request offers the
+     guided reveal so nobody stays stuck. Content comes from engine metadata. */
+  function practiceRequestHint() {
+    if (!practice.active || practice.phase === "complete" || practice.sessionDone) return;
+    practice.hintRequests++;
+    if (practice.hintRequests > 3) { practiceGuidedReveal(); return; }
+    practice.hintLevel = Math.max(practice.hintLevel, practice.hintRequests);
+    renderPractice();
   }
 
   function practiceAdvanceColumn() {
     const p = practice.problem;
+    practice.pendingCarryPlace = null;
+    practice.hintRequests = 0; practice.hintLevel = 0; practice.attempts = 0;
     if (practice.colIndex < p.columns.length - 1) {
       practice.colIndex++;
       practice.phase = "digit";
@@ -1705,9 +1829,11 @@
   /* ---------- Practice rendering ---------- */
   function renderPractice() {
     const p = practice.problem;
-    el("practice-count").textContent = "Problem " + practice.count;
+    el("practice-count").textContent =
+      "Problem " + Math.min(practice.count, practice.sessionLength) + " of " + practice.sessionLength;
     const placeChip = el("practice-place");
-    if (practice.phase === "digit" || practice.phase === "carry") {
+    if (practice.phase === "digit" || practice.phase === "carry-dest"
+        || practice.phase === "carry-value") {
       placeChip.textContent = placeUpper(practiceCol().place); placeChip.hidden = false;
     } else if (practice.phase === "final") {
       placeChip.textContent = placeUpper(p.finalCarryPlace); placeChip.hidden = false;
@@ -1715,10 +1841,20 @@
 
     const work = el("practice-work");
     const done = el("practice-complete");
+    const sessionDoneEl = el("practice-session-complete");
+    if (practice.sessionDone) {
+      work.hidden = true; done.hidden = true; sessionDoneEl.hidden = false;
+      el("practice-session-note").textContent =
+        "You worked through all " + practice.sessionLength + " problems, one place at a time.";
+      return;
+    }
+    sessionDoneEl.hidden = true;
     if (practice.phase === "complete") {
       work.hidden = true; done.hidden = false;
       el("practice-celebrate").textContent =
         "You did it! " + p.topNumber + " + " + p.bottomNumber + " = " + p.answer + ".";
+      el("practice-next").textContent = practice.count >= practice.sessionLength
+        ? "Finish \u2192" : "Next Problem \u2192";
       el("practice-streak").textContent =
         practice.guidedThisProblem
           ? "We worked that one out together \u2014 the next one is all yours!"
@@ -1761,7 +1897,25 @@
 
     renderAdditionBoard(el("practice-board"), p, practiceBoardOptions());
 
-    const padOn = practice.phase === "digit" || practice.phase === "final";
+    // Hint control: always available, labelled with how much help is showing.
+    const hintBtn = el("practice-hint-btn");
+    if (hintBtn) {
+      const more = practice.hintRequests >= 3 ? "Show me" : "Hint";
+      hintBtn.textContent = (practice.hintLevel > 0 && practice.hintRequests > 0)
+        ? "\uD83D\uDCA1 " + more + " (" + Math.min(practice.hintRequests, 3) + "/3)"
+        : "\uD83D\uDCA1 Hint";
+      hintBtn.disabled = false;
+      hintBtn.setAttribute("aria-label", practice.phase === "carry-dest"
+        ? "Hint: where does the regrouped value go?"
+        : (practice.phase === "carry-value"
+            ? "Hint: what value do we regroup?"
+            : "Hint for the current place"));
+    }
+
+    // The pad is live for answer digits, the final leading digit, AND the
+    // regroup value the child now types themselves.
+    const padOn = practice.phase === "digit" || practice.phase === "final"
+                  || practice.phase === "carry-value";
     Array.from(document.querySelectorAll("#practice-pad .pad-btn")).forEach(b => { b.disabled = !padOn; });
   }
 
@@ -1795,11 +1949,21 @@
       b.addEventListener("click", () => practiceHandleDigit(b.dataset.digit)));
     el("practice-board").addEventListener("click", e => {
       const cellNode = e.target.closest('[data-row="regroup"]');
-      if (cellNode && practice.active && practice.phase === "carry") {
+      if (cellNode && practice.active && practice.phase === "carry-dest") {
         practiceHandleRegroupTap(cellNode.dataset.place);
       }
     });
-    el("practice-next").addEventListener("click", nextPracticeProblem);
+    el("practice-hint-btn").addEventListener("click", practiceRequestHint);
+    el("practice-next").addEventListener("click", practiceAdvanceSession);
+    el("practice-done-mode").addEventListener("click", backToModeStep);
+    el("practice-done-home").addEventListener("click", startWizard);
+    el("test-to-practice").addEventListener("click", function () {
+      state.mode = "practice"; startPractice();
+    });
+    el("test-to-learn").addEventListener("click", function () {
+      state.mode = "learn"; startLearn();
+    });
+    el("practice-again").addEventListener("click", startPracticeSession);
     document.addEventListener("keydown", e => {
       if (!practice.active || el("screen-practice").hidden) return;
       if (e.key >= "0" && e.key <= "9") practiceHandleDigit(e.key);
@@ -1814,14 +1978,6 @@
     });
     el("learn-done-home").addEventListener("click", startWizard);
     el("learn-done-mode").addEventListener("click", backToModeStep);
-
-    // Board Preview controls: one delegated listener per control strip,
-    // bound exactly once at init — rerenders never re-attach listeners.
-    Array.from(document.querySelectorAll("[data-bp-controls]")).forEach(strip =>
-      strip.addEventListener("click", e => {
-        const btn = e.target.closest("[data-bp]");
-        if (btn) handlePreviewAction(btn.dataset.bp);
-      }));
 
     renderBuildBadge();
     startWizard();
@@ -1850,6 +2006,7 @@
     practiceLoadProblem,
     practiceHandleDigit,
     practiceHandleRegroupTap,
+    practiceRequestHint,
     config: { SKILLS, SIZES, MODES, TEST_LENGTHS, PLACE_NAMES, ENGINE_SIZES }
   };
 })();

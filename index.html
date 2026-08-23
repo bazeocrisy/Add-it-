@@ -250,6 +250,9 @@
               <div id="practice-baseten"></div>
             </div>
             <div class="learn-board" id="practice-board" data-board-host="practice"></div>
+            <div class="practice-actions">
+              <button type="button" class="nav-btn hint-btn" id="practice-hint-btn">&#128161; Hint</button>
+            </div>
             <div class="num-pad" id="practice-pad" aria-label="Number pad">
               <button type="button" class="pad-btn" data-digit="1">1</button>
               <button type="button" class="pad-btn" data-digit="2">2</button>
@@ -261,6 +264,17 @@
               <button type="button" class="pad-btn" data-digit="8">8</button>
               <button type="button" class="pad-btn" data-digit="9">9</button>
               <button type="button" class="pad-btn pad-zero" data-digit="0">0</button>
+            </div>
+          </div>
+
+          <div id="practice-session-complete" class="learn-complete" hidden>
+            <p class="lc-mark lc-mark-big" aria-hidden="true">&#127881;</p>
+            <h2 class="placeholder-title">Practice complete!</h2>
+            <p class="lc-recap" id="practice-session-note"></p>
+            <div class="lc-buttons">
+              <button type="button" class="nav-btn learn-next-btn" id="practice-again">Practice Again</button>
+              <button type="button" class="nav-btn" id="practice-done-mode">Choose Another Mode</button>
+              <button type="button" class="nav-btn" id="practice-done-home"><span aria-hidden="true">&#127968;</span> Home</button>
             </div>
           </div>
 
@@ -280,7 +294,7 @@
       </footer>
     </section>
 
-    <!-- ================= TEST (placeholder) ================= -->
+    <!-- ================= TEST (Coming Soon — Build 5.2) ================= -->
     <section class="screen screen-test" id="screen-test" aria-labelledby="test-heading" hidden>
       <header class="app-header header-test">
         <div class="ph-brand"><span class="ph-mark" aria-hidden="true"><span class="ph-mark-plus">+</span></span><span class="ph-name">Add It!</span></div>
@@ -294,24 +308,20 @@
 
       <div class="placeholder-body">
         <div class="stage placeholder-stage">
-          <h2 id="test-heading" class="placeholder-title"><span aria-hidden="true">&#127942;</span> Test</h2>
+          <p class="coming-mark" aria-hidden="true">&#128274;</p>
+          <h2 id="test-heading" class="placeholder-title">Test Mode</h2>
+          <p class="coming-soon">Coming soon!</p>
           <div class="placeholder-chips">
             <span class="setting-chip chip-skill" id="test-ph-skill"></span>
             <span class="setting-chip chip-size" id="test-ph-size"></span>
             <span class="setting-chip chip-length" id="test-ph-length"></span>
           </div>
-          <section class="board-preview" aria-label="Addition Board Preview">
-            <p class="bp-title">Addition Board Preview</p>
-            <div class="board-host" data-board-host="test"></div>
-            <p class="bp-status" data-bp-status aria-live="polite"></p>
-            <div class="bp-controls" data-bp-controls>
-              <button type="button" class="nav-btn bp-btn" data-bp="new">New Preview Problem</button>
-              <button type="button" class="nav-btn bp-btn" data-bp="regroup">Show Regrouping</button>
-              <button type="button" class="nav-btn bp-btn" data-bp="answer">Show Answer</button>
-              <button type="button" class="nav-btn bp-btn" data-bp="reset">Reset Board</button>
-            </div>
-            <p class="bp-note">Interactive work begins in a later build.</p>
-          </section>
+          <p class="coming-note">When Test Mode is ready, you'll solve problems on your own with no hints.
+             Until then, try <strong>Learn</strong> to see how it works, or <strong>Practice</strong> to try it with help.</p>
+          <div class="lc-buttons">
+            <button type="button" class="nav-btn learn-next-btn" id="test-to-practice">Go to Practice <span aria-hidden="true">&rarr;</span></button>
+            <button type="button" class="nav-btn" id="test-to-learn">Go to Learn</button>
+          </div>
         </div>
       </div>
 

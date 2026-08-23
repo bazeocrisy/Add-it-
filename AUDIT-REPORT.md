@@ -146,3 +146,152 @@ If those checks pass without new instructional or responsive defects, Build 4.3 
 **Known issues.** None found by automated testing. Not yet verified: real iPhone Safari rendering (dynamic toolbar behavior, true touch ergonomics, font rendering) — that is what owner acceptance testing will confirm.
 
 **BUILD 5.1 · CODE COMPLETE · AUTOMATED AUDIT PASS · READY FOR OWNER ACCEPTANCE TESTING · NOT FROZEN**
+
+---
+
+# BUILD 5.2 — RESPONSIVE + INSTRUCTIONAL REMEDIATION
+
+**A. Build.** Build 5.2. Badge: `Add It! — Build 5.2`. Not Build 6; Test Mode remains unbuilt.
+
+**B. Baseline confirmation.** Verified before any edit: runtime read `Build 5.1`; Learn, Practice, engine, shared board and base-ten renderer all present; all seven harnesses passed on the untouched tree; `B51_BASELINE` snapshot + md5 hashes recorded. Final diff vs that baseline: `index.html` 35 lines, `css/styles.css` 187 lines, `js/app.js` 168 lines — all traceable to the changes below.
+
+**C. Files changed.** `index.html`, `css/styles.css`, `js/app.js`, `AUDIT-REPORT.md`. Engine, problem generation, correctness metadata, board semantics, hint ladder, misconception signatures, logo, branding, colour identity, wizard and Home behaviour untouched.
+
+**D. Owner findings resolved.**
+
+| Finding | Resolution | Evidence |
+|---|---|---|
+| **A** place labels too small | Solved by *wrapping, not shrinking*: long names carry a soft-hyphen break opportunity (`HUN­DREDS`, `THOU­SANDS`) with `hyphens:manual`; size scales by track count; colour darkened to `#3B5C8A` | 6.1px → **11.8px** typical, 9.6px worst case (5-track phone), 18.4px on TV; contrast **4.34 → 6.27**; zero overlap/clipping/overflow at 320–2560 |
+| **B** Next hard to reach | Height-aware tiers at `max-height` 720/620/560 plus a landscape rule; reclaimed padding, gaps and the redundant skill/size chips in the progress row — no instructional text shrunk | iPhone SE intro **+159px → +63px**; landscape **+221px → +123px**; mini / 14/15 / 15PM / iPad / laptop / desktop **0px** |
+| **C** phone regroup co-visibility | Before/After panels stay a two-panel row on phones; landscape gets a board-beside-workspace grid | Board + blocks now co-visible at the regroup state on mini, 14/15, 15PM, iPad P/L, laptop, desktop, TV **and landscape**; iPhone SE still cannot fit both (see P) |
+| **D** classroom display | Deliberate `min-width:1800px` treatment placed last in the cascade; content column grows to 1720px, instructional type scales, lesson vertically centred | Content **46% → 67%** of 2560px; digits **32 → 54.4px** (~2.7 m), labels **8.3 → 18.4px**, title 38.4px, choices 24px/72px |
+| **E** endless Practice | 10-problem session, "Problem 3 of 10", completion panel (Practice Again / Choose Another Mode / Home), **no auto-restart** | T11/T11b transition tests pass; practice suite updated and green |
+| **F** Test honesty | Developer preview removed application-wide; "Test Mode — Coming soon!" with routes to Practice or Learn | `document.querySelectorAll('[data-bp]').length === 0`; no Show Answer reachable by a child |
+| **§4** decomposition lines | One line per addend, zeros included ("807 means 8 hundreds, 0 tens, and 7 ones"); no arrows added | Verified in the opening-screen evidence shot |
+
+Two further defects were found *by* this work and fixed: lesson controls measured 42px (now **46px**), and keyboard focus was lost on every step advance (now moves to the next actionable control, using `preventScroll` — see O).
+
+**E. Device-state matrix (240 probes, 10 device profiles, width × height).**
+
+| Metric | 5.1 | 5.2 |
+|---|---|---|
+| Horizontal overflow | 0 | **0** |
+| Panel overlap | 0 | **0** |
+| Base-ten blocks escaping | 0 | **0** |
+| Yes/No row splits | 0 | **0** |
+| Smallest place label | 6.4px | **11.2px** |
+| Smallest text anywhere | 6.4px | **8.3px** |
+| Worst scroll ratio | 3.55× | **3.04×** |
+
+**F. Instructional-objective matrix.** All 15 objectives remain taught, and the 5.1 sequence is preserved: per column `add → decide → [regroup] → record`, with "Then move left." on every non-final record. The regroup decision is still asked at **every** applicable column (600-lesson probe: one Yes/No per column, key from `carryOut`, decision always precedes the demo, no prompts where the total is under 10). The opening screen now teaches place value with zeros included.
+
+**G. Accessibility.** Contrast now passes AA everywhere sampled: place labels 6.27, note text 5.85 (both previously failing at 4.34/4.38), step counter 4.71, body 12.39. Touch targets at 390px: choices 48px, controls 46px. Native buttons throughout; `:focus-visible` ring intact; focus now follows the lesson without hijacking scroll; reduced motion honoured. **Still open:** gated Next has no `aria-disabled`/reason, progress row is not a `role="status"`, and there is no `h1` (all S3, carried forward).
+
+**H. Cognitive load.** Screen load unchanged and healthy: 9–38 words per state, median 24, **0 of 54** states above 45 words. Session load unchanged: 33–65 steps across the twelve skill×size families — the 4-digit tracks remain long (D-05 in the 5.1 register, deliberately not addressed here).
+
+**I. Transitions / state leakage.** 13 tests, **zero leakage**, zero page errors: Learn→Home→Learn full reset; Learn completion→Practice handoff; Practice→Mode→Learn; Test→Practice with no stale board; `testLength` never leaks into other modes; Back over an answered choice restores lock/mark/correction; double-tap and pad-spam guarded; **new:** T11 session boundary stops at exactly 10 with no auto-restart, T11b Practice Again resets to "Problem 1 of 10" with clean entries.
+
+**J. Mathematical forensics.** 13 problems (no regroup, ones regroup, tens-only regroup, multiple/chain regroup, zeros in an addend, 3-digit, 4-digit, boundary 9,999+9,999) × engine columns + carries + final carry + board output + Learn decision keys + base-ten exchange equivalence + Practice input acceptance and full solve — **every value matched independent Python recomputation. Zero defects.**
+
+**K. Practice regression.** Full suite green: generation, engine-derived correctness, active place, pad and physical keyboard, wrong-digit rejection, regroup placement and destination, 3-level hint ladder, shared vertical base-ten rows and Before/After panels, misconception feedback, duplicate prevention, completion and celebration without scoring — plus the new session boundary.
+
+**L. Responsive width/height.** 320 / 360 / 390 / 430 / landscape 844×390 / 768 / 1024 / 1366×768 / 1920×1080 / 2560×1440. Zero horizontal overflow at every width and state.
+
+**M. Classroom display.** 1920 and 2560 verified: no overflow, no scrolling (ratio 1.0), board and workspace co-visible, content centred at 1720px. Estimated legibility (~20 CSS-px per metre): digits ~2.7 m, place labels ~0.9 m, title ~1.9 m, block captions ~1.1 m.
+
+**N. Defect register (this build).**
+
+| ID | Mode | State | Device | W×H | Sev | Expected | Actual | Root cause | Fix | Regression risk | Evidence | Status |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 52-01 | Learn/Practice | all board states | all | all | S2 | place labels legible | 6.1–8.3px, contrast 4.34 | Build 3 overlap fix shrank labels | soft-hyphen wrap + scale + darker colour | board shared by all modes | 11.8px / 6.27 measured | **FIXED** |
+| 52-02 | Learn | intro, decide | SE, landscape, iPad, laptop | short heights | S2 | Next discoverable | up to +295px below fold | no height-aware rules | 3 `max-height` tiers + landscape grid | Learn + Practice controls | +63px / +123px worst | **FIXED** |
+| 52-03 | Learn/Practice | regroup, hint L2/L3 | phones | ≤430w | S2 | board + blocks compared together | vertically separated | tall stacked exchange panels | compact two-panel row | shared with Practice hints | co-visible on all but SE | **FIXED** |
+| 52-04 | all | all | TV/projector | ≥1800w | S1 | classroom-legible | 46% width, 8.3px labels | no large-display scale step | dedicated `min-width:1800px` composition | cascade order/specificity | 67% / 54.4px digits | **FIXED** |
+| 52-05 | Practice | session | all | all | S2 | a finish line | endless stream | session framing deferred in B5 | 10-problem session + completion | dedupe pool | T11 pass | **FIXED** |
+| 52-06 | Test | preview | all | all | S2 | honest unavailability | Show Answer offered to a child | B3 scaffolding never revisited | Coming Soon + routes | two harnesses re-pointed | 0 `[data-bp]` | **FIXED** |
+| 52-07 | Learn | controls | phones | 375w | S3 | ~44px targets | 42px | button padding | min-height 46px | none | measured 46px | **FIXED** |
+| 52-08 | Learn | every advance | all | all | S3 | keyboard focus follows | focus dropped to body | no focus management | `focus({preventScroll:true})` | scroll position (see O) | verified | **FIXED** |
+
+**O. Harness false positives / simulation limitations (kept separate from product defects).**
+1. `forensic4` mutation tests and `board_audit2` §16/§26/§28/§29/§45 drove the **removed** Test preview — harness defect from an intentional feature removal; re-pointed to the Learn board or retired with a note.
+2. Practice "acceptance" failure across all 13 forensic cases: the harness drove Practice **from the Learn screen** with no active session, so input was correctly ignored. App verified correct; harness fixed.
+3. Six "overlap" hits on SE/landscape Practice hints: probe captured the panel **mid-`rise` animation**; after settling, the gap is 8px. Simulation artifact — added an animation settle to the probe.
+4. Below-fold counts in the matrix are **scroll-position dependent** (the probe measures wherever the walk left the page). The deterministic first-screen measurements in D are the meaningful figures.
+5. `focus()` initially *caused* a real regression (scrolling Next below the fold) — caught by the matrix, root-caused, fixed with `preventScroll`. Recorded because it was a genuine intermediate failure.
+6. T7 rapid-tap remains a known false positive: taps 2–3 land on a correctly gated decision.
+
+**P. Known limitations (not fixed, stated plainly).**
+- **iPhone SE (320×568) regroup state:** board and blocks still cannot both fit one viewport (page ≈1.96× viewport). Improved but not solved; a child must scroll once to compare them.
+- **iPhone SE / landscape intro:** Next remains ~63px / ~123px below the fold — one short flick.
+- **Session length:** 4-digit tracks still run to ~65 steps (5.1 register D-05, deliberately deferred).
+- **No resume:** reload or Safari tab eviction loses lesson progress (5.1 register D-11, deferred — needs its own build).
+- **Carried-forward S3s:** gated-Next has no accessible reason; progress row not a live region; no `h1`; Practice hint L1 is generic when a column has no carry-in; No-Regrouping sessions ask about regrouping without ever teaching it.
+
+**Q. Owner acceptance tests required — see the checklist below.**
+
+**R. Final status.** Code complete; automated audit pass; **not frozen**.
+
+---
+
+# BUILD 5.2 — PRACTICE PRE-DEPLOYMENT CORRECTION
+
+*(Build 5.2 was never pushed; this corrects the unpublished package. Version stays 5.2.)*
+
+**1. Baseline confirmation.** Runtime read `Build 5.2`; all prior 5.2 work verified present (label sizing, height-aware tiers, phone regroup compaction, classroom mode, Learn decomposition lines, 10-problem sessions, Test Coming Soon, touch/focus fixes). `B52_BASELINE` snapshot taken. Final diff: `index.html` 3 lines, `css/styles.css` 5 lines, `js/app.js` 149 lines.
+
+**2. Owner findings (both reproduced in code before editing).**
+- **#1 Regroup auto-fill.** `practiceHandleRegroupTap()` executed `regroupEntries[c.carryPlace] = String(c.carryOut)` the moment the child tapped the correct box. The child supplied the *location*; the **application supplied the value** — an essential mathematical action Practice should develop.
+- **#2 No student-controlled Hint.** `hintLevel` was only ever set from `practice.attempts`. `grep -c "Hint" index.html` returned **0**. A child had to fail on purpose to receive help.
+
+**3. Root causes.** Build 5's carry interaction modelled regrouping as a single "where does it go?" gesture and treated the value as a consequence of a correct tap. The hint ladder was built as an *error-escalation* mechanism only, never surfaced as a child-facing affordance.
+
+**4. Child vs app responsibility (after correction).**
+
+| Action | Child | App |
+|---|---|---|
+| Determine the column answer | **YES** | validate against `answerDigit` |
+| Enter the answer digit | **YES** | validate |
+| Recognise regrouping is needed | understands it | knows it (`carryOut`) |
+| Choose the regroup destination | **YES** | validate against `carryPlace` |
+| **Enter the regroup value** | **YES (new)** | validate against `carryOut` |
+| Enter the final leading digit | **YES** | validate against `finalCarry` |
+| Advance to the next place | — | only after both validations |
+| Request a hint | **YES (new)** | provide, contextual |
+| Compute any digit for the child | **NO** | **NO** (except guided reveal after repeated difficulty) |
+
+**5. Files changed.** `index.html`, `css/styles.css`, `js/app.js`, `AUDIT-REPORT.md`.
+
+**6. Practice state machine — before / after.**
+- *Before:* `digit → carry (tap = value auto-written) → [next column] → final → complete`
+- *After:* `digit → carry-dest (child picks destination) → carry-value (pad re-enables; child types the value) → [next column] → final → complete`
+Only after the child's regroup value validates does Practice advance. `pendingCarryPlace` holds the chosen destination between the two steps and is cleared on every advance.
+
+**7. Regroup entry implementation.** Tapping the correct box now sets `pendingCarryPlace` and moves to `carry-value` — it writes nothing. The pad re-enables, the target regroup cell carries the `is-prompt` marker, and the typed digit is compared to `practiceCol().carryOut`. Wrong values do not advance and do not overwrite the child's attempt: a generic miss gets "Check what 14 ones becomes when you regroup"; typing the answer digit instead gets "That digit stays in the ONES place. What moves to the TENS?" Wrong destinations get "Regroup one place to the LEFT" and stay put. **No arithmetic is performed in the Practice controller** — `carryOut`, `carryPlace`, `finalCarry`, `finalCarryPlace` remain the only sources of truth.
+
+**8. Hint implementation.** A visible `💡 Hint` button (semantic `<button>`, 46px, contextual `aria-label`) sits above the number pad in every working state. Requests walk the existing ladder — L1 gentle cue → L2 conceptual with the vertical Base-10 addend/Sum rows → L3 Before/After exchange — and are **contextual to the phase**: answering a column, choosing a destination, or entering the regroup value each get their own wording. A 4th request offers the guided reveal so nobody is stuck. Requested hints (`hintRequests`) are tracked separately from wrong-answer escalation (`attempts`), and both reset on every advance — verified no stale hint leaks forward.
+
+**9. Back button.** Not added, per owner decision.
+
+**10. Practice session.** Unchanged: 10 problems, "Problem X of 10", completion panel, no auto-restart. Verified the counter does **not** advance on answer-digit or regroup-value entry — only on full problem completion.
+
+**11. Mathematical forensics.** 8 problems (23+14, 59+55, 182+190, 589+476, 405+270, 999+999, 1,008+2,091, 9,999+9,999 — covering no regroup, ones/tens/hundreds regroup, chain regroup, zero-containing addends, final carry) driven entirely through the **new** interaction: every answer digit, destination pick and child-entered regroup value matched independent Python recomputation, and the destination/value step counts equalled the engine's carry count exactly. **Zero defects.**
+
+**12. Mutation test.** (a) `carryOut` falsified 1→7 on an audit-only clone: Practice **rejected the arithmetically correct 1** and **accepted the falsified 7**. (b) `carryPlace` falsified tens→hundreds: TENS was rejected, HUNDREDS accepted. This proves the new regroup validation reads engine metadata rather than recomputing `floor(rawTotal/10)`. Production data never mutated; genuine object restored after.
+
+**13. Adversarial results.** Typing before choosing a destination is ignored (10 digits, no state change); repeated wrong destinations never advance; double-tapping the destination does not skip the value step or write a value; spamming wrong values escalates support rather than passing; repeated hint requests always reach a resolution; hint state resets on advance.
+
+**14. Responsive.** All 15 required Practice states × 10 device profiles (320×568 → 2560×1440 incl. 844×390 landscape) = **150 probes: zero horizontal overflow, zero overlap, zero block escapes, and the pad/Hint never below the fold on any device.** Whole-app total 320 probes with the same clean result; place labels 11.2–18.4px; smallest text in Practice 10.6px; worst scroll ratio 2.92 (iPhone SE).
+
+**15. Accessibility.** Hint is a semantic ≥44px button with a phase-specific `aria-label`; the prompt cell is marked with a class (not colour alone); instruction panel remains `aria-live="polite"` so wrong-answer and wrong-regroup feedback are announced; pad keys ≥44px; keyboard verified for **both** entry types — a digit typed before destination selection is correctly ignored, and the regroup value is accepted only after a valid destination.
+
+**16. State leakage.** Problem→problem carries nothing forward: answer entries, regroup entries, hint level, hint requests, pending destination, attempts, feedback text and the hint panel all reset. Full transition suite re-run (13 tests) with zero leakage and zero page errors.
+
+**17. Regression.** All seven suites pass: wizard, engine, board (both parts + mutation forensics), Learn, Practice, and the 5.1/5.2 audits.
+
+**18. Defects found during correction.** One application defect introduced and fixed mid-work: the board click listener and pad-enable check still referenced the retired `"carry"` phase name, so destination taps silently did nothing — caught by smoke test, fixed, re-verified.
+
+**19. Harness defects (kept separate).** (a) `practice_audit`, `b51_audit` and the matrix harness all drove the retired `carry` phase — expected behaviour change, updated to the two-step model. (b) A hint-reset assertion wrongly expected a *newly requested* hint on the next column to leave the counter at zero; the app was verified correct and the test corrected. (c) Matrix navigation assumed a home button that isn't present on the Learn completion screen.
+
+**20. Remaining known issues (unchanged from 5.2).** iPhone SE cannot fit board + blocks in one viewport at the regroup state; SE/landscape intro leaves Next slightly below the fold; 4-digit Learn sessions run ~65 steps; no resume after reload; carried-forward S3s (gated-Next has no accessible reason, progress row is not a live region, no `h1`, generic hint L1 without carry-in, No-Regrouping sessions ask about regrouping without teaching it).
+
+**Status: pre-deployment correction complete; automated audit pass; NOT frozen.**
