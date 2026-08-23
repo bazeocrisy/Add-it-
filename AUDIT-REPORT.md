@@ -295,3 +295,61 @@ Only after the child's regroup value validates does Practice advance. `pendingCa
 **20. Remaining known issues (unchanged from 5.2).** iPhone SE cannot fit board + blocks in one viewport at the regroup state; SE/landscape intro leaves Next slightly below the fold; 4-digit Learn sessions run ~65 steps; no resume after reload; carried-forward S3s (gated-Next has no accessible reason, progress row is not a live region, no `h1`, generic hint L1 without carry-in, No-Regrouping sessions ask about regrouping without teaching it).
 
 **Status: pre-deployment correction complete; automated audit pass; NOT frozen.**
+
+---
+
+# BUILD 5.2 — REAL-IPHONE MOBILE VERTICAL UX CORRECTION
+
+*(Still Build 5.2 — not 5.3, not Build 6. Corrections layered on the unpublished tree.)*
+
+**1. Baseline confirmation.** Runtime `Build 5.2`; Learn, Practice, the student-entered regroup workflow (`carry-dest → carry-value`, 39 references), the Hint button, and the 10-problem session all verified working before editing; all suites green; `B52C_BASELINE` hashed for a provable diff.
+
+**2. Owner real-device findings addressed.**
+- **Safari toolbar cutting off the number pad.** On the owner's device class the pad's bottom sat **44px below** the Safari-visible viewport (SE −231px, mini −188px). Fixed by reclaiming vertical space, not by shrinking.
+- **Mode cards too tall.** Cards were 220px with 276px of chrome above them, so on SE even the *Learn* card was clipped and Practice was invisible.
+
+**3. Files changed.** `css/styles.css` only (plus `AUDIT-REPORT.md`). **No JavaScript, no HTML** — the engine, Practice correctness, regroup workflow and Hint system are untouched by construction.
+
+**4. Practice mobile changes (≤599px width).** Removed the duplicated skill/size chips from the progress row (they already appear in the coloured header), tightened section gaps 14→8, instruction padding 14→9, hint/pad margins, board grid padding, footer padding, and put the phone header on one row. The Hint button now reads as part of the board+keypad cluster rather than its own band.
+
+**5. Mode-selection mobile changes (≤599px width).** Card padding 28→14/16, icon 2.6rem→1.9rem, tighter internal gaps, CTA given an explicit 44px target, method strip compacted, and pre-card chrome (header, step title) tightened.
+
+**6. Before / after vertical measurements** — *Safari chrome modelled at 88–96px, which the CSS viewport does not account for:*
+
+| Device (visible height) | Pad bottom BEFORE | AFTER | Result |
+|---|---|---|---|
+| iPhone 14 390×844 (748) | 792 (−44) | 653 | **+95px clear — no scrolling** |
+| 15 Pro 393×852 (756) | 792 (−36) | 655 | **+101px clear** |
+| iPhone 11 414×896 (800) | 798 (+2) | 658 | **+142px clear** |
+| Pro Max 430×932 (836) | 802 (+34) | 663 | **+173px clear** |
+| iPhone 8 375×667 (579) | 732 (−153) | −69px | one short scroll |
+| mini 360×640 (544) | 732 (−188) | −105px | one short scroll |
+| SE 320×568 (480) | 711 (−231) | −196px | one scroll |
+
+**On every phone**, after a single scroll the board, Hint and the **complete** keypad are simultaneously fully visible — verified programmatically. Mode cards: **220px → 174px (−21%)**; card 1 now fully visible on every profile including SE, with Practice peeking 25% (SE) to 100% (390px+) as the scroll affordance.
+
+**7. Width × height device matrix.** 13 profiles (320×568, 360×640, 375×667, 390×844, 393×852, 414×896, 430×932, 844×390 landscape, 768×1024, 1024×768, 1366×768, 1920×1080, 2560×1440) × 33 states = **416 probes**: zero horizontal overflow, zero overlap, zero base-ten escapes, zero choice-row splits; place labels 11.2–18.4px; smallest Practice text 10.6px. *(This matrix measures the CSS viewport; the chrome-modelled table in §6 is the honest Safari figure.)*
+
+**8. Practice state matrix.** All 15 required states — initial entry, correct feedback, wrong feedback, hints 1/2/3, destination selection, wrong destination, regroup-value entry, wrong value, hint during regroup, carry displayed, TENS/HUNDREDS/THOUSANDS, final digit, problem completion, session completion — **195 probes**, clean on every profile.
+
+**9. Learn regression.** Full suite pass: lesson sequence, regroup decision at every applicable column, Yes/No side-by-side, Base-10 visuals, celebrations, Next/Back, mathematical accuracy.
+
+**10. Practice regression.** Full suite plus the Practice-correction suite pass: 10-problem session, student enters answer → picks destination → **enters the regroup value**, hint ladder, wrong-answer blocking, guided reveal, keyboard, touch, no leakage.
+
+**11. Accessibility.** Nothing instructional was shrunk. Digits 20–23.2px on phones (unchanged), place labels unchanged, pad keys **46px**, Hint **44px**, mode CTA **44px**, footer nav **44px**. Contrast, focus visibility and keyboard navigation unchanged.
+
+**12–16. Tablet / laptop / desktop / classroom.** Verified **byte-identical** to the pre-correction tree at 768, 1024, 1366×768, 1920×1080 and 2560×1440 when the same problem is rendered. All mobile rules are inside `@media (max-width: 599px)`.
+
+**17. Mathematical forensics.** 13 problems re-verified end to end through the two-step regroup interaction against independent Python recomputation: **zero defects**.
+
+**18. Application defects found.** None introduced. (The correction is CSS-only.)
+
+**19. Harness defects found.** The pre-correction mathematical-forensics harness still solved with the retired single-step `carry` phase and reported ten false "practice solve" failures; verified as an expected behaviour change, harness updated, re-run clean.
+
+**20. Simulation artifacts found.** Two large-display cells first appeared "CHANGED" (tablet1024 board 265→263, desktop 401→381); forcing the same problem showed them **identical** — the difference was a randomly generated 4-track vs 3-track problem, not a layout change.
+
+**21. Known issues.** iPhone SE (320×568), 12 mini (360×640) and iPhone 8 (375×667) still require one short scroll to reach the whole keypad with Safari's toolbars visible — arithmetically unavoidable without shrinking the board or instruction text, which the brief forbids; board + Hint + full pad are co-visible after that single scroll. Carried forward: SE regroup co-visibility in Learn, 4-digit Learn sessions ~65 steps, no resume after reload, and the five S3 accessibility/instructional items.
+
+**22. Real-device tests still required (SIMULATED RESPONSIVE TESTING ONLY — not a real-device pass).** On the actual iPhone in Safari: confirm the full keypad is reachable in portrait with toolbars visible; scroll once and confirm board + Hint + keypad sit together; check the mode screen shows all of Learn plus a slice of Practice; rotate to landscape mid-regroup; confirm tap accuracy on regroup boxes and pad keys; verify nothing is hidden behind the home indicator.
+
+**23. Status: CODE COMPLETE — AUTOMATED AUDIT PASS — READY FOR OWNER REAL-DEVICE ACCEPTANCE — NOT FROZEN.**
