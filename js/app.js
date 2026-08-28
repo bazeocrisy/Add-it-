@@ -1,5 +1,15 @@
 /* =========================================================
-   Add It! — Build 5.2: responsive + instructional remediation
+   Add It! — Build 5.2.1: desktop composition + vertical representation
+   Targeted correction release on top of Build 5.2 (which passed its
+   re-baseline forensic audit). 5.2.1 changes presentation only:
+     1 desktop Learn composition (classroom rules were firing at 1920)
+     2 vertical problem representation in Learn instruction panels
+     3 D-01 reserved feedback space so answering never moves "Next"
+     4 D-02 Before/After label readability
+     5 low-risk accessibility items
+   Engine, generator, metadata, board arithmetic, Practice state machine,
+   Hint ladder and session behaviour are untouched.
+   Earlier header (Build 5.2): responsive + instructional remediation
    Base: Build 5.1 (all Learn/Practice behaviour preserved).
    5.2 addresses the Build 5.1 forensic audit:
      A place-value labels legible (soft-hyphen wrapping, not shrinking)
@@ -65,7 +75,7 @@
 (function () {
   "use strict";
 
-  const BUILD_NUMBER = "Build 5.2";
+  const BUILD_NUMBER = "Build 5.2.1";
 
   /* =========================================================
      SECTION A — SHELL + WIZARD (Build 1, preserved)
@@ -753,12 +763,19 @@
         }
         const has = regVal !== "";
         const c = cell("regroup", 2, t, "ab-regroup" + (has ? " is-shown" : " is-empty"), regVal);
+        // Build 5.2.1: a regroup box is the DESTINATION of a regrouped value.
+        // Nothing regroups into ONES, so ONES never shows a child-visible box.
+        // The grid cell is still emitted (and reserves identical space) so no
+        // label, digit, comma, rule, plus sign or answer box shifts.
+        const isVoidDestination = (placeName === "ones");
+        if (isVoidDestination) c.classList.add("ab-regroup-void");
         if (entered) c.classList.add("is-entered");
         if (!has) {
           c.classList.add("ab-blank-ok");
-          if (opts.tapRegroups) c.classList.add("ab-tap");
+          if (opts.tapRegroups && !isVoidDestination) c.classList.add("ab-tap");
         }
-        if (opts.promptCell && opts.promptCell.row === "regroup" && opts.promptCell.place === placeName) {
+        if (!isVoidDestination && opts.promptCell &&
+            opts.promptCell.row === "regroup" && opts.promptCell.place === placeName) {
           c.classList.add("is-prompt");
         }
       }
@@ -1070,6 +1087,14 @@
     push({
       phase: "intro", place: null,
       title: "Let\u2019s add " + problem.topNumber + " + " + problem.bottomNumber,
+      // Build 5.2.1: the opening problem is shown vertically so the
+      // instruction reinforces the written algorithm the board teaches.
+      // Values come straight from the engine's problem object.
+      verticalEquation: {
+        rows: [{ value: String(problem.topNumber) },
+               { value: String(problem.bottomNumber), operator: "+" }],
+        showRule: true
+      },
       // One line per addend so each explanation lines up with its row on the board.
       bodyLines: [
         problem.topNumber + " means " + decomposeByPlace(topStr, true) + ".",
@@ -1113,12 +1138,22 @@
       const eq = (c.carryIn > 0 ? c.carryIn + " " + u(c.carryIn) + " + " : "") +
                  c.topDigit + " " + u(c.topDigit) + " + " + c.bottomDigit + " " + u(c.bottomDigit) +
                  " = " + c.rawTotal + " " + u(c.rawTotal);
+      // Build 5.2.1: the column sum is shown stacked, mirroring the algorithm
+      // (top + bottom, ruled, sum). Digits/total come from engine metadata.
+      const vqRows = [];
+      if (c.carryIn > 0) vqRows.push({ value: String(c.carryIn), unit: u(c.carryIn), carried: true });
+      vqRows.push({ value: String(c.topDigit), unit: u(c.topDigit) });
+      vqRows.push({ value: String(c.bottomDigit), unit: u(c.bottomDigit), operator: "+" });
       push({
         phase: "add", place,
         title: i === 0 ? "Start with the ONES" : "Move left to the " + P,
         body: (c.carryIn > 0
-                ? "Don\u2019t forget the " + c.carryIn + " " + u(c.carryIn) + " we regrouped. "
-                : "") + eq + ".",
+                ? "Don\u2019t forget the " + c.carryIn + " " + u(c.carryIn) + " we regrouped."
+                : ""),
+        verticalEquation: {
+          rows: vqRows, showRule: true,
+          sum: { value: String(c.rawTotal), unit: u(c.rawTotal) }
+        },
         baseTen: baseTenForColumn(problem, i, "groups"),
         board: board(place)
       });
@@ -1210,6 +1245,55 @@
 
     steps.forEach(function (st, n) { st.index = n; st.total = steps.length; });
     return steps;
+  }
+
+  /* ---------- Vertical instructional equation (Build 5.2.1) ----------
+     Renders a small stacked "top + bottom = sum" block that mirrors the
+     written algorithm. It is a REPRESENTATION, not a second board: no
+     place labels, no entry cells, no arithmetic. Every value is passed
+     in from engine metadata by buildLessonSteps.
+     Accessible as one sentence; the visual grid is hidden from AT. */
+  function renderVerticalEquation(container, vq) {
+    container.innerHTML = "";
+    if (!vq) { container.hidden = true; return; }
+    container.hidden = false;
+    const wrap = document.createElement("div");
+    wrap.className = "vq";
+    wrap.setAttribute("role", "img");
+
+    const say = [];
+    function row(r, cls) {
+      const op = document.createElement("span");
+      op.className = "vq-op";
+      op.textContent = r.operator || "";
+      wrap.appendChild(op);
+      const val = document.createElement("span");
+      val.className = "vq-val" + (cls ? " " + cls : "");
+      val.textContent = formatNumber(r.value);
+      if (r.unit) {
+        const u = document.createElement("span");
+        u.className = "vq-unit";
+        u.textContent = r.unit;
+        val.appendChild(u);
+      }
+      wrap.appendChild(val);
+      say.push((r.operator ? "plus " : "") + r.value + (r.unit ? " " + r.unit : ""));
+    }
+    vq.rows.forEach(function (r) { row(r, r.carried ? "vq-carried" : ""); });
+    if (vq.showRule) {
+      const rule = document.createElement("span");
+      rule.className = "vq-rule";
+      wrap.appendChild(rule);
+    }
+    if (vq.sum) { row(vq.sum, ""); say.push("equals " + vq.sum.value + (vq.sum.unit ? " " + vq.sum.unit : "")); }
+    wrap.setAttribute("aria-label", say.join(" ") + ".");
+    Array.from(wrap.children).forEach(function (n) { n.setAttribute("aria-hidden", "true"); });
+    container.appendChild(wrap);
+  }
+
+  // Display-only thousands separator, matching the board's comma treatment.
+  function formatNumber(v) {
+    return String(v).length > 3 ? Number(v).toLocaleString("en-US") : String(v);
   }
 
   /* ---------- Learn example selection ----------
@@ -1307,6 +1391,8 @@
     if (star) star.hidden = !st.celebrate;
 
     el("learn-title").textContent = st.title;
+    renderVerticalEquation(el("learn-vertical"), st.verticalEquation || null);
+
     const bodyEl = el("learn-body");
     bodyEl.innerHTML = "";
     if (st.bodyLines) {
@@ -1323,6 +1409,7 @@
       bodyEl.classList.remove("li-body-stacked");
       bodyEl.textContent = st.body || "";
     }
+    bodyEl.hidden = !(st.bodyLines || (st.body && st.body.length));
     const note = el("learn-note");
     note.textContent = st.note || ""; note.hidden = !st.note;
     const why = el("learn-why");
@@ -1334,7 +1421,8 @@
     choices.innerHTML = "";
     correction.hidden = true;
     correction.textContent = "";
-    correction.classList.remove("is-correct", "is-corrective");
+    correction.classList.remove("is-correct", "is-corrective", "is-reserved");
+    correction.removeAttribute("aria-hidden");
     const answeredValue = learn.answered[learnKey()];
     const answered = answeredValue !== undefined;
     choices.classList.remove("li-choices-2", "li-choices-3", "li-choices-4");
@@ -1355,6 +1443,19 @@
         b.addEventListener("click", function () { answerLearnChoice(ch.value); });
         choices.appendChild(b);
       });
+      if (!answered) {
+        // Build 5.2.1 (D-01): reserve the feedback line's REAL height now, using
+        // the longest message variant, hidden from sight and from assistive
+        // tech. Answering then only reveals it, so the panel never grows and
+        // "Next" stays exactly where the child last saw it.
+        const variantA = "That\u2019s right! " +
+          st.interaction.correction.replace(/^Addition starts/, "Addition always starts");
+        const variantB = "Almost. " + st.interaction.correction;
+        correction.textContent = variantA.length >= variantB.length ? variantA : variantB;
+        correction.hidden = false;
+        correction.classList.add("is-reserved");
+        correction.setAttribute("aria-hidden", "true");
+      }
       if (answered) {
         Array.from(choices.querySelectorAll(".li-choice")).forEach(b => b.disabled = true);
         if (answeredValue === st.interaction.correct) {
@@ -1381,11 +1482,28 @@
     renderBaseTenModel(el("learn-baseten"), st.baseTen || null);
 
     el("learn-prev").disabled = (learn.exampleIndex === 0 && learn.stepIndex === 0);
-    el("learn-next").disabled = !!(st.interaction && !answered);
+    setNextGated(!!(st.interaction && !answered));
     el("learn-next").textContent =
       (learn.stepIndex === learn.steps.length - 1)
         ? (learn.exampleIndex === 3 ? "Finish \u2192" : "Next Example \u2192")
         : "Next \u2192";
+  }
+
+  // Build 5.2.1: gating the Next button and describing WHY it is unavailable
+  // must happen together, or assistive tech is told the button is still
+  // disabled after the child has answered.
+  function setNextGated(gated) {
+    const nextBtn = el("learn-next");
+    nextBtn.disabled = gated;
+    if (gated) {
+      nextBtn.setAttribute("aria-disabled", "true");
+      nextBtn.setAttribute("title", "Answer the question above to continue");
+      nextBtn.setAttribute("aria-describedby", "learn-choices");
+    } else {
+      nextBtn.removeAttribute("aria-disabled");
+      nextBtn.removeAttribute("title");
+      nextBtn.removeAttribute("aria-describedby");
+    }
   }
 
   function answerLearnChoice(value) {
@@ -1393,7 +1511,8 @@
     if (!st.interaction || learn.answered[learnKey()]) return;
     const correction = el("learn-correction");
     learn.answered[learnKey()] = value;
-    correction.classList.remove("is-correct", "is-corrective");
+    correction.classList.remove("is-correct", "is-corrective", "is-reserved");
+    correction.removeAttribute("aria-hidden");
     if (value === st.interaction.correct) {
       correction.textContent = "That’s right! " + st.interaction.correction.replace(/^Addition starts/, "Addition always starts");
       correction.classList.add("is-correct");
@@ -1408,7 +1527,7 @@
       if (b.dataset.value === st.interaction.correct) b.classList.add("li-correct");
       if (b.dataset.value === value && value !== st.interaction.correct) b.classList.add("li-selected-wrong");
     });
-    el("learn-next").disabled = false;
+    setNextGated(false);
   }
 
   // Build 5.2: after an advance the panel re-renders, which drops focus to the
@@ -1995,6 +2114,7 @@
     problemKey,
     validateProblem,
     renderAdditionBoard,
+    renderVerticalEquation,
     getBoardColumns,
     boardTrackCount,
     buildLessonSteps,

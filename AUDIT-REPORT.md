@@ -353,3 +353,45 @@ Only after the child's regroup value validates does Practice advance. `pendingCa
 **22. Real-device tests still required (SIMULATED RESPONSIVE TESTING ONLY — not a real-device pass).** On the actual iPhone in Safari: confirm the full keypad is reachable in portrait with toolbars visible; scroll once and confirm board + Hint + keypad sit together; check the mode screen shows all of Learn plus a slice of Practice; rotate to landscape mid-regroup; confirm tap accuracy on regroup boxes and pad keys; verify nothing is hidden behind the home indicator.
 
 **23. Status: CODE COMPLETE — AUTOMATED AUDIT PASS — READY FOR OWNER REAL-DEVICE ACCEPTANCE — NOT FROZEN.**
+
+---
+
+# BUILD 5.2.1 — TARGETED CORRECTION + REGRESSION PASS
+
+**Baseline:** Build 5.2, hashes `6faec681…` (index) / `74ba6b40…` (css) / `5e90d39a…` (js). **Files changed:** `index.html` (6 lines), `css/styles.css` (80), `js/app.js` (129), this report. Engine, generator, metadata, board arithmetic, Practice state machine, Hint ladder, session behaviour and duplicate prevention untouched.
+
+**Correction 1 — desktop Learn composition.** *Root cause:* the classroom block was gated at `min-width: 1800px`, so an ordinary 1920 desktop received projector-scale treatment (1280px panel, 26/40px padding). *Fix:* classroom gate moved to 2200px; a new 900–2199px desktop rule caps the panel at 640px with tighter padding and gives the board larger grid tracks and digits. *Result:* panel/board area ratio at 1920 **1.90× → 1.19×**; the math is now the visual anchor.
+
+**Correction 2 — vertical representation.** `buildLessonSteps` now attaches a `verticalEquation` (rows + optional sum) built purely from engine metadata; `renderVerticalEquation` draws a small stacked block — not a second board (no place labels, entry cells or arithmetic). The opening problem renders stacked; the column `add` step renders `4 ones / + 5 ones / ──── / 9 ones`. Explanatory prose ("624 means 6 hundreds…") deliberately remains prose. Verified across 14+35, 68+37, 99+99, 184+583, 347+268, 999+999, 1234+4321, 4876+3759, 9999+9999, 105+203, 1005+2030: right-aligned, correct operator and rule, commas for 4-digit, zero overflow, one accessible sentence per block.
+
+**Correction 3 — D-01.** *Root cause:* the correction message was inserted into normal flow on answering, reflowing the panel. *Fix:* the longest message variant is rendered up front, `visibility:hidden` and `aria-hidden`, then revealed on answering; the line was also compacted. *Result:* panel growth **+80px → +4px**; "Next" moves **0–4px** instead of 80.
+
+**Correction 4 — D-02.** Before/After headings **9.3px → 13.1px** at every width, zero block escapes, zero overflow.
+
+**Accessibility items:** badge contrast **4.48 → 6.09** FIXED · gated Next now carries `aria-disabled`, `title`, `aria-describedby` FIXED · progress rows are `role="status" aria-live="polite"` FIXED · visually-hidden `h1` added FIXED · 200% zoom overflow **39px → 0px** FIXED (incidental benefit of the narrower desktop panel).
+
+**Defect found and fixed during this pass:** the new `aria-disabled` went stale after answering (button enabled but still announced as disabled). Caught by the regression harness, root-caused, and fixed with a single `setNextGated()` helper so `disabled` and its ARIA can never diverge.
+
+**Regression:** all seven suites, the Practice-correction suite, mathematical forensics (zero defects) and 13 transition tests pass. Device matrix 416 probes: overflow 0, overlap 0, block escapes 0, choice splits 0, Practice states below fold 0, place labels ≥11.2px — all equal to or better than 5.2.
+
+**Harness/simulation notes:** two suites timed out clicking a Next button legitimately below the fold at 1366×768 (scroll-into-view added); `learn_audit` read the column equation from prose that has moved into the vertical representation (expected behaviour change, harness updated). No production code was changed to satisfy a harness.
+
+**Status: BUILD 5.2.1 — automated regression pass — ready for owner real-device acceptance — NOT FROZEN.**
+
+### Build 5.2.1 — Regroup Box Rule
+
+**Rule implemented:** a regroup box is the DESTINATION of a regrouped value, so it renders only above places that can receive one (TENS, HUNDREDS, THOUSANDS, TEN-THOUSANDS). **ONES never shows a child-visible regroup box** — nothing regroups into it. The structural grid cell is still emitted so alignment is untouched; it is `visibility:hidden` with `pointer-events:none`.
+
+**Presentation-only.** No arithmetic, engine, generator or metadata change; the renderer reads the same `carryPlace`/`carryOut` fields as before.
+
+**Verified visibility by board width** (Learn and Practice): 2-digit → TENS visible, ONES hidden · 3-digit → HUNDREDS + TENS visible, ONES hidden · 4-digit → THOUSANDS + HUNDREDS + TENS visible, ONES hidden · 5-track final carry (9,999+9,999) → TEN-THOUSANDS + THOUSANDS + HUNDREDS + TENS visible, ONES hidden · no-regroup problems → same rule.
+
+**No-shift proof:** board geometry captured pre- and post-change for 184+583, 9,999+9,999, 1,008+2,091 and 68+347 — every place label, addend digit, comma, answer box, regroup cell, horizontal rule, plus sign, active highlight and overall grid box is **pixel-identical**.
+
+**Practice interaction:** ONES is never tappable (`ab-tap` withheld, `pointer-events:none`) and never receives the prompt marker; tapping ONES during destination selection does not advance and writes nothing. Destination boxes stay neutral — not highlighted, not interactive — until a regroup is actually required, and they never appear/disappear based on whether regrouping is needed, so they cannot leak the answer.
+
+**Learn interaction:** at the "Do we need to regroup?" step, destination boxes are present but empty and unhighlighted for both a regrouping problem (12 ones) and a non-regrouping problem (7 ones) — identical presentation, no give-away.
+
+**Cross-device:** rule and alignment verified at 320/390/430/768/1366/1920/2560 — ONES box visible count 0 everywhere, all five board rows aligned, zero horizontal overflow.
+
+**Regression:** all seven suites, the Practice-correction suite, mathematical forensics (zero defects) and 13 transition tests pass.
