@@ -451,6 +451,11 @@ h1,h2,h3{color:var(--navy);}
 .ab-regroup.is-entered{border-style:solid;border-color:var(--orange);background:var(--soft-orange);}
 .ab-cell.is-prompt{outline:3px solid var(--royal-blue);outline-offset:2px;border-radius:10px;animation:promptPulse 1.2s ease-in-out infinite;}
 .ab-regroup.ab-tap{border-color:var(--royal-blue);background:#fff;cursor:pointer;animation:promptPulse 1.2s ease-in-out infinite;}
+/* Build 5.2.1: give the tappable destination box a >=44px hit area without
+   resizing the box or moving anything. The overlay stays inside its own
+   grid track (half the column gap each side), so it cannot steal a
+   neighbouring destination's tap. */
+.ab-regroup.ab-tap::after{content:"";position:absolute;inset:-12px -5px;border-radius:12px;}
 .ab-regroup.ab-tap:hover{background:var(--soft-blue);}
 @keyframes promptPulse{0%,100%{box-shadow:0 0 0 0 rgba(70,103,242,.35);}50%{box-shadow:0 0 0 7px rgba(70,103,242,0);}}
 #practice-board-done{margin:6px 0 14px;}
@@ -482,6 +487,7 @@ h1,h2,h3{color:var(--navy);}
   .learn-workspace,.practice-hint{padding-top:8px;padding-bottom:8px;}
   .baseten{padding:8px 10px 6px;}
   .ab-grid{padding-top:10px;padding-bottom:10px;}
+  .practice-decision{gap:6px;margin-top:0;}
 }
 /* Very short viewports (iPhone SE class, small browser windows): compress the
    board's empty rows and chrome. Digits stay 20px; nothing instructional shrinks. */
@@ -570,6 +576,25 @@ h1,h2,h3{color:var(--navy);}
   font-size:1.35rem;margin:0 0 14px;}
 .coming-note{font-weight:700;color:var(--muted);max-width:460px;margin:0 auto 20px;line-height:1.5;}
 
+/* Build 5.2.1: Practice regroup-decision. The child must explicitly answer
+   "Do we need to regroup?" at every column. Compact, connected to the board
+   (not a second Learn-style panel), Yes/No side by side, >=44px targets. */
+.practice-decision{width:min(420px,100%);margin:2px auto 0;display:flex;
+  flex-direction:column;align-items:center;gap:8px;animation:rise .2s ease;}
+.pd-question{font-family:var(--font-display);font-weight:800;color:var(--navy);
+  margin:0;font-size:1.05rem;text-align:center;}
+.pd-buttons{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.pd-btn{font-family:var(--font-display);font-weight:800;font-size:1.05rem;
+  min-width:96px;min-height:48px;padding:8px 22px;border-radius:14px;
+  border:3px solid var(--soft-blue);background:#fff;color:var(--navy);
+  box-shadow:var(--shadow-soft);transition:transform .1s ease,border-color .15s ease;}
+.pd-btn:hover{transform:translateY(-2px);}
+.pd-btn:active{transform:translateY(0);}
+.pd-yes{border-color:var(--green);}
+.pd-yes:hover{border-color:var(--green-dark);background:var(--soft-green);}
+.pd-no{border-color:var(--coral);}
+.pd-no:hover{border-color:var(--orange-dark);background:var(--soft-orange);}
+
 .practice-actions{display:flex;justify-content:center;margin:2px 0 2px;}
 .hint-btn{background:var(--soft-yellow);border-color:var(--gold);color:var(--navy);min-height:46px;
   display:inline-flex;align-items:center;justify-content:center;gap:6px;}
@@ -601,6 +626,8 @@ h1,h2,h3{color:var(--navy);}
   #screen-practice .practice-hint{padding:8px 12px;gap:6px;}
   #screen-practice .learn-board{margin:0;}
   #screen-practice .ab-grid{padding:10px 10px 12px;row-gap:1px;}
+  #screen-practice .practice-decision{margin-top:0;gap:6px;}
+  #screen-practice .pd-btn{min-height:44px;padding:8px 18px;}
   /* Hint sits with the keypad as one control cluster, not in its own band. */
   #screen-practice .practice-actions{margin:0;}
   #screen-practice .hint-btn{min-height:44px;padding:8px 22px;}

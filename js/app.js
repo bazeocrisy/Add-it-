@@ -1590,10 +1590,14 @@
   const practice = {
     active: false, problem: null, colIndex: 0,
     sessionLength: PRACTICE_SESSION_LENGTH, sessionDone: false,
-    // "digit" | "carry-dest" | "carry-value" | "final" | "complete"
+    // "digit" | "regroup-decision" | "carry-dest" | "carry-value" | "final" | "complete"
     // Build 5.2 correction: regrouping is now TWO child actions — choose the
     // destination (carry-dest) and then ENTER the value (carry-value). The app
     // validates both against engine metadata; it never writes either for them.
+    // Build 5.2.1 (this pass): a THIRD child action now precedes those two —
+    // at every column, correct or not, the child must explicitly answer
+    // "Do we need to regroup?" (regroup-decision) before any destination or
+    // value entry can begin. The app never infers the decision for them.
     phase: "digit",
     pendingCarryPlace: null,     // destination the child selected, awaiting its value
     hintRequests: 0,             // student-requested hints for the current step
@@ -1679,6 +1683,12 @@
         body: "What do we regroup to the " + placeUpper(practice.pendingCarryPlace) + " place?"
       };
     }
+    if (practice.phase === "regroup-decision") {
+      return {
+        title: "Do we need to regroup?",
+        body: "Think about the total you found for the " + placeUpper(c.place) + " place."
+      };
+    }
     return {
       title: (practice.colIndex === 0 ? "Start with the ONES" : "Now the " + placeUpper(c.place)),
       body: "Add the " + placeUpper(c.place) + "." +
@@ -1693,11 +1703,21 @@
     if (practice.phase === "digit") {
       active = practiceCol().place;
       prompt = { row: "answer", place: active };
+    } else if (practice.phase === "regroup-decision") {
+      // Build 5.2.1: the completed place stays highlighted for reference, but
+      // NOTHING about the regroup destination boxes may differ here between a
+      // regrouping and a non-regrouping problem — tap stays false and no
+      // promptCell is set, so every destination box renders in its ordinary
+      // neutral state regardless of what the correct decision will be.
+      active = practiceCol().place;
     } else if (practice.phase === "carry-dest") {
       active = practiceCol().place;
       tap = true;
     } else if (practice.phase === "carry-value") {
-      active = practiceCol().place;
+      // Build 5.2.1: the child is now writing into the DESTINATION column, so
+      // the visual emphasis follows there. Keeping it on the source column
+      // pointed at ONES while the prompt asked for the TENS box.
+      active = practice.pendingCarryPlace;
       prompt = { row: "regroup", place: practice.pendingCarryPlace };
     } else if (practice.phase === "final") {
       active = p.finalCarryPlace;
@@ -1750,6 +1770,22 @@
         text: "10 " + u(10) + " make 1 " + unitWord(c.carryPlace, 1) + ". Tap the " +
               placeUpper(c.carryPlace) + " box.",
         baseTen: baseTenForColumn(p, practice.colIndex, "exchange") };
+    }
+    if (practice.phase === "regroup-decision") {
+      // Levels 1-2 support the CONCEPT without revealing this column's
+      // answer; level 3 is procedural (consistent with every other phase's
+      // ladder) and a 4th request resolves the step via guided reveal.
+      if (lvl === 1) return { level: 1,
+        text: "Look at the total you found for the " + placeUpper(c.place) + " place.", baseTen: null };
+      if (lvl === 2) return { level: 2,
+        text: "Is that total 10 or more, or is it less than 10?",
+        baseTen: baseTenForColumn(p, practice.colIndex, "groups") };
+      return { level: 3,
+        text: c.rawTotal + " " + u(c.rawTotal) + " is " +
+              (c.carryOut > 0
+                ? "10 or more, so tap YES \u2014 we regroup."
+                : "less than 10, so tap NO \u2014 we don\u2019t regroup here."),
+        baseTen: baseTenForColumn(p, practice.colIndex, "groups") };
     }
     // digit phase
     if (lvl === 1) {
@@ -1814,12 +1850,11 @@
       practice.answerEntries[c.place] = String(d);
       practice.lastFeedback = "ok:" + ["Nice!", "Great!", "You got it!"][(practice.colIndex + practice.count) % 3];
       practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
-      if (c.carryOut > 0) {
-        practice.phase = "carry-dest";
-        renderPractice();
-      } else {
-        practiceAdvanceColumn();
-      }
+      // Build 5.2.1: the app no longer infers whether to regroup from
+      // carryOut and branch the phase itself. Every column now goes through
+      // an explicit child decision, regardless of what that decision will be.
+      practice.phase = "regroup-decision";
+      renderPractice();
       return;
     }
     // Wrong: supportive, misconception-aware. Signatures are derived from
@@ -1847,7 +1882,33 @@
   }
 
   function practiceHandleRegroupTap(place) {
-    if (!practice.active || practice.phase !== "carry-dest") return;
+    if (!practice.active) return;
+    // Build 5.2.1: tapping a regroup box before destination selection used to
+    // be discarded in silence, so the child believed the box was broken. Say
+    // what to do next — WITHOUT revealing whether regrouping will be needed.
+    if (practice.phase === "digit") {
+      const c = practiceCol();
+      practice.lastFeedback = "try:First find the " + placeUpper(c.place) +
+        " total and write it below the line.";
+      renderPractice();
+      return;
+    }
+    if (practice.phase === "carry-value") {
+      practice.lastFeedback = "try:Use the number keys to write the regrouped amount above the " +
+        placeUpper(practice.pendingCarryPlace) + ".";
+      renderPractice();
+      return;
+    }
+    if (practice.phase === "regroup-decision") {
+      // A tap here — on either a real destination box or the wrong-moment
+      // instinct to jump ahead — gets the same neutral redirection whether
+      // or not this column will actually need to regroup, so it can't leak
+      // the coming Yes/No answer.
+      practice.lastFeedback = "try:First answer \u201CDo we need to regroup?\u201D using the buttons.";
+      renderPractice();
+      return;
+    }
+    if (practice.phase !== "carry-dest") return;
     const c = practiceCol();
     if (place === c.carryPlace) {
       // Correct DESTINATION only. The app does not write the value — the child
@@ -1867,10 +1928,56 @@
     }
   }
 
+  // Build 5.2.1: the explicit regroup-decision. The child must say Yes or No
+  // for the CURRENT column; the app only ever compares the answer to
+  // engine-provided carryOut metadata — it never recomputes the arithmetic.
+  function practiceHandleRegroupDecision(isYes) {
+    if (!practice.active || practice.phase !== "regroup-decision") return;
+    const c = practiceCol();
+    const needsRegroup = c.carryOut > 0;
+    if (Boolean(isYes) === needsRegroup) {
+      practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
+      if (needsRegroup) {
+        practice.lastFeedback = "ok:Yes \u2014 " + c.rawTotal + " " + unitWord(c.place, c.rawTotal) +
+          " is 10 or more, so we regroup.";
+        practice.phase = "carry-dest";
+        renderPractice();
+      } else {
+        practice.lastFeedback = "ok:That\u2019s right \u2014 " + c.rawTotal + " " + unitWord(c.place, c.rawTotal) +
+          " is less than 10, so we don\u2019t regroup.";
+        practiceAdvanceColumn();
+      }
+      return;
+    }
+    // Wrong decision: concise, mathematically specific, never advances, and
+    // never activates or reveals a destination.
+    practice.attempts++;
+    practice.hintLevel = Math.min(practice.attempts, 3);
+    practice.lastFeedback = "try:Check again. " + c.rawTotal + " " + unitWord(c.place, c.rawTotal) + " is " +
+      (needsRegroup ? "10 or more, so we need to regroup." : "less than 10, so we don\u2019t regroup here.");
+    if (practice.attempts >= 4) practiceGuidedReveal();
+    else renderPractice();
+  }
+
   // After 3 failed attempts + full hint ladder: show the move, explain, go on.
   function practiceGuidedReveal() {
     const p = practice.problem;
     practice.guidedThisProblem = true;
+    if (practice.phase === "regroup-decision") {
+      const c = practiceCol();
+      practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
+      if (c.carryOut > 0) {
+        practice.lastFeedback = "guided:" + c.rawTotal + " " + unitWord(c.place, c.rawTotal) +
+          " is 10 or more, so we do regroup. Let\u2019s find where it goes together.";
+        practice.phase = "carry-dest";
+        renderPractice();
+      } else {
+        practice.lastFeedback = "guided:" + c.rawTotal + " " + unitWord(c.place, c.rawTotal) +
+          " is less than 10, so we don\u2019t regroup here. Let\u2019s keep going together.";
+        practiceAdvanceColumn();
+      }
+      return;
+    }
     if (practice.phase === "carry-dest") {
       const c = practiceCol();
       practice.pendingCarryPlace = c.carryPlace;
@@ -1899,14 +2006,22 @@
       practiceCompleteProblem();
       return;
     }
+    // Build 5.2.1 (targeted P0 correction): this fallback is reached when
+    // guided reveal fires from the "digit" phase (repeated wrong attempts or
+    // repeated Hint requests on the answer digit itself). It must resolve
+    // ONLY the digit — the child still owns the regroup-decision that comes
+    // next — so this now mirrors practiceHandleDigit()'s correct-answer
+    // transition into "regroup-decision" exactly (same reset fields, same
+    // next phase) instead of branching on c.carryOut to guess the decision
+    // for the child. Keep these two transitions in sync if either changes.
     const c = practiceCol();
     practice.answerEntries[c.place] = String(c.answerDigit);
     practice.lastFeedback = "guided:The digit is " + c.answerDigit + " \u2014 " +
       (c.carryIn > 0 ? "with the regrouped " + unitWord(c.place, 1) + " counted, " : "") +
       "the total is " + c.rawTotal + ". Let\u2019s keep going together.";
-    practice.attempts = 0; practice.hintLevel = 0;
-    if (c.carryOut > 0) { practice.phase = "carry-dest"; renderPractice(); }
-    else practiceAdvanceColumn();
+    practice.attempts = 0; practice.hintLevel = 0; practice.hintRequests = 0;
+    practice.phase = "regroup-decision";
+    renderPractice();
   }
 
   /* ---------- Student-controlled Hint (Build 5.2 correction) ----------
@@ -1951,8 +2066,8 @@
     el("practice-count").textContent =
       "Problem " + Math.min(practice.count, practice.sessionLength) + " of " + practice.sessionLength;
     const placeChip = el("practice-place");
-    if (practice.phase === "digit" || practice.phase === "carry-dest"
-        || practice.phase === "carry-value") {
+    if (practice.phase === "digit" || practice.phase === "regroup-decision"
+        || practice.phase === "carry-dest" || practice.phase === "carry-value") {
       placeChip.textContent = placeUpper(practiceCol().place); placeChip.hidden = false;
     } else if (practice.phase === "final") {
       placeChip.textContent = placeUpper(p.finalCarryPlace); placeChip.hidden = false;
@@ -2016,6 +2131,12 @@
 
     renderAdditionBoard(el("practice-board"), p, practiceBoardOptions());
 
+    // Build 5.2.1: the Yes/No regroup-decision controls. Shown ONLY during
+    // regroup-decision, for every column, whether or not it actually needs
+    // to regroup — its presence/absence never varies by the answer.
+    const decisionBox = el("practice-decision");
+    if (decisionBox) decisionBox.hidden = practice.phase !== "regroup-decision";
+
     // Hint control: always available, labelled with how much help is showing.
     const hintBtn = el("practice-hint-btn");
     if (hintBtn) {
@@ -2028,11 +2149,15 @@
         ? "Hint: where does the regrouped value go?"
         : (practice.phase === "carry-value"
             ? "Hint: what value do we regroup?"
-            : "Hint for the current place"));
+            : (practice.phase === "regroup-decision"
+                ? "Hint: do we need to regroup?"
+                : "Hint for the current place")));
     }
 
     // The pad is live for answer digits, the final leading digit, AND the
-    // regroup value the child now types themselves.
+    // regroup value the child now types themselves. It stays disabled (but
+    // visible, matching the existing carry-dest treatment) during the
+    // regroup-decision phase, so number keys can't be used to skip it.
     const padOn = practice.phase === "digit" || practice.phase === "final"
                   || practice.phase === "carry-value";
     Array.from(document.querySelectorAll("#practice-pad .pad-btn")).forEach(b => { b.disabled = !padOn; });
@@ -2068,10 +2193,15 @@
       b.addEventListener("click", () => practiceHandleDigit(b.dataset.digit)));
     el("practice-board").addEventListener("click", e => {
       const cellNode = e.target.closest('[data-row="regroup"]');
-      if (cellNode && practice.active && practice.phase === "carry-dest") {
+      // Build 5.2.1: pass every regroup-box tap to the handler and let IT decide.
+      // Gating here meant a tap at the wrong moment was discarded before any
+      // guidance could be given, which read to the child as a broken box.
+      if (cellNode && practice.active) {
         practiceHandleRegroupTap(cellNode.dataset.place);
       }
     });
+    el("practice-yes-btn").addEventListener("click", () => practiceHandleRegroupDecision(true));
+    el("practice-no-btn").addEventListener("click", () => practiceHandleRegroupDecision(false));
     el("practice-hint-btn").addEventListener("click", practiceRequestHint);
     el("practice-next").addEventListener("click", practiceAdvanceSession);
     el("practice-done-mode").addEventListener("click", backToModeStep);
@@ -2126,6 +2256,7 @@
     practiceLoadProblem,
     practiceHandleDigit,
     practiceHandleRegroupTap,
+    practiceHandleRegroupDecision,
     practiceRequestHint,
     config: { SKILLS, SIZES, MODES, TEST_LENGTHS, PLACE_NAMES, ENGINE_SIZES }
   };

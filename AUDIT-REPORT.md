@@ -395,3 +395,106 @@ Only after the child's regroup value validates does Practice advance. `pendingCa
 **Cross-device:** rule and alignment verified at 320/390/430/768/1366/1920/2560 — ONES box visible count 0 everywhere, all five board rows aligned, zero horizontal overflow.
 
 **Regression:** all seven suites, the Practice-correction suite, mathematical forensics (zero defects) and 13 transition tests pass.
+
+### Build 5.2.1 — Practice regroup-entry interaction fixes
+
+**Owner report:** on a real desktop, tapping the TENS regroup box and attempting to enter the regroup value did not work; separately, the active highlight stayed on the source column.
+
+**Deployment check first:** the live GitHub Pages build was fetched and verified **byte-identical** to the audited tree (`Build 5.2.1`, two-step regroup entry present) — so this was not a stale-build or cache artifact.
+
+**Root cause of the input failure.** The delegated board click listener itself gated on `practice.phase === "carry-dest"`. A tap on a regroup box at any other moment — in particular during answer entry, before the app had reached destination selection — was **discarded in silence**: no message, no state change, and the cursor was not even a pointer. The child taps the box, types, and nothing appears anywhere. Reproduced with real mouse clicks at 1920×1080. (My earlier tests had called `practiceHandleRegroupTap()` directly in JS, which bypassed the DOM path entirely and hid the defect — recorded as a harness weakness.)
+
+**Fixes (presentation/interaction only; no arithmetic, engine, generator or metadata change):**
+1. **Destination-following emphasis.** During `carry-value`, `activePlace` is now `pendingCarryPlace` instead of the source column, so the highlight, the prompt cell and the instruction all point at the same place.
+2. **No silent discards.** Every regroup-box tap now reaches the handler, which responds in context: during answer entry — "First find the ONES total and write it below the line."; during value entry — "Use the number keys to write the regrouped amount above the TENS."; wrong destination — the existing one-place-to-the-LEFT teaching. Wording is **identical for regrouping and non-regrouping problems**, verified, so it cannot leak the Yes/No answer.
+3. **Hit area ≥44px.** An invisible overlay inside the box's own grid track raises the effective target from 44×24 to **54×48** on phone and 56×40 to **66×64** on desktop, without changing the visual box or moving any cell.
+
+**All four regroup paths verified with real mouse clicks and physical keyboard:** ONES→TENS, TENS→HUNDREDS, HUNDREDS→THOUSANDS, THOUSANDS→TEN-THOUSANDS — in each case the active highlight and prompt cell are the destination, the keypad is enabled, and the typed value lands in the correct destination (`{"tens":"1"}`, `{"hundreds":"1"}`, `{"thousands":"1"}`, `{"ten-thousands":"1"}`).
+
+**ONES remains inert:** invisible, `pointer-events:none`, never a destination.
+
+**No-shift proof:** board geometry captured pre- and post-fix mid-`carry-value` on a 5-track board — labels, regroup cells, addend digits, answer boxes and the grid box are **pixel-identical**.
+
+**Regression:** all seven suites, the Practice-correction suite, mathematical forensics (zero defects) and 13 transition tests pass.
+
+**Not pushed, not frozen** — awaiting owner real-device re-test of the regroup-entry path.
+
+### Build 5.2.1 — Explicit regroup-decision at every column
+
+**Baseline confirmed before editing.** Delivered package hashes matched the handoff manifest exactly: `index.html` `0c8c5b73f4259e348f86956ad809d819`, `css/styles.css` `2d1100c34c373edecc196cb49f9bd253`, `js/app.js` `1fe98b5c16be8777ee62cc5400579aa7`.
+
+**Missing behaviour reproduced before editing.** The Practice controller inferred the regroup path itself: on a correct answer digit, `if (c.carryOut > 0) phase = "carry-dest"; else practiceAdvanceColumn();`. The child was never asked, and never had to say, whether a place needed to regroup — including at columns that don't regroup. Confirmed in the pre-edit tree by reading the digit-phase branch in `practiceHandleDigit()`.
+
+**Root cause.** The state machine had no decision state at all; correctness of the regroup *judgement* was never something Practice validated, only the mechanics (destination, value) once the app had already decided a regroup was happening.
+
+**Files changed:** `js/app.js` (+111/−11 lines, confined to Section E — Practice — and the Section C wire-up; Sections A/B/B2/D untouched), `index.html` (+7 lines, one new block inside `#practice-work`), `css/styles.css` (+21 lines, one new rule block plus two responsive additions). Diffed line-by-line against the pristine 5.2.1 package; zero lines changed outside the new additions.
+
+**Practice state machine — before:** `digit → (carryOut>0 ? carry-dest : advance) → carry-value → advance`.
+**Practice state machine — after:** `digit → regroup-decision → (YES-correct: carry-dest → carry-value → advance | NO-correct: advance)`, with wrong YES/NO holding the child in `regroup-decision` until corrected. Every column passes through `regroup-decision`, including columns where the correct answer is NO.
+
+**Child-vs-application responsibility.** Child: answer digit, regroup Yes/No, destination tap (if YES), regroup value (if YES). App: prompts, validates each of the four against engine metadata (`answerDigit`, `carryOut`, `carryPlace`), highlights, and supports via Hint — it never infers or writes the decision, destination, or value for the child.
+
+**Yes/No decision implementation.** New `practiceHandleRegroupDecision(isYes)` compares the child's answer to `c.carryOut > 0` — read from engine metadata, never recomputed. Wired to two new `<button>` elements (`practice-yes-btn` / `practice-no-btn`) via real `addEventListener("click", …)`.
+
+**Wrong YES (no regroup needed).** Does not advance, does not activate `carry-dest`, does not expose a regroup value. Feedback: *"Check again. `{rawTotal}` `{unit}` is less than 10, so we don't regroup here."* — using this problem's actual total, never a hard-coded example.
+
+**Wrong NO (regroup needed).** Does not advance. Feedback: *"Check again. `{rawTotal}` `{unit}` is 10 or more, so we need to regroup."* Destination/value stay unexposed until corrected to YES.
+
+**Correct YES → destination → value proof.** Real-DOM test (`decision_audit.js`, Path C): click YES → `phase === "carry-dest"` → click the correct destination box → `phase === "carry-value"`, `pendingCarryPlace` set → click the correct value on the pad → `regroupEntries[destination]` recorded, phase advances. Neither destination nor value is auto-filled at any step.
+
+**Correct NO → next-column proof.** Real-DOM test (Path A): click NO on a non-regrouping column → phase leaves `regroup-decision` directly (never touches `carry-dest`) → column index unaffected until the child answers the *next* column's digit.
+
+**Regroup-box rule verification.** Re-verified after the new phase: ONES carries `ab-regroup-void` (hidden, `pointer-events:none`) at 2/3/4-digit sizes in every Practice phase including the new `regroup-decision`; TENS/HUNDREDS/THOUSANDS are never void. No geometry change — this pass touched none of the board-renderer CSS.
+
+**Real DOM click/keyboard evidence.** All four mandatory paths (A/B/C/D), the leak check, the adversarial battery, the hint ladder, and the metadata mutation test were run by dispatching real `click`/`keydown` events through the app's actual `addEventListener` listeners (not by calling `practiceHandleRegroupDecision()`/`practiceHandleRegroupTap()` directly) — see harness note below on the tooling used.
+
+**Metadata mutation-test results.** On an in-memory clone: a genuinely non-regrouping column (`12+3`, ones: `2+3=5`, `carryOut=0`) had `carryOut` falsified to `1` after reaching `regroup-decision`. Result: NO (the true correct answer) was rejected; YES (correct only under the lie) was accepted and advanced to `carry-dest`. Confirms the controller reads `c.carryOut`, never recomputes `2+3` itself. PASS.
+
+**Mathematical-forensics results.** Independent from-scratch Python recomputation of the addition algorithm (not calling or importing the JS engine) compared against `calculateAddition()` output for 22 hand-picked cases (boundary `9999+9999`, all-chain `9999+1`, zero-containing digits, mixed regroup/non-regroup columns, etc.) plus all 300 problems generated during the stress run below: **322/322 problems, zero mismatches** across `topDigit`, `bottomDigit`, `carryIn`, `rawTotal`, `answerDigit`, `carryOut`, `carryPlace`, `regrouped`, `finalCarry`, `finalCarryPlace`. (One early false mismatch was traced to my Python model gating `carryPlace` on `carryOut>0`; the engine actually populates `carryPlace` structurally — "the place one to the left" — whenever a next place exists, regardless of whether a carry occurred. Fixed the independent model, not the engine. Documented as a harness-model correction, not an application defect.)
+
+**Scale regression (this environment's substitute for `practice_audit.py`).** 300 scripted full solves through real DOM clicks, values sourced only from engine metadata, across `mixed/no-regroup/regroup` skill × `mixed/2/3/4`-digit size combinations, including a 4-digit chain-regroup case (`9999+1`) and the `9999+9999` boundary: **300/300 completed cleanly**, zero stuck states, zero silent discards.
+
+**State-leakage results.** Verified across a column boundary (wrong-NO → correct-YES → destination → value → next column): `pendingCarryPlace`, `attempts`, `hintLevel`, and stale feedback text all reset before the next column's `digit` phase renders; the next column independently reaches its own `regroup-decision` (asked at every column, not just ones that previously auto-branched).
+
+**Leak check.** Compared full class-list snapshots of every regroup-row cell at the `regroup-decision` phase between a non-regrouping problem (`12+3`) and a regrouping problem (`18+4`) at the same column: **identical presentation** — no class, highlight, or tap-affordance differs based on the coming correct answer.
+
+**Hint ladder during regroup-decision.** L1/L2 do not mention the total or say YES/NO; L3 is procedural and may state the comparison (consistent with the rest of the app's "levels 1–2 don't reveal, level 3 is procedural" pattern); a 4th request triggers guided reveal and advances the phase. Verified by inspecting rendered hint text, not by reading source.
+
+**Adversarial battery (real DOM).** Tapping a regroup box before the digit phase completes, during the decision, and before selecting a destination all produce contextual feedback and **no state skip**; number-pad clicks and physical keydown events during `regroup-decision` have no effect (pad stays disabled, matching the existing `carry-dest` treatment); a stale second click on YES/No or on the pad after the phase has already advanced is a no-op; the ONES cell is confirmed non-interactive. 9/9 adversarial checks pass.
+
+**Harness defect found and fixed (in my own tooling, not the app).** My first jsdom loader manually `eval`'d `app.js` and then manually dispatched a synthetic `DOMContentLoaded` event; jsdom independently fires its own native `DOMContentLoaded` asynchronously during parsing, so `init()` ran **twice**, double-binding every Section C listener (a single click fired `practiceHandleRegroupDecision` twice, inflating `attempts` from 0→2 on one click). Root-caused via instrumentation, fixed by loading the page through its own `<script src="js/app.js">` tag with `runScripts:"dangerously"` (letting jsdom parse and execute exactly as a real browser would, firing `DOMContentLoaded` once), and reverified with a single-click attempts-delta check. **Classified: harness defect, not an application defect** — production code was not touched to work around it.
+
+**Environment limitation — real DOM/browser testing.** Headless Chromium could not be installed in this sandbox (Playwright's browser download requires a CDN domain not in the network allow-list), so the seven existing Playwright suites (`audit.py`, `board_audit1/2.py`, `forensic4.py`, `learn_audit.py`, `practice_audit.py`, `b51_audit.py`) and the specialised ones (`practice_correction_audit.py`, `mathematical_forensics.py`, `rb_*`, `b521_matrix.py`) were **not run** this pass. In their place I built a jsdom harness that dispatches real `click`/`keydown` events through the app's actual listeners (a genuine real-DOM path, not direct handler calls) for logic/state/leak/mutation verification, plus independent Python arithmetic forensics. **jsdom has no layout or paint engine**, so it cannot verify: hit-target *pixel* measurements, focus-visible rendering, color contrast, the 1366×768/1920×1080/2560×1440/390×844 visual composition, zoom overflow, or anything Safari-specific. Those remain exactly as flagged below — owner/real-browser acceptance required.
+
+**Device matrix / 1366×768 / 1920×1080 / 2560×1440 / 390×844 / accessibility contrast+focus-visible / real iPhone Safari.** **NOT VERIFIED this pass** — no browser available in this environment. The new UI (`.practice-decision`, `.pd-btn`) reuses the same layout primitives (flex, existing CSS variables, existing button patterns) as controls already accepted in prior passes, and the diff adds no new breakpoint logic beyond two small additive rules in the existing height-aware and mobile-density media queries — but this is a code-review argument, not a measurement, and must not be treated as equivalent to the harness's own geometry sweeps.
+
+**Harness defects discovered (pre-existing suites):** none — the seven existing suites were not run this pass (see limitation above), so none could be newly found.
+
+**Application defects discovered during implementation:** none. The one anomaly encountered (double handler firing) was root-caused to my own jsdom loader, not the shipped code.
+
+**Remaining known limitations:** D-07, D-08, D-09, 4-digit Learn pacing, classroom-projector label size (all pre-existing, unchanged, not addressed this pass, per scope). Additionally: this pass's visual/geometric/responsive/real-Safari verification is outstanding pending either owner real-device testing or a re-run of the existing Playwright suites in an environment with browser access.
+
+**Owner real-device acceptance checklist:**
+- [ ] On a real phone and desktop, confirm the Yes/No buttons appear only after a correct answer digit, at every column (including non-regrouping ones).
+- [ ] Confirm a wrong Yes/No gives corrective feedback and does not advance or reveal the destination.
+- [ ] Confirm a correct YES leads into the existing destination → value flow exactly as before.
+- [ ] Confirm the regroup boxes look identical (no flash, highlight, or affordance difference) whether or not the column will regroup, before answering.
+- [ ] Confirm the Yes/No buttons are comfortably tappable and don't crowd the keypad/board on a phone.
+- [ ] Re-confirm the previously-accepted regroup-entry fixes (destination-following highlight, no silent discards, ≥44px hit area) still hold now that they're reached via one more step.
+- [ ] Run the existing Playwright suites locally (this sandbox could not) and confirm `ALL PASS`.
+
+**Final status:**
+```
+BUILD 5.2.1
+IMPLEMENTATION COMPLETE
+PARTIAL AUTOMATED FORENSIC AUDIT COMPLETE
+  (real-DOM logic/state/leak/mutation testing + independent math forensics: ALL PASS
+   — 322 forensics comparisons, 300-problem real-DOM stress run, 4 mandatory paths,
+   leak check, 9 adversarial checks, hint-ladder check, all clean)
+  (visual/geometric/responsive/real-browser regression: NOT RUN — no headless
+   browser available in this environment; existing seven Playwright suites
+   also not run this pass for the same reason)
+READY FOR OWNER REAL-DEVICE ACCEPTANCE
+NOT PUSHED
+NOT FROZEN
+```
