@@ -2,6 +2,16 @@
 (function () {
   'use strict';
   var D = document;
+  var PIC_ALT = {
+    home: 'Chris, a smiling Black boy in a teal number 21 jersey, holding a bat and a book',
+    verbs: 'Chris swinging a bat at a baseball',
+    nouns: 'Chris and his coach standing on the baseball field',
+    adjectives: 'A big red ball, a small red ball, and a yellow ball',
+    adverbs: 'Chris running quickly toward a base',
+    vowels: 'A baseball cap and a superhero cape',
+    reading: 'Three teammates throwing and catching on the baseball field'
+  };
+  function pic(k, cls) { var src = (typeof IMAGES !== 'undefined') && IMAGES[k]; return src ? '<img class="pic ' + (cls || '') + '" src="' + src + '" alt="' + esc(PIC_ALT[k] || '') + '">' : ''; }
   var HOSTED = !!window.__CLC_HOSTED; // claude.ai hosted copy: printing and downloads are blocked there
   var app = D.getElementById('app');
 
@@ -614,7 +624,7 @@
   function passageHTML(p, QS, test) {
     var evMode = QS && QS.q.kind === 'ev', idx = 0;
     var showMarks = QS && QS.fb && !test;
-    var h = '<div class="passage" aria-label="Story text">' + (p.title ? '<h3 class="p-title">' + esc(p.title) + ' <span class="p-type">' + esc(p.type) + '</span></h3>' : '');
+    var h = '<div class="passage" aria-label="Story text">' + (p.title ? '<h3 class="p-title">' + esc(p.title) + ' <span class="p-type">' + esc(p.type) + '</span></h3>' : '') + (p.img ? '<div class="passage-pic-wrap">' + pic(p.img, 'passage-pic') + '</div>' : '');
     if (p.title) h += sayBtn(p.title + '. ' + p.sents.join(' '), 'Read the story to me');
     p.paras.forEach(function (para) {
       h += '<p>';
@@ -759,7 +769,7 @@
   function btn(act, label, extra, cls) { return '<button type="button" class="btn ' + (cls || '') + '" data-act="' + act + '" data-fkey="' + act + (extra && extra.key ? extra.key : '') + '"' + (extra && extra.attrs ? ' ' + extra.attrs : '') + '>' + label + '</button>'; }
 
   function screenHome() {
-    var h = '<section class="hero"><div class="hero-art">' + KID + '</div><div class="hero-text">';
+    var h = '<section class="hero"><div class="hero-art">' + (pic('home', 'hero-pic') || KID) + '</div><div class="hero-text">';
     h += '<h1 id="scr-title" tabindex="-1">Hi, ' + esc(P.nick) + '!</h1>';
     h += '<p class="lead">Pick a skill. Learn it, try it with the coach, then practice.</p>';
     if (view.editName) {
@@ -781,7 +791,7 @@
     var a = areaById(view.a), ls = LESSONS[a.id];
     var next = ls.filter(function (l) { return !l.optional && !lessonDone(a.id, l.id); })[0];
     var h = topNav([btn('home', '⌂ Home')]);
-    h += '<div class="area-head"><span class="area-icon lg">' + ICON[a.icon] + '</span><h1 id="scr-title" tabindex="-1">' + esc(a.name) + '</h1></div>';
+    h += '<div class="area-head"><span class="area-icon lg">' + ICON[a.icon] + '</span><h1 id="scr-title" tabindex="-1">' + esc(a.name) + '</h1></div>' + (pic(a.id, 'area-pic') ? '<div class="area-pic-wrap">' + pic(a.id, 'area-pic') + '</div>' : '');
     if (next) h += '<p class="lead">Coach suggests: <b>Lesson ' + next.id + ': ' + esc(next.title) + '</b>.</p>';
     else h += '<p class="lead">All main lessons are done. Keep practicing!</p>';
     h += '<div class="path">';
@@ -832,6 +842,7 @@
     h += '<span class="steps-text">Step ' + (view.step + 1) + ' of ' + n + '</span></div>';
     var title = st.title || ({ guided: 'Let’s do one together', 'try': 'Your turn', mc: 'Quick check', reading: 'Read and answer', cards: 'Helper memory cards' })[st.t] || '';
     h += '<section class="card lesson-card"><h1 id="scr-title" tabindex="-1">' + esc(title) + '</h1>';
+    if (st.img) h += '<div class="lesson-pic-wrap">' + pic(st.img, 'lesson-pic') + '</div>';
     var canNext = true;
     if (st.t === 'explain') {
       if (st.tiles) h += '<div class="tiles">' + st.tiles.map(function (t) { return canSpeak ? '<button type="button" class="tile" data-act="say" data-text="' + esc(t) + '">' + esc(t) + '</button>' : '<span class="tile">' + esc(t) + '</span>'; }).join('') + '</div>';

@@ -263,7 +263,7 @@ var VOWEL_BANK = [
 /* ───────────────────────── READING PASSAGES (6) ───────────────────────── */
 var PASSAGES = [
   {
-    id: 'p1', title: 'Teamwork on the Baseball Field', type: 'Nonfiction', topic: 'Baseball teamwork',
+    id: 'p1', img: 'reading', title: 'Teamwork on the Baseball Field', type: 'Nonfiction', topic: 'Baseball teamwork',
     paras: [
       ['Baseball might look like a contest between one pitcher and one batter, but it is really a team sport.', 'When a team is in the field, nine players work together to stop the other team from scoring runs.', 'Each player has a position, which is a special place and job on the field.', 'The pitcher throws the ball toward home plate, and the catcher crouches behind the plate to catch it.', 'Four infielders play near the bases, while three outfielders cover the wide grass farther away.'],
       ['Sometimes a batter hits the ball deep into the outfield.', 'The outfielder who chases it down may be too far away to throw it all the way to home plate.', 'Instead, the outfielder throws the ball to an infielder who is waiting in between.', 'That player catches it, turns, and quickly throws it the rest of the way.', 'Passing the ball this way is called a relay, and it is usually faster than one long throw that bounces across the grass.'],
@@ -366,7 +366,7 @@ var LESSONS = {
   verbs: [
     { id: 'A', title: 'Action Verbs', skill: 'action', key: 'A verb can tell what someone or something does.', steps: [
       { t: 'explain', title: 'Action verbs', text: ['A verb can tell what someone or something does.', 'Some actions you can see, like run and throw.', 'Some actions happen in your head, like think and learn.'] },
-      { t: 'show', title: 'Watch me find it', mode: 'verb', s: 'Chris [swings] the bat.', labels: { swings: 'verb' }, text: ['Swings tells what Chris does.', 'We draw TWO lines under a verb.'] },
+      { t: 'show', img: 'verbs', title: 'Watch me find it', mode: 'verb', s: 'Chris [swings] the bat.', labels: { swings: 'verb' }, text: ['Swings tells what Chris does.', 'We draw TWO lines under a verb.'] },
       { t: 'words', title: 'Action words to know', groups: [ { name: 'Body actions', words: ['run', 'jump', 'throw', 'catch', 'swing'] }, { name: 'Word actions', words: ['read', 'write', 'talk'] }, { name: 'Thinking actions', words: ['think', 'know', 'learn'] } ], text: ['Act out one body action.', 'Thinking actions happen in your brain. They are verbs too!'] },
       { t: 'guided', coach: 'What does the dog do? Tap that word.', q: { mode: 'verb', s: 'The dog [runs] outside.', ask: 'What does the dog do?', h: 'The dog is doing something. Which word tells what it does?', ex: 'Runs tells what the dog does. Runs is the verb.', notes: { outside: 'Outside tells WHERE the dog runs. It is not a verb.', dog: 'Dog names an animal. Which word tells what it DOES?' } } },
       { t: 'try', q: { mode: 'verb', s: 'Mom [cooks] dinner.', ask: 'What does Mom do?', h: 'Dinner is the food. Which word is the action?', ex: 'Cooks tells what Mom does.', notes: { dinner: 'Dinner is a thing (a noun). What does Mom DO?' } } },
@@ -462,7 +462,7 @@ var LESSONS = {
     { id: 'E', title: 'More Than One Noun', skill: 'multi', key: 'A sentence can have many nouns. Find them all!', steps: [
       { t: 'explain', title: 'Find them all', text: ['A sentence can have more than one noun.', 'Check every word. Ask: person? place? thing?'] },
       { t: 'show', title: 'Watch me find them', mode: 'noun', s: '[Chris:p] carries a [bat:t].', labels: { chris: 'person', bat: 'thing' }, text: ['Chris names a person.', 'Bat names a thing.'] },
-      { t: 'show', title: 'Another one', mode: 'noun', s: 'The [coach:p] stood on the [field:l].', labels: { coach: 'person', field: 'place' }, text: ['Coach names a person.', 'Field names a place.'] },
+      { t: 'show', img: 'nouns', title: 'Another one', mode: 'noun', s: 'The [coach:p] stood on the [field:l].', labels: { coach: 'person', field: 'place' }, text: ['Coach names a person.', 'Field names a place.'] },
       { t: 'guided', coach: 'Find ALL THREE nouns.', q: { mode: 'noun', s: 'My [sister:p] found a [shell:t] at the [beach:l].', h: 'A person, a thing, and a place.', ex: 'Sister is a person. Shell is a thing. Beach is a place.' } },
       { t: 'try', q: { mode: 'noun', s: '[Grandma:p] baked a [pie:t] in the [kitchen:l].', h: 'Who? What? Where?', ex: 'Grandma is a person. Pie is a thing. Kitchen is a place.' } }
     ] },
@@ -476,7 +476,7 @@ var LESSONS = {
   adjectives: [
     { id: 'A', title: 'What Kind?', skill: 'kind', key: 'An adjective describes a noun.', steps: [
       { t: 'explain', title: 'Adjectives', text: ['An adjective describes a noun.', 'It can tell what kind, which one, or how many.', 'Little words like the, a, and my will be gray. You do not tap them here.'] },
-      { t: 'show', title: 'Watch me find it', mode: 'adj', s: 'The [red@ball] ball rolled.', text: ['Red describes ball.', 'It tells what kind of ball.'] },
+      { t: 'show', img: 'adjectives', title: 'Watch me find it', mode: 'adj', s: 'The [red@ball] ball rolled.', text: ['Red describes ball.', 'It tells what kind of ball.'] },
       { t: 'show', title: 'Another one', mode: 'adj', s: 'The [small@puppy] puppy sleeps.', text: ['Small describes puppy.'] },
       { t: 'guided', coach: 'First find the noun. Then find the word that describes it.', q: { mode: 'adj', s: 'The [brown@dog] dog barked.', h: 'What kind of dog?', ex: 'Brown describes dog.' } },
       { t: 'try', q: { mode: 'adj', s: 'We ate [warm@bread] bread.', h: 'What kind of bread?', ex: 'Warm describes bread.' } }
@@ -507,7 +507,7 @@ var LESSONS = {
   adverbs: [
     { id: 'A', title: 'How?', skill: 'how', key: 'An adverb can tell HOW something happens.', steps: [
       { t: 'explain', title: 'Adverbs', text: ['An adverb can describe a verb.', 'It can tell how, when, or where.', 'Today: HOW.'] },
-      { t: 'show', title: 'Watch me find it', mode: 'adv', s: 'Chris runs [quickly@runs:how].', text: ['Quickly tells HOW Chris runs.'] },
+      { t: 'show', img: 'adverbs', title: 'Watch me find it', mode: 'adv', s: 'Chris runs [quickly@runs:how].', text: ['Quickly tells HOW Chris runs.'] },
       { t: 'guided', coach: 'Find the verb moved. Then ask: HOW did the turtle move?', q: { mode: 'adv', s: 'The turtle moved [slowly@moved:how].', h: 'How did the turtle move?', ex: 'Slowly tells HOW the turtle moved.' } },
       { t: 'try', q: { mode: 'adv', s: 'The team played [well@played:how].', h: 'How did the team play?', ex: 'Well tells HOW they played. Not every adverb ends in -ly!' } }
     ] },
@@ -546,7 +546,7 @@ var LESSONS = {
     ] },
     { id: 'D', title: 'Silent e', skill: 'silente', key: 'Silent e often helps the earlier vowel say its name.', steps: [
       { t: 'explain', title: 'The silent e', text: ['Silent e often helps the earlier vowel say its name.', 'You do not hear the e at the end.'] },
-      { t: 'table', title: 'Add an e and watch', say: true, head: ['Short', 'Add silent e → Long'], rows: [['cap', 'cape'], ['kit', 'kite'], ['hop', 'hope'], ['cub', 'cube']] },
+      { t: 'table', img: 'vowels', title: 'Add an e and watch', say: true, head: ['Short', 'Add silent e → Long'], rows: [['cap', 'cape'], ['kit', 'kite'], ['hop', 'hope'], ['cub', 'cube']] },
       { t: 'explain', title: 'Not always!', text: ['Silent e does not ALWAYS work this way.', 'In have and give, the e is silent, but the vowel is short.', 'So use it as a strong clue, not a promise.'] },
       { t: 'mc', q: { q: 'Add silent e to hop. What new word do you make?', c: ['hope', 'hip', 'hops'], a: 0, say: true, h: 'Write hop, then put e at the end.', ex: 'hop + e = hope. The o now says its name.' } }
     ] },
