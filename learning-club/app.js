@@ -76,6 +76,15 @@
   function addCheck(q) { QBY[q.id] = q; (CHECK_Q[q.area] = CHECK_Q[q.area] || []).push(q); }
   VERB_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'verbs', 'verb')); });
   HELPER_CHECK.forEach(function (r) { addCheck(mkMC(r, 'verbs')); });
+  NOUN_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'nouns', 'noun')); });
+  ADJ_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'adjectives', 'adj')); });
+  ADV_CHECK.forEach(function (r) { addCheck(r.k === 'mc' ? mkMC(r, 'adverbs') : mkSelect(r, 'adverbs', 'adv')); });
+  VOWEL_CHECK.forEach(function (r) { addCheck(r.k === 'sort' ? mkSort(r, 'vowels') : mkMC(r, 'vowels')); });
+  CHECK_PASSAGES.forEach(function (p) {
+    p.sents = []; p.paraOf = [];
+    p.paras.forEach(function (para, pi) { para.forEach(function (s) { p.sents.push(s); p.paraOf.push(pi); }); });
+    p.qs.forEach(function (r) { addCheck(mkReading(r, p)); });
+  });
   /* Mastery challenge: 59 sentences used ONLY in the final assessment */
   var MASTERY_Q = VERB_MASTERY.map(function (r) {
     var cat = MASTERY_CATS.filter(function (c) { return c.id === r.cat; })[0];
@@ -666,7 +675,7 @@
     if (q.mode === 'verb') return 'Tap EVERY verb word: main verbs and their helpers.';
     if (q.mode === 'noun') {
       if (!q.want) return 'Tap ALL the nouns.';
-      return { p: 'Tap the noun that names a PERSON.', l: 'Tap the noun that names a PLACE.', t: 'Tap the noun that names a THING.', i: 'Tap the noun that names an IDEA.', P: 'Tap every PROPER noun (special names).', c: 'Tap the COMMON noun.' }[q.want];
+      return { p: 'Tap the noun that names a PERSON.', l: 'Tap the noun that names a PLACE.', t: 'Tap the noun that names a THING.', i: 'Tap the noun that names an IDEA.', P: 'Tap every PROPER noun (special names).', c: 'Tap every COMMON noun.' }[q.want];
     }
     if (q.mode === 'adj') return 'Tap every adjective (describing word).';
     if (q.mode === 'adv') return q.want ? 'Tap the adverb that tells ' + q.want.toUpperCase() + '.' : 'Tap the adverb.';
@@ -945,7 +954,9 @@
   function startTest(a, n) {
     var ids;
     if (a === 'reading') {
-      var order = storyOrder(), stories = order.slice(0, n >= 10 ? 2 : 1);
+      /* Reading checks use CHECK_PASSAGES only, never the practice stories */
+      var order = CHECK_PASSAGES.slice().sort(function (x, y) { return ((P.stats['story:' + x.id] || {}).last || 0) - ((P.stats['story:' + y.id] || {}).last || 0); });
+      var stories = order.slice(0, n >= 10 ? 2 : 1);
       ids = []; stories.forEach(function (p) { markStory(p.id); p.qs.forEach(function (q) { ids.push(q.id); }); });
     } else ids = testPick(a, n);
     var v = { v: 'test', a: a, ids: ids, i: 0, ans: {} };
@@ -982,7 +993,10 @@
     var per = {};
     items.forEach(function (it) { var q = QBY[it.id]; per[q.sk] = per[q.sk] || { right: 0, total: 0 }; per[q.sk].total++; if (it.ok) per[q.sk].right++; });
     Object.keys(per).forEach(function (sk) { var r = skillRec(view.a, sk); r.chkRight += per[sk].right; r.chkTotal += per[sk].total; r.lastChk = per[sk]; });
-    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
+    var seen = P.stats.checkSeen || (P.stats.checkSeen = {});
+    var repeat = items.filter(function (it) { return seen[it.id]; }).length;
+    items.forEach(function (it) { seen[it.id] = 1; });
+    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, repeat: repeat, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
     if (P.checks.length > 50) P.checks = P.checks.slice(-50);
     saveP();
     go({ v: 'testResult', a: view.a, items: items, score: score, per: per });
@@ -1112,7 +1126,7 @@
     h += '<div class="card"><p>' + (storageOK ? 'Progress is saved in this browser on this device only. It does not sync to other devices and is never sent anywhere.' : '<b>Progress is not being saved.</b> ' + esc(storageNote)) + '</p>';
     var ns = nextSkill();
     if (ns) { var ar = areaById(ns.a); h += '<p class="next-skill"><b>Next skill to practice:</b> ' + esc(ar.short) + ' – ' + esc(ns.sk.name) + ' <span class="muted">(' + esc(ns.why) + ')</span></p>'; }
-    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>With help</b> = used a hint, the coach, or a retry. <b>Shown</b> = used “Show me.” “Getting strong” needs at least 5 first-try answers in recent practice; the app never calls a skill mastered from one answer. Check My Skills results are kept separate from practice.</p></div>';
+    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>With help</b> = used a hint, the coach, or a retry. <b>Shown</b> = used “Show me.” “Getting strong” needs at least 5 first-try answers in recent practice; the app never calls a skill mastered from one answer. Check My Skills results are kept separate from practice.</p><p class="muted small"><b>About checks:</b> each subject has its own check questions that never appear in lessons or practice (verbs 22, nouns 10, adjectives 10, adverbs 10, vowels 10, reading 2 check-only stories with 5 questions each). Because the banks are small, a second check repeats questions he has already seen; those are marked \u201crepeated\u201d below, and the first check is the best independent measure.</p></div>';
     AREAS.forEach(function (a) {
       var ls = LESSONS[a.id], done = ls.filter(function (l) { return lessonDone(a.id, l.id); }).length;
       h += '<div class="card"><h2>' + esc(a.name) + ' <span class="muted small">· ' + done + ' of ' + ls.length + ' lessons done</span></h2><div class="tbl-wrap"><table class="tbl small"><thead><tr><th scope="col">Skill</th><th scope="col">Lesson</th><th scope="col">First try</th><th scope="col">With help</th><th scope="col">Shown</th><th scope="col">Checks</th><th scope="col">Status</th></tr></thead><tbody>';
@@ -1129,7 +1143,7 @@
     h += '</div>';
     h += '<div class="card"><h2>Check My Skills history</h2>';
     if (!P.checks.length) h += '<p class="muted">No checks yet.</p>';
-    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
+    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.repeat ? ' <span class="tag">' + c.repeat + ' repeated question' + (c.repeat > 1 ? 's' : '') + '</span>' : '') + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
     h += '</div><div class="card"><h2>Settings</h2>' + btn('editNameG', 'Change nickname (now: ' + esc(P.nick) + ')');
     if (view.confirmReset) h += '<div class="confirm" role="alertdialog" aria-label="Confirm reset"><p><b>Erase all progress on this device?</b> This cannot be undone.</p>' + btn('doReset', 'Yes, erase everything', null, 'danger') + ' ' + btn('cancelReset', 'Cancel') + '</div>';
     else h += ' ' + btn('askReset', 'Reset all progress', null, 'ghost');

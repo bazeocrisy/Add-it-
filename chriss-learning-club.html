@@ -1765,7 +1765,7 @@ var VERB_MULTI_PRACTICE = [
 var VERB_CHECK = [
   { id: 'vc1', sk: 'action', s: 'The goalie [blocked] the hard kick.', h: 'What did the goalie do?', ex: 'Blocked tells what the goalie did.' },
   { id: 'vc2', sk: 'action', s: 'My friend [whispered] a secret.', h: 'What did my friend do?', ex: 'Whispered tells what my friend did.' },
-  { id: 'vc3', sk: 'action', s: 'The happy baby [clapped] her hands.', h: 'Happy describes the baby. What did she do?', ex: 'Clapped is the verb. Happy describes the baby.' },
+  { id: 'vc3', sk: 'action', s: 'The sleepy baby [rubbed] her eyes.', h: 'Sleepy describes the baby. What did she do?', ex: 'Rubbed is the verb. Sleepy describes the baby.' },
   { id: 'vc4', sk: 'action', s: 'Ben [carried] the heavy box upstairs.', h: 'What did Ben do with the box?', ex: 'Carried is the verb. Heavy describes the box.' },
   { id: 'vc5', sk: 'being', s: 'The soup [is] hot.', h: 'Find the being word.', ex: 'Is is the verb. Hot describes the soup.' },
   { id: 'vc6', sk: 'being', s: 'We [were] late for the bus.', h: 'Find the being word.', ex: 'Were is the verb. Late describes us.' },
@@ -1861,6 +1861,90 @@ var VERB_MASTERY = [
   { id: 'm59', cat: 'multi', s: 'Jamal [has:a] [read:a] the book, and he [will:b] [write:b] a report.', ex: 'Has read is one verb team, and will write is another verb team.' }
 ];
 
+/* ───────────── CHECK MY SKILLS banks (separate from lessons and practice) ───────────── */
+var NOUN_CHECK = [
+  { id: 'nc1', sk: 'multi', s: '[Keisha:pP] painted a [rainbow:t] on the [sidewalk:l].', h: 'Who? What? Where?', ex: 'Keisha is a person, rainbow is a thing, and sidewalk is a place.' },
+  { id: 'nc2', sk: 'multi', s: 'The [mailman:p] left a [package:t] on our [porch:l].', h: 'Who? What? Where?', ex: 'Mailman is a person, package is a thing, and porch is a place.' },
+  { id: 'nc3', sk: 'people', s: 'The [nurse:p] checked my [ears:t].', want: 'p', h: 'Who checked?', ex: 'Nurse names a person. Ears are things.' },
+  { id: 'nc4', sk: 'places', s: 'We ate [sandwiches:t] at the [zoo:l].', want: 'l', h: 'Where did we eat?', ex: 'Zoo names a place. Sandwiches are things.' },
+  { id: 'nc5', sk: 'things', s: 'My [cousin:p] dropped her [crayons:t].', want: 't', h: 'What did my cousin drop?', ex: 'Crayons names things. Cousin is a person.', notes: { her: 'Her tells whose. It is not a noun here.' } },
+  { id: 'nc6', sk: 'proper', s: '[Andre:pP] flew to [Texas:lP] in a [plane:t].', want: 'P', h: 'Look for special names with capital letters.', ex: 'Andre and Texas are proper nouns. Plane is a common noun.' },
+  { id: 'nc7', sk: 'proper', s: 'Our [puppy:t] [Biscuit:tP] chewed a [sock:t].', want: 'c', h: 'Common nouns are not special names.', ex: 'Puppy and sock are common nouns. Biscuit is the puppy’s name, a proper noun.' },
+  { id: 'nc8', sk: 'ideas', s: 'The [firefighter:p] showed great [bravery:i].', want: 'i', h: 'Which noun can you not touch?', ex: 'Bravery names an idea. Firefighter is a person.', notes: { great: 'Great describes bravery. It is not a noun.' } },
+  { id: 'nc9', sk: 'ideas', s: '[Honesty:i] matters to my [family:p].', want: 'i', h: 'Which noun names an idea?', ex: 'Honesty names an idea. Family names a group of people.' },
+  { id: 'nc10', sk: 'multi', s: 'A [squirrel:t] buried an [acorn:t] near the [fence:t].', h: 'An animal and two things.', ex: 'Squirrel, acorn, and fence are all nouns.' }
+];
+var ADJ_CHECK = [
+  { id: 'ac1', sk: 'kind', s: 'The [fuzzy@caterpillar] caterpillar crawled.', h: 'What kind of caterpillar?', ex: 'Fuzzy describes caterpillar.' },
+  { id: 'ac2', sk: 'kind', s: 'Dad wore a [striped@tie] tie.', h: 'What kind of tie?', ex: 'Striped describes tie.' },
+  { id: 'ac3', sk: 'many', s: '[Seven@kids] kids rode the bus.', h: 'How many kids?', ex: 'Seven tells how many kids.' },
+  { id: 'ac4', sk: 'many', s: 'We picked [several@apples] apples.', h: 'How many apples?', ex: 'Several tells how many apples.' },
+  { id: 'ac5', sk: 'which', s: 'The [first@runner] runner won a medal.', h: 'Which runner?', ex: 'First tells which runner.' },
+  { id: 'ac6', sk: 'which', s: 'Our team scored in the [final@inning] inning.', h: 'Which inning?', ex: 'Final tells which inning.' },
+  { id: 'ac7', sk: 'link', s: 'The [hot@cocoa] cocoa smelled [delicious@cocoa].', h: 'Two words describe the cocoa.', ex: 'Hot and delicious both describe cocoa.' },
+  { id: 'ac8', sk: 'link', s: 'The pond was [icy@pond].', h: 'What describes the pond?', ex: 'Icy describes pond. It comes after was.' },
+  { id: 'ac9', sk: 'multi', s: 'A [tiny@ant] ant carried a [huge@crumb] crumb.', h: 'Check both nouns.', ex: 'Tiny describes ant. Huge describes crumb.' },
+  { id: 'ac10', sk: 'multi', s: '[Four@geese] geese flew over the [quiet@lake] lake.', h: 'How many geese? What kind of lake?', ex: 'Four describes geese. Quiet describes lake.' }
+];
+var ADV_CHECK = [
+  { id: 'dc1', sk: 'how', s: 'The baby giggled [happily@giggled:how].', h: 'How did the baby giggle?', ex: 'Happily tells HOW the baby giggled.' },
+  { id: 'dc2', sk: 'how', s: 'Jasmine answered [correctly@answered:how].', h: 'How did Jasmine answer?', ex: 'Correctly tells HOW Jasmine answered.' },
+  { id: 'dc3', sk: 'how', s: 'Our coach spoke [softly@spoke:how].', h: 'How did the coach speak?', ex: 'Softly tells HOW the coach spoke.' },
+  { id: 'dc4', sk: 'when', s: 'We will visit our aunt [tomorrow@visit:when].', h: 'When will we visit?', ex: 'Tomorrow tells WHEN.' },
+  { id: 'dc5', sk: 'when', s: 'The movie starts [now@starts:when].', h: 'When does it start?', ex: 'Now tells WHEN the movie starts.' },
+  { id: 'dc6', sk: 'when', s: '[Yesterday@rained:when], it rained [hard@rained:how].', want: 'when', h: 'Which word tells WHEN?', ex: 'Yesterday tells WHEN. Hard is an adverb too, but it tells HOW.' },
+  { id: 'dc7', sk: 'where', s: 'The children ran [downstairs@ran:where].', h: 'Where did they run?', ex: 'Downstairs tells WHERE.' },
+  { id: 'dc8', sk: 'where', s: 'Please put your boots [there@put:where].', h: 'Where should the boots go?', ex: 'There tells WHERE.' },
+  { id: 'dc9', sk: 'compare', k: 'mc', q: 'Which sentence uses an ADVERB?', c: ['The quick fox ran.', 'The fox ran quickly.', 'The fox was quick.'], a: 1, h: 'Find the word that describes the verb ran.', ex: 'Quickly describes ran, so it is an adverb. Quick describes the fox, so it is an adjective.' },
+  { id: 'dc10', sk: 'compare', k: 'mc', q: 'Which word is an adverb that does NOT end in -ly?', c: ['soon', 'silly', 'sleepy'], a: 0, h: 'Which word tells when?', ex: 'Soon tells when, so it is an adverb. Silly and sleepy describe nouns, so they are adjectives.' }
+];
+var VOWEL_CHECK = [
+  { id: 'oc1', sk: 'letters', k: 'mc', q: 'Which word has TWO vowel letters?', c: ['frog', 'train', 'milk'], a: 1, h: 'Look for a, e, i, o, u in each word.', ex: 'Train has two vowel letters: a and i. Frog and milk have one each.' },
+  { id: 'oc2', sk: 'short', k: 'mc', q: 'Which word has the same vowel sound as sun?', c: ['mud', 'mule', 'moon'], a: 0, h: 'Sun has a short u.', ex: 'Mud has short u, like sun (one vowel between consonants).' },
+  { id: 'oc3', sk: 'short', k: 'mc', q: 'Which word has a short e sound?', c: ['wheel', 'web', 'wade'], a: 1, h: 'Find one e between two consonants.', ex: 'Web has the short e pattern w-e-b.' },
+  { id: 'oc4', sk: 'long', k: 'mc', q: 'Which word has a long o spelled with silent e?', c: ['road', 'rob', 'rope'], a: 2, h: 'Two words may have long o; only one ends in e.', ex: 'Rope uses silent e. Road has long o too, but it uses the team oa.' },
+  { id: 'oc5', sk: 'silente', k: 'mc', q: 'Add a silent e to pin. What new word do you make?', c: ['pins', 'pine', 'pint'], a: 1, h: 'Write pin, then put e at the end.', ex: 'pin + e = pine. The i now says its name.' },
+  { id: 'oc6', sk: 'silente', k: 'mc', q: 'In the word cube, what does the u usually say?', c: ['its name (long u)', 'short u, like in cub'], a: 0, h: 'Cube ends with silent e.', ex: 'The silent e in cube helps the u say its name.' },
+  { id: 'oc7', sk: 'teams', k: 'mc', q: 'Which word has the same vowel team as rain and tail?', c: ['snack', 'snail', 'snore'], a: 1, h: 'Rain and tail both have ai.', ex: 'Snail has the team ai, just like rain and tail.' },
+  { id: 'oc8', sk: 'teams', k: 'mc', q: 'Which word has a vowel team that says long e?', c: ['shop', 'ship', 'sheep'], a: 2, h: 'Look for two vowels side by side.', ex: 'Sheep has ee, which says long e.' },
+  { id: 'oc9', sk: 'long', k: 'sort', q: 'How is the long vowel spelled? Sort each word.', b: ['Silent e', 'Vowel team'], items: [['note', 0], ['soap', 1], ['lake', 0], ['paid', 1], ['mule', 0], ['leaf', 1]], h: 'Does the word end in e, or have two vowels together?', ex: 'note, lake, mule use silent e. soap, paid, leaf use vowel teams.' },
+  { id: 'oc10', sk: 'teams', k: 'mc', q: 'Which word fits and has the team oa?\n“I washed my hands with ___.”', c: ['sap', 'soap', 'soup'], a: 1, h: 'Which word makes sense AND has o and a together?', ex: 'Soap makes sense and has the team oa.' }
+];
+/* Reading check passages: used ONLY in Check My Skills, never in lessons, guided practice, or practice. */
+var CHECK_PASSAGES = [
+  {
+    id: 'cp1', title: 'How Honeybees Make Honey', type: 'Nonfiction', topic: 'Insects',
+    paras: [
+      ['Honeybees are busy insects.', 'They fly from flower to flower to collect a sweet liquid called nectar.', 'A bee sips the nectar and carries it back to the hive.'],
+      ['Inside the hive, other bees put the nectar into tiny wax rooms called cells.', 'Then the bees fan their wings over the cells.', 'The moving air dries the nectar until it becomes thick and sticky.', 'Now it is honey!', 'The bees close each cell with a wax cap.'],
+      ['Bees also help plants.', 'When a bee lands on a flower, a yellow powder called pollen sticks to its legs.', 'The bee carries the pollen to the next flower.', 'This helps the plants make seeds and fruit.']
+    ],
+    qs: [
+      { id: 'cp1q1', sk: 'main', q: 'What is this passage mostly about?', c: ['How bees make honey and help plants', 'Why flowers are yellow', 'How to build a hive', 'Why bees sting'], a: 0, h: 'What do most sentences tell about?', ex: 'The passage explains how bees turn nectar into honey and how they carry pollen to help plants.' },
+      { id: 'cp1q2', sk: 'detail', q: 'What is nectar?', c: ['A yellow powder', 'A sweet liquid from flowers', 'A wax cap', 'A kind of bee'], a: 1, h: 'Look in the first paragraph.', ex: 'The passage says nectar is a sweet liquid that bees collect from flowers.' },
+      { id: 'cp1q3', sk: 'sequence', q: 'What happens right after the bees fan their wings over the cells?', c: ['The bees fly to a flower.', 'The moving air dries the nectar.', 'Pollen sticks to their legs.', 'The bees sip the nectar.'], a: 1, h: 'Find the sentence about fanning. Read the next one.', ex: 'The next sentence says the moving air dries the nectar until it becomes honey.' },
+      { id: 'cp1q4', sk: 'vocab', q: 'In this passage, what are cells?', c: ['Tiny wax rooms in the hive', 'Phones', 'Parts of a flower', 'Drops of rain'], a: 0, h: 'The passage tells you in the same sentence.', ex: 'The passage says cells are tiny wax rooms.' },
+      { id: 'cp1q5', sk: 'evidence', k: 'ev', q: 'Tap the sentence that shows how bees help plants make fruit.', ok: [11], h: 'Look in the last paragraph.', ex: '“This helps the plants make seeds and fruit.” shows how bees help.' }
+    ]
+  },
+  {
+    id: 'cp2', title: 'The Bucket Garden', type: 'Fiction', topic: 'Solving a problem with help',
+    paras: [
+      ['Rosa wanted to grow tomatoes, but her backyard was full of rocks.', 'She asked her neighbor, Mr. Okafor, for advice.', '“Try a container,” he said, and he gave her a big empty bucket.'],
+      ['First, Rosa poked small holes in the bottom of the bucket.', 'Next, she filled it with soil from the garden store.', 'Then she planted a tiny tomato plant and watered it.'],
+      ['Every morning, Rosa checked her plant.', 'When the leaves drooped on a hot day, she gave it more water.', 'By the next morning, the leaves stood up straight again.'],
+      ['In August, Rosa picked six red tomatoes.', 'She carried the biggest one next door.', '“Thank you for the bucket,” she told Mr. Okafor with a smile.']
+    ],
+    qs: [
+      { id: 'cp2q1', sk: 'main', q: 'What problem did Rosa have at the start?', c: ['She did not like tomatoes.', 'Her backyard was full of rocks.', 'Her bucket had a hole.', 'Mr. Okafor moved away.'], a: 1, h: 'Read the first sentence.', ex: 'Rosa wanted to grow tomatoes, but her backyard was full of rocks.' },
+      { id: 'cp2q2', sk: 'sequence', q: 'What did Rosa do right after she poked holes in the bucket?', c: ['She picked tomatoes.', 'She filled it with soil.', 'She asked for advice.', 'She watered the plant.'], a: 1, h: 'Look for the signal word Next.', ex: 'Next, she filled the bucket with soil.' },
+      { id: 'cp2q3', sk: 'vocab', q: 'What does drooped mean in this story?', c: ['Grew taller', 'Hung down', 'Turned red', 'Fell off the plant'], a: 1, h: 'Read the next sentence: the leaves stood up straight AGAIN.', ex: 'The leaves stood up straight again after water, so drooped means hung down.' },
+      { id: 'cp2q4', sk: 'inference', q: 'Why did Rosa bring the biggest tomato to Mr. Okafor?', c: ['To thank him for helping her', 'Because she did not want it', 'To sell it to him', 'Because he asked for it'], a: 0, h: 'What does Rosa say when she gives it to him?', ex: 'She says “Thank you for the bucket.” His help made her garden possible, so she shares her best tomato.' },
+      { id: 'cp2q5', sk: 'evidence', k: 'ev', q: 'Tap the sentence that shows the extra water helped the plant.', ok: [8], h: 'Look at what happened the morning after she watered it.', ex: '“By the next morning, the leaves stood up straight again.” shows the water helped.' }
+    ]
+  }
+];
+
 </script>
 <script>
 /* Chris's Learning Club — app logic. No network, no accounts, no tracking. */
@@ -1941,6 +2025,15 @@ var VERB_MASTERY = [
   function addCheck(q) { QBY[q.id] = q; (CHECK_Q[q.area] = CHECK_Q[q.area] || []).push(q); }
   VERB_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'verbs', 'verb')); });
   HELPER_CHECK.forEach(function (r) { addCheck(mkMC(r, 'verbs')); });
+  NOUN_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'nouns', 'noun')); });
+  ADJ_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'adjectives', 'adj')); });
+  ADV_CHECK.forEach(function (r) { addCheck(r.k === 'mc' ? mkMC(r, 'adverbs') : mkSelect(r, 'adverbs', 'adv')); });
+  VOWEL_CHECK.forEach(function (r) { addCheck(r.k === 'sort' ? mkSort(r, 'vowels') : mkMC(r, 'vowels')); });
+  CHECK_PASSAGES.forEach(function (p) {
+    p.sents = []; p.paraOf = [];
+    p.paras.forEach(function (para, pi) { para.forEach(function (s) { p.sents.push(s); p.paraOf.push(pi); }); });
+    p.qs.forEach(function (r) { addCheck(mkReading(r, p)); });
+  });
   /* Mastery challenge: 59 sentences used ONLY in the final assessment */
   var MASTERY_Q = VERB_MASTERY.map(function (r) {
     var cat = MASTERY_CATS.filter(function (c) { return c.id === r.cat; })[0];
@@ -2531,7 +2624,7 @@ var VERB_MASTERY = [
     if (q.mode === 'verb') return 'Tap EVERY verb word: main verbs and their helpers.';
     if (q.mode === 'noun') {
       if (!q.want) return 'Tap ALL the nouns.';
-      return { p: 'Tap the noun that names a PERSON.', l: 'Tap the noun that names a PLACE.', t: 'Tap the noun that names a THING.', i: 'Tap the noun that names an IDEA.', P: 'Tap every PROPER noun (special names).', c: 'Tap the COMMON noun.' }[q.want];
+      return { p: 'Tap the noun that names a PERSON.', l: 'Tap the noun that names a PLACE.', t: 'Tap the noun that names a THING.', i: 'Tap the noun that names an IDEA.', P: 'Tap every PROPER noun (special names).', c: 'Tap every COMMON noun.' }[q.want];
     }
     if (q.mode === 'adj') return 'Tap every adjective (describing word).';
     if (q.mode === 'adv') return q.want ? 'Tap the adverb that tells ' + q.want.toUpperCase() + '.' : 'Tap the adverb.';
@@ -2810,7 +2903,9 @@ var VERB_MASTERY = [
   function startTest(a, n) {
     var ids;
     if (a === 'reading') {
-      var order = storyOrder(), stories = order.slice(0, n >= 10 ? 2 : 1);
+      /* Reading checks use CHECK_PASSAGES only, never the practice stories */
+      var order = CHECK_PASSAGES.slice().sort(function (x, y) { return ((P.stats['story:' + x.id] || {}).last || 0) - ((P.stats['story:' + y.id] || {}).last || 0); });
+      var stories = order.slice(0, n >= 10 ? 2 : 1);
       ids = []; stories.forEach(function (p) { markStory(p.id); p.qs.forEach(function (q) { ids.push(q.id); }); });
     } else ids = testPick(a, n);
     var v = { v: 'test', a: a, ids: ids, i: 0, ans: {} };
@@ -2847,7 +2942,10 @@ var VERB_MASTERY = [
     var per = {};
     items.forEach(function (it) { var q = QBY[it.id]; per[q.sk] = per[q.sk] || { right: 0, total: 0 }; per[q.sk].total++; if (it.ok) per[q.sk].right++; });
     Object.keys(per).forEach(function (sk) { var r = skillRec(view.a, sk); r.chkRight += per[sk].right; r.chkTotal += per[sk].total; r.lastChk = per[sk]; });
-    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
+    var seen = P.stats.checkSeen || (P.stats.checkSeen = {});
+    var repeat = items.filter(function (it) { return seen[it.id]; }).length;
+    items.forEach(function (it) { seen[it.id] = 1; });
+    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, repeat: repeat, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
     if (P.checks.length > 50) P.checks = P.checks.slice(-50);
     saveP();
     go({ v: 'testResult', a: view.a, items: items, score: score, per: per });
@@ -2977,7 +3075,7 @@ var VERB_MASTERY = [
     h += '<div class="card"><p>' + (storageOK ? 'Progress is saved in this browser on this device only. It does not sync to other devices and is never sent anywhere.' : '<b>Progress is not being saved.</b> ' + esc(storageNote)) + '</p>';
     var ns = nextSkill();
     if (ns) { var ar = areaById(ns.a); h += '<p class="next-skill"><b>Next skill to practice:</b> ' + esc(ar.short) + ' – ' + esc(ns.sk.name) + ' <span class="muted">(' + esc(ns.why) + ')</span></p>'; }
-    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>With help</b> = used a hint, the coach, or a retry. <b>Shown</b> = used “Show me.” “Getting strong” needs at least 5 first-try answers in recent practice; the app never calls a skill mastered from one answer. Check My Skills results are kept separate from practice.</p></div>';
+    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>With help</b> = used a hint, the coach, or a retry. <b>Shown</b> = used “Show me.” “Getting strong” needs at least 5 first-try answers in recent practice; the app never calls a skill mastered from one answer. Check My Skills results are kept separate from practice.</p><p class="muted small"><b>About checks:</b> each subject has its own check questions that never appear in lessons or practice (verbs 22, nouns 10, adjectives 10, adverbs 10, vowels 10, reading 2 check-only stories with 5 questions each). Because the banks are small, a second check repeats questions he has already seen; those are marked \u201crepeated\u201d below, and the first check is the best independent measure.</p></div>';
     AREAS.forEach(function (a) {
       var ls = LESSONS[a.id], done = ls.filter(function (l) { return lessonDone(a.id, l.id); }).length;
       h += '<div class="card"><h2>' + esc(a.name) + ' <span class="muted small">· ' + done + ' of ' + ls.length + ' lessons done</span></h2><div class="tbl-wrap"><table class="tbl small"><thead><tr><th scope="col">Skill</th><th scope="col">Lesson</th><th scope="col">First try</th><th scope="col">With help</th><th scope="col">Shown</th><th scope="col">Checks</th><th scope="col">Status</th></tr></thead><tbody>';
@@ -2994,7 +3092,7 @@ var VERB_MASTERY = [
     h += '</div>';
     h += '<div class="card"><h2>Check My Skills history</h2>';
     if (!P.checks.length) h += '<p class="muted">No checks yet.</p>';
-    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
+    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.repeat ? ' <span class="tag">' + c.repeat + ' repeated question' + (c.repeat > 1 ? 's' : '') + '</span>' : '') + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
     h += '</div><div class="card"><h2>Settings</h2>' + btn('editNameG', 'Change nickname (now: ' + esc(P.nick) + ')');
     if (view.confirmReset) h += '<div class="confirm" role="alertdialog" aria-label="Confirm reset"><p><b>Erase all progress on this device?</b> This cannot be undone.</p>' + btn('doReset', 'Yes, erase everything', null, 'danger') + ' ' + btn('cancelReset', 'Cancel') + '</div>';
     else h += ' ' + btn('askReset', 'Reset all progress', null, 'ghost');
