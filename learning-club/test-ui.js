@@ -33,7 +33,7 @@ async function answerCurrent(pg, correct = true) {
   const areas = await pg.evaluate(() => AREAS.map(a => ({ id: a.id, lessons: LESSONS[a.id].map(l => l.id) })));
   for (const a of areas) {
     await pg.click('[data-act="home"] >> nth=0'); await pg.click(`[data-act="area"][data-a="${a.id}"]`);
-    ok(a.id + ' has 4 learning steps', (await pg.locator('.path-step').count()) === 4);
+    ok(a.id + ' has 4 learning steps' + (a.id === 'verbs' ? ' + final challenge' : ''), (await pg.locator('.path-step').count()) === (a.id === 'verbs' ? 5 : 4));
     for (const l of a.lessons) {
       await pg.click('[data-act="learn"]'); await pg.click(`[data-act="lesson"][data-l="${l}"]`);
       let n = 0;

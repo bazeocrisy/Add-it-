@@ -138,7 +138,7 @@ button.tile { cursor: pointer; }
 .w { display: inline-flex; align-items: baseline; position: relative; margin-right: 4px; }
 .tok-label { position: absolute; left: 50%; top: 100%; transform: translate(-50%, 3px); font-size: 13px; line-height: 1.1; white-space: nowrap; background: var(--navy); color: #fff; border-radius: 6px; padding: 2px 6px; font-weight: 700; }
 .sent:has(.tok-label) { padding-bottom: 30px; }
-.punct { color: var(--ink); }
+.punct { color: var(--ink); line-height: 1.25; padding-bottom: 8px; }
 span.tok:not(.sel-adj):not(.sel-adv):not(.noun-found) { padding-left: 1px; padding-right: 1px; border-width: 0; }
 .scroll-cue { font-size: 14px; color: var(--muted); margin: 4px 0 0; }
 .tok { position: relative; font: inherit; line-height: 1.25; background: transparent; border: 2px solid transparent; border-radius: 10px; padding: 2px 6px 8px; margin: 2px 0; color: var(--ink); text-decoration: none; }
@@ -282,3 +282,10 @@ button.rdot.now { border-color: var(--navy); background: var(--gold-l); }
   .sheet { border: 0; margin: 0; padding: 0; max-width: none; }
   .sh-key { break-before: page; }
 }
+
+.path-step.final { border-color: var(--gold-d); background: var(--gold-l); }
+.path-step.final .num { background: var(--navy); color: var(--gold); }
+.mbar { height: 12px; background: #e6dcc7; border-radius: 999px; overflow: hidden; margin: 6px 0; }
+.mbar span { display: block; height: 100%; background: var(--teal); }
+.jump-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.jump-grid .btn { min-width: 52px; }

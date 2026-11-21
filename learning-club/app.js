@@ -47,7 +47,9 @@
     var marked = toks.filter(function (t) { return t.ans; }).map(function (t) { return t.i; });
     var ans = marked.filter(function (i) { return wantMatch(mode, raw.want, toks[i]); });
     if (!ans.length) throw new Error('No answer in ' + raw.s);
-    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'select', mode: mode, toks: toks, marked: marked, ans: ans, want: raw.want || null, ask: raw.ask || null, h: raw.h, ex: raw.ex, notes: lowerKeys(raw.notes), labels: lowerKeys(raw.labels) };
+    var teams = [];
+    if (mode === 'verb') { var tmap = {}, order = []; ans.forEach(function (i) { var k = toks[i].tags || 'x'; if (!tmap[k]) { tmap[k] = []; order.push(k); } tmap[k].push(i); }); teams = order.map(function (k) { return tmap[k]; }); }
+    return { id: id || raw.id, area: area, sk: raw.sk, cat: raw.cat || null, kind: 'select', mode: mode, toks: toks, marked: marked, ans: ans, teams: teams, want: raw.want || null, ask: raw.ask || null, h: raw.h || '', ex: raw.ex, notes: lowerKeys(raw.notes), labels: lowerKeys(raw.labels) };
   }
   function mkMC(raw, area, id) {
     return { id: id || raw.id, area: area, sk: raw.sk, kind: 'mc', q: raw.q, c: raw.c, a: raw.a, h: raw.h, ex: raw.ex, why: raw.why || [], say: !!raw.say };
@@ -68,6 +70,18 @@
   ADJ_BANK.forEach(function (r) { addQ(mkSelect(r, 'adjectives', 'adj')); });
   ADV_BANK.forEach(function (r) { addQ(r.k === 'mc' ? mkMC(r, 'adverbs') : mkSelect(r, 'adverbs', 'adv')); });
   VOWEL_BANK.forEach(function (r) { addQ(r.k === 'sort' ? mkSort(r, 'vowels') : mkMC(r, 'vowels')); });
+  VERB_MULTI_PRACTICE.forEach(function (r) { addQ(mkSelect(r, 'verbs', 'verb')); });
+  /* Check My Skills items live in their own bank (verbs), never mixed into practice */
+  var CHECK_Q = {};
+  function addCheck(q) { QBY[q.id] = q; (CHECK_Q[q.area] = CHECK_Q[q.area] || []).push(q); }
+  VERB_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'verbs', 'verb')); });
+  HELPER_CHECK.forEach(function (r) { addCheck(mkMC(r, 'verbs')); });
+  /* Mastery challenge: 59 sentences used ONLY in the final assessment */
+  var MASTERY_Q = VERB_MASTERY.map(function (r) {
+    var cat = MASTERY_CATS.filter(function (c) { return c.id === r.cat; })[0];
+    var q = mkSelect({ id: r.id, s: r.s, sk: cat.skill, cat: r.cat, ex: r.ex }, 'verbs', 'verb'); QBY[q.id] = q; return q;
+  });
+  var MASTERY_IDS = MASTERY_Q.map(function (q) { return q.id; });
   var PBY = {};
   PASSAGES.forEach(function (p) {
     var n = 0; p.sents = []; p.paraOf = [];
@@ -109,7 +123,7 @@
   /* ───────────── progress storage ───────────── */
   var KEY = 'chrissLearningClub.v1';
   var storageOK = true, storageNote = '', noticeDismissed = false;
-  function defP() { return { v: 1, nick: 'Player', lessons: {}, stats: {}, skills: {}, checks: [], resume: null, serve: 0 }; }
+  function defP() { return { v: 1, nick: 'Player', lessons: {}, stats: {}, skills: {}, checks: [], resume: null, serve: 0, mastery: null, masteryResults: [] }; }
   function loadP() {
     var ls;
     try { ls = window.localStorage; var t = '__clc_test'; ls.setItem(t, '1'); ls.removeItem(t); }
@@ -125,6 +139,8 @@
       if (Array.isArray(d.checks)) p.checks = d.checks.slice(-50);
       if (d.resume && typeof d.resume === 'object') p.resume = d.resume;
       if (typeof d.serve === 'number') p.serve = d.serve;
+      if (d.mastery && typeof d.mastery === 'object') p.mastery = d.mastery;
+      if (Array.isArray(d.masteryResults)) p.masteryResults = d.masteryResults.slice(-10);
       return p;
     } catch (e) {
       storageNote = 'Saved progress could not be read, so the app started fresh. Old progress was not used.';
@@ -192,7 +208,8 @@
   function markStory(pid) { P.serve++; var s = P.stats['story:' + pid] || (P.stats['story:' + pid] = { n: 0, last: 0 }); s.last = P.serve; s.n++; saveP(); }
   function testPick(a, n) {
     var core = SKILLS[a].filter(function (s) { return !s.optional || (s.id === 'long' && lessonDone(a, 'E')); });
-    var bySk = core.map(function (s) { return shuffle(bankFor(a).filter(function (q) { return q.sk === s.id; })); }).filter(function (l) { return l.length; });
+    var src = CHECK_Q[a] || bankFor(a);
+    var bySk = core.map(function (s) { return shuffle(src.filter(function (q) { return q.sk === s.id; })); }).filter(function (l) { return l.length; });
     var out = [], i = 0;
     while (out.length < n && bySk.some(function (l) { return l.length; })) { var l = bySk[i % bySk.length]; if (l.length) out.push(l.pop()); i++; }
     return shuffle(out).map(function (q) { return q.id; });
@@ -201,6 +218,7 @@
   /* ───────────── question state ───────────── */
   var IGNORE_ADJ = { a: 'article', an: 'article', the: 'article', my: 'whose', your: 'whose', his: 'whose', her: 'whose', its: 'whose', our: 'whose', their: 'whose' };
   var PRONOUNS = { i: 1, me: 1, you: 1, he: 1, she: 1, it: 1, we: 1, they: 1, him: 1, us: 1, them: 1 };
+  var JOINERS = { and: 1, but: 1, so: 1, or: 1, while: 1, when: 1, because: 1 };
   var CAT = { p: 'person', l: 'place', t: 'thing', i: 'idea' };
   var CATQ = { p: 'Who?', l: 'Where?', t: 'What thing?', i: 'What feeling or idea?' };
   function nounCat(t) { var c = (t.tags || '').replace('P', '').charAt(0); return CAT[c] || 'thing'; }
@@ -259,6 +277,7 @@
     }
     if (q.mode === 'verb') {
       if (PRONOUNS[t.lw]) return w + ' is a pronoun. It tells who, not the action.';
+      if (JOINERS[t.lw]) return w + ' joins parts of the sentence. It is not a verb.';
       if (IGNORE_ADJ[t.lw] === 'article') return w + ' is a little pointer word. It is not a verb.';
       return w + ' is not part of the verb here. Ask: does it show action, tell about being, or help the main verb?';
     }
@@ -290,16 +309,28 @@
     return IGNORE_ADJ[t.lw] === 'article' ? w + ' is a little pointer word called an article. We skip it and look for words that tell what kind, which one, or how many.'
       : w + ' tells whose. We skip it here and look for words that tell what kind, which one, or how many.';
   }
+  function teamClue(team, hit, ask) {
+    var main = team[team.length - 1], helpers = team.slice(0, -1);
+    var hitHelper = helpers.some(function (i) { return hit.indexOf(i) >= 0; });
+    var hitMain = hit.indexOf(main) >= 0;
+    var missH = helpers.filter(function (i) { return hit.indexOf(i) < 0; }).length;
+    if (hitHelper && !hitMain) return 'You found a helper! ' + (ask ? ask + ' ' : '') + 'Find the rest of the verb team.';
+    if (hitMain && missH) return 'You found the main verb! Look for its helper' + (missH > 1 ? 's' : '') + '.';
+    if (hitHelper && hitMain) return 'You have part of the team. This team has ' + team.length + ' verb words.';
+    return 'Not yet. ' + (ask ? 'Ask: ' + ask : 'Look for the word that shows action or tells about being.');
+  }
   function missingClue(q, miss, hit) {
     if (q.mode === 'verb') {
-      var main = q.ans[q.ans.length - 1];
-      var helpers = q.ans.slice(0, -1);
-      var hitHelper = hit.some(function (i) { return helpers.indexOf(i) >= 0; });
-      var hitMain = hit.indexOf(main) >= 0;
-      if (hitHelper && !hitMain) return 'You found a helper! ' + (q.ask ? q.ask + ' ' : '') + 'Find the rest of the verb team.';
-      if (hitMain && miss.some(function (i) { return helpers.indexOf(i) >= 0; })) return 'You found the main verb! Look for its helper' + (miss.length > 1 ? 's' : '') + '.';
-      if (hitHelper && hitMain) return 'You have part of the team. This team has ' + q.ans.length + ' verb words.';
-      return 'Not yet. ' + (q.ask ? 'Ask: ' + q.ask : 'Look for the word that shows action or tells about being.');
+      var teams = q.teams && q.teams.length ? q.teams : [q.ans];
+      var has = function (i) { return hit.indexOf(i) >= 0; };
+      if (teams.length > 1) {
+        var full = teams.filter(function (t) { return t.every(has); }).length;
+        var part = teams.filter(function (t) { return t.some(has) && !t.every(has); });
+        if (part.length) return teamClue(part[0], hit, null) + ' This sentence has ' + teams.length + ' verbs or verb teams.';
+        if (full) return 'You found ' + full + ' of ' + teams.length + '. Keep reading! Something else happens in this sentence. Find every verb.';
+        return 'Not yet. Read the whole sentence. Look for every action or being word. There is more than one.';
+      }
+      return teamClue(teams[0], hit, q.ask);
     }
     if (q.mode === 'noun') {
       var n = miss.length, t = q.toks[miss[0]];
@@ -376,6 +407,7 @@
     if (q.kind === 'select') {
       var n = q.ans.length;
       if (QS.phase === 'noun') return 'The noun is “' + q.toks[uniqueTargets(q)[0]].w + '”. Tap it.';
+      if (q.mode === 'verb' && q.teams && q.teams.length > 1) return 'This sentence has ' + q.teams.length + ' verbs or verb teams, with ' + n + ' verb words in all.';
       if (q.mode === 'verb') return n === 1 ? 'The verb is just ONE word here.' : 'This verb team has ' + n + ' words. Find all ' + n + '.';
       if (q.mode === 'noun') return 'Look for ' + n + ' noun' + (n > 1 ? 's' : '') + (q.want && CAT[q.want] ? ' that name' + (n > 1 ? '' : 's') + ' a ' + CAT[q.want] : '') + '.';
       if (q.mode === 'adj') { var nouns = uniqueTargets(q).map(function (i) { return '“' + q.toks[i].w + '”'; }); return 'Look for ' + n + ' describing word' + (n > 1 ? 's' : '') + '. Check the noun' + (nouns.length > 1 ? 's ' : ' ') + nouns.join(' and ') + '.'; }
@@ -450,14 +482,16 @@
     if (v.v === 'lesson') r = { v: 'lesson', a: v.a, l: v.l, step: v.step };
     else if (v.v === 'round') r = { v: 'round', a: v.a, mode: v.mode, sk: v.sk || null, story: v.story || null, ids: v.ids, i: v.i, res: v.res };
     else if (v.v === 'test' || v.v === 'testReview') r = { v: 'test', a: v.a, ids: v.ids, i: v.i, ans: v.ans };
+    else if (v.v === 'mastery' || v.v === 'masteryBreak' || v.v === 'masteryReview') r = { v: 'mastery', a: 'verbs' };
     if (r) { P.resume = r; saveP(); }
-    else if (v.v === 'roundEnd' || v.v === 'testResult' || v.v === 'lessonEnd') { P.resume = null; saveP(); }
+    else if (v.v === 'roundEnd' || v.v === 'testResult' || v.v === 'lessonEnd' || v.v === 'masteryResult') { P.resume = null; saveP(); }
   }
   function resumeDesc(r) {
     var a = areaById(r.a); if (!a) return null;
     if (r.v === 'lesson') { var l = lessonById(r.a, r.l); if (!l) return null; return a.short + ': Lesson ' + l.id + ' – ' + l.title + ' (step ' + (r.step + 1) + ')'; }
     if (r.v === 'round') return a.short + ': ' + (r.mode === 'guided' ? 'Guided practice' : 'Practice') + ', question ' + (r.i + 1) + ' of ' + r.ids.length;
     if (r.v === 'test') return a.short + ': Check My Skills, question ' + (r.i + 1) + ' of ' + r.ids.length;
+    if (r.v === 'mastery') return validMastery(P.mastery) ? 'Verb Mastery Challenge, sentence ' + (P.mastery.i + 1) + ' of ' + MASTERY_IDS.length + ' (' + mAnswered() + ' answered)' : null;
     return null;
   }
   function doResume() {
@@ -465,6 +499,7 @@
     try {
       if (r.v === 'lesson') { var l = lessonById(r.a, r.l); if (!l) throw 0; return startLesson(r.a, r.l, Math.min(r.step, l.steps.length - 1)); }
       if (r.v === 'round') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var v = { v: 'round', a: r.a, mode: r.mode, sk: r.sk, story: r.story, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), res: r.res || [] }; v.qs = newQS(QBY[v.ids[v.i]], r.mode); return go(v); }
+      if (r.v === 'mastery') { if (!validMastery(P.mastery)) throw 0; return openMasteryQ(P.mastery.i); }
       if (r.v === 'test') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var t = { v: 'test', a: r.a, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), ans: r.ans || {} }; t.qs = newQS(QBY[t.ids[t.i]], 'test', t.ans[t.ids[t.i]]); return go(t); }
     } catch (e) { /* fall through */ }
     P.resume = null; saveP(); go({ v: 'home' });
@@ -628,7 +663,7 @@
     return h;
   }
   function promptFor(q) {
-    if (q.mode === 'verb') return 'Find the verb. If it is a verb team, tap EVERY verb word.';
+    if (q.mode === 'verb') return 'Tap EVERY verb word: main verbs and their helpers.';
     if (q.mode === 'noun') {
       if (!q.want) return 'Tap ALL the nouns.';
       return { p: 'Tap the noun that names a PERSON.', l: 'Tap the noun that names a PLACE.', t: 'Tap the noun that names a THING.', i: 'Tap the noun that names an IDEA.', P: 'Tap every PROPER noun (special names).', c: 'Tap the COMMON noun.' }[q.want];
@@ -674,6 +709,7 @@
       questionDone(QS);
     }
     if (view.v === 'test') { view.ans[q.id] = saveAnswer(QS); saveResume(); }
+    if (view.v === 'mastery' && P.mastery) { P.mastery.ans[q.id] = saveAnswer(QS); saveP(); }
     render();
   }
   function questionDone(QS) {
@@ -720,6 +756,10 @@
     h += '<button type="button" class="path-step" data-act="pick" data-mode="guided" data-fkey="pickg"><span class="num">2</span><span><b>GUIDED PRACTICE</b><span>The coach helps on every question</span></span></button>';
     h += '<button type="button" class="path-step" data-act="pick" data-mode="practice" data-fkey="pickp"><span class="num">3</span><span><b>PRACTICE</b><span>5 questions. Hints when you want them.</span></span></button>';
     h += '<button type="button" class="path-step" data-act="testSetup" data-fkey="tests"><span class="num">4</span><span><b>CHECK MY SKILLS</b><span>No hints. Show what you know.</span></span></button>';
+    if (a.id === 'verbs') {
+      var mInfo = validMastery(P.mastery) ? 'In progress: ' + mAnswered() + ' of ' + MASTERY_IDS.length + ' answered' : (P.masteryResults.length ? 'Last score: ' + P.masteryResults[P.masteryResults.length - 1].score + ' of ' + MASTERY_IDS.length : '59 new sentences. Breaks every 10.');
+      h += '<button type="button" class="path-step final" data-act="masteryIntro" data-fkey="mastery"><span class="num">\u2605</span><span><b>FINAL: VERB MASTERY CHALLENGE</b><span>' + esc(mInfo) + '</span></span></button>';
+    }
     h += '</div>';
     return h;
   }
@@ -821,7 +861,8 @@
     h += '<p class="key"><b>Remember:</b> ' + esc(les.key) + '</p>';
     h += '<div class="end-btns">' + btn('practiceSkill', 'Practice this (5 questions)', { attrs: 'data-a="' + a.id + '" data-sk="' + les.skill + '" data-mode="practice"' }, 'primary big');
     if (next) h += btn('lesson', 'Next lesson: ' + esc(next.title) + (next.optional ? ' (optional)' : ''), { attrs: 'data-l="' + next.id + '"' }, 'big');
-    h += btn('learn', 'All lessons', null, 'big') + btn('home', '⌂ Home', null, 'big') + '</div></section>';
+    if (view.a === 'verbs' && !next) h += btn('masteryIntro', '\u2605 Verb Mastery Challenge', null, 'big');
+    h += btn('learn', 'All lessons', null, 'big') + btn('home', '\u2302 Home', null, 'big') + '</div></section>';
     return h;
   }
 
@@ -1081,6 +1122,11 @@
       });
       h += '</tbody></table></div></div>';
     });
+    h += '<div class="card"><h2>Verb Mastery Challenge</h2><p class="muted small">59 sentences used only in this final check. Benchmark: ' + MASTERY_BENCHMARK + ' of ' + MASTERY_IDS.length + ' with no help. Every verb word must be found; a partial verb team or an extra word makes that sentence wrong.</p>';
+    if (validMastery(P.mastery)) h += '<p><b>In progress:</b> ' + mAnswered() + ' of ' + MASTERY_IDS.length + ' answered (saved).</p>';
+    if (!P.masteryResults.length) h += '<p class="muted">Not taken yet.</p>';
+    P.masteryResults.slice(-5).reverse().forEach(function (r) { var d = new Date(r.date); h += '<p>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ': <b>' + r.score + ' of ' + r.total + '</b> \u00B7 ' + (r.met ? 'benchmark met' : 'benchmark not met yet') + '</p>' + catTable(r.byCat); });
+    h += '</div>';
     h += '<div class="card"><h2>Check My Skills history</h2>';
     if (!P.checks.length) h += '<p class="muted">No checks yet.</p>';
     else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
@@ -1088,6 +1134,125 @@
     if (view.confirmReset) h += '<div class="confirm" role="alertdialog" aria-label="Confirm reset"><p><b>Erase all progress on this device?</b> This cannot be undone.</p>' + btn('doReset', 'Yes, erase everything', null, 'danger') + ' ' + btn('cancelReset', 'Cancel') + '</div>';
     else h += ' ' + btn('askReset', 'Reset all progress', null, 'ghost');
     h += '</div>';
+    return h;
+  }
+
+
+  /* ───────────── Verb Mastery Challenge (final assessment) ───────────── */
+  function validMastery(m) { return !!(m && Array.isArray(m.order) && m.order.length === MASTERY_IDS.length && m.order.every(function (id) { return MASTERY_IDS.indexOf(id) >= 0; }) && typeof m.i === 'number' && m.ans && typeof m.ans === 'object'); }
+  function mAnswered() { var m = P.mastery; if (!validMastery(m)) return 0; return m.order.filter(function (id) { var a = m.ans[id]; return a && a.sel && a.sel.length; }).length; }
+  function startMastery(fresh) {
+    if (fresh || !validMastery(P.mastery)) P.mastery = { order: shuffle(MASTERY_IDS), i: 0, ans: {}, started: new Date().toISOString() };
+    saveP(); openMasteryQ(P.mastery.i);
+  }
+  function openMasteryQ(i) {
+    var m = P.mastery; m.i = Math.max(0, Math.min(i, m.order.length - 1)); saveP();
+    var v = { v: 'mastery' }; v.qs = newQS(QBY[m.order[m.i]], 'test', m.ans[m.order[m.i]]); go(v);
+  }
+  function masteryMeets(score) { return score >= MASTERY_BENCHMARK; }
+  function catTable(byCat) {
+    if (!byCat) return '';
+    return '<div class="tbl-wrap"><table class="tbl small"><thead><tr><th scope="col">Skill category</th><th scope="col">Correct</th></tr></thead><tbody>' +
+      MASTERY_CATS.map(function (c) { var r = byCat[c.id] || { right: 0, total: c.count }; return '<tr><th scope="row">' + esc(c.name) + '</th><td>' + r.right + ' of ' + r.total + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function screenMasteryIntro() {
+    var h = topNav([btn('area', '← Verbs', { attrs: 'data-a="verbs"' }), btn('home', '⌂ Home')]);
+    h += '<h1 id="scr-title" tabindex="-1">Verb Mastery Challenge</h1>';
+    h += '<div class="card"><p class="lead">' + MASTERY_IDS.length + ' brand-new sentences. In each one, tap EVERY verb word: main verbs and their helpers.</p>';
+    h += '<ul class="rules"><li>One sentence at a time. Use Back and Next.</li><li>No hints and no answers until you turn it in.</li><li>Your answers save by themselves. Take a break after every 10.</li><li>You do NOT have to finish in one sitting.</li><li>Goal: ' + MASTERY_BENCHMARK + ' of ' + MASTERY_IDS.length + ' correct.</li></ul>';
+    var notDone = LESSONS.verbs.filter(function (l) { return !l.optional && !lessonDone('verbs', l.id); });
+    if (notDone.length) h += '<p class="msg info">Coach tip: finish these verb lessons first: ' + esc(notDone.map(function (l) { return 'Lesson ' + l.id + ' (' + l.title + ')'; }).join(', ')) + '. Lessons E and G are optional, but they help too.</p>';
+    h += '<div class="end-btns">';
+    if (validMastery(P.mastery)) {
+      h += btn('mStart', 'Continue at sentence ' + (P.mastery.i + 1) + ' ▶', null, 'primary big');
+      h += '</div><p class="center">' + mAnswered() + ' of ' + MASTERY_IDS.length + ' answered so far.</p>';
+      if (view.confirmRestart) h += '<div class="confirm" role="alertdialog" aria-label="Confirm start over"><p><b>Start over?</b> Your saved answers for this challenge will be erased.</p>' + btn('mRestart', 'Yes, start over', null, 'danger') + ' ' + btn('mRestartNo', 'Cancel') + '</div>';
+      else h += '<div class="end-btns">' + btn('mRestartAsk', 'Start over', null, 'ghost') + '</div>';
+    } else h += btn('mStart', 'Start the challenge ▶', null, 'primary big') + '</div>';
+    h += '</div>';
+    if (P.masteryResults.length) { var r = P.masteryResults[P.masteryResults.length - 1]; h += '<div class="card"><h2>Last time</h2><p><b>' + r.score + ' of ' + r.total + '</b> · ' + (r.met ? 'Benchmark met' : 'Benchmark not met yet') + '</p></div>'; }
+    return h;
+  }
+  function screenMastery() {
+    var m = P.mastery, n = m.order.length;
+    var h = topNav([btn('mPause', '⏸ Save and take a break'), btn('masteryIntro', 'Challenge info')]);
+    h += '<p class="crumb">Verb Mastery Challenge · no hints until you turn it in</p>';
+    h += '<div class="mbar" aria-hidden="true"><span style="width:' + Math.round(100 * (m.i + 1) / n) + '%"></span></div>';
+    h += '<p class="steps-text">Sentence ' + (m.i + 1) + ' of ' + n + ' · ' + mAnswered() + ' answered</p>';
+    h += '<section class="card"><h1 id="scr-title" tabindex="-1" class="sr-only">Sentence ' + (m.i + 1) + ' of ' + n + '</h1>' + qWidget(view.qs) + '</section>';
+    h += '<div class="lesson-foot">' + (m.i > 0 ? btn('mPrev', '← Back') : '<span></span>') + (m.i < n - 1 ? btn('mNext', 'Next →', null, 'primary big') : btn('mReview', 'Review my answers →', null, 'primary big')) + '</div>';
+    return h;
+  }
+  function screenMasteryBreak() {
+    var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">Break time? <span aria-hidden="true">⭐</span></h1>';
+    h += '<p class="lead">You finished sentences 1 to ' + view.done + '. Your answers are saved.</p><p>Stretch, get a drink of water, or keep going. You can stop now and come back later.</p>';
+    h += '<div class="end-btns">' + btn('mResume', 'Keep going: sentence ' + (view.done + 1), null, 'primary big') + btn('mPause', 'Take a break (go Home)', null, 'big') + '</div></section>';
+    return h;
+  }
+  function screenMasteryReview() {
+    var m = P.mastery, missing = [];
+    m.order.forEach(function (id, i) { var a = m.ans[id]; if (!(a && a.sel && a.sel.length)) missing.push(i); });
+    var h = topNav([btn('mResume', '← Back to sentences'), btn('mPause', 'Save and take a break')]);
+    h += '<section class="card"><h1 id="scr-title" tabindex="-1">Ready to turn it in?</h1>';
+    if (missing.length) {
+      h += '<p class="lead">You have <b>' + missing.length + '</b> unanswered sentence' + (missing.length > 1 ? 's' : '') + '. Tap a number to go there:</p><div class="jump-grid">';
+      missing.forEach(function (i) { h += btn('mJump', String(i + 1), { attrs: 'data-i="' + i + '" aria-label="Go to sentence ' + (i + 1) + '"', key: 'r' + i }, 'small'); });
+      h += '</div><p>Unanswered sentences count as not correct.</p>';
+    } else h += '<p class="lead">All ' + m.order.length + ' sentences have an answer. Nice!</p>';
+    h += '<div class="end-btns">' + btn('mSubmit', 'Turn it in', null, 'primary big') + btn('mResume', 'Keep checking', null, 'big') + '</div></section>';
+    return h;
+  }
+  function verbDiagnosis(q, sel) {
+    sel = sel || [];
+    if (!sel.length) return ['No answer was given.'];
+    var notes = [];
+    var extra = sel.filter(function (i) { return q.ans.indexOf(i) < 0; }).map(function (i) { return q.toks[i].w; });
+    q.teams.forEach(function (t) {
+      var main = t[t.length - 1], helpers = t.slice(0, -1);
+      var mh = helpers.filter(function (i) { return sel.indexOf(i) < 0; }).map(function (i) { return q.toks[i].w; });
+      if (sel.indexOf(main) < 0) notes.push('Missed the main verb “' + q.toks[main].w + '”.');
+      if (mh.length) notes.push('Missed the helper' + (mh.length > 1 ? 's' : '') + ' “' + mh.join('”, “') + '”.');
+    });
+    if (extra.length) notes.push('Extra word' + (extra.length > 1 ? 's' : '') + ' that ' + (extra.length > 1 ? 'are' : 'is') + ' not a verb here: “' + extra.join('”, “') + '”.');
+    return notes;
+  }
+  function submitMastery() {
+    var m = P.mastery, byCat = {};
+    MASTERY_CATS.forEach(function (c) { byCat[c.id] = { right: 0, total: 0 }; });
+    var items = MASTERY_IDS.map(function (id) { var q = QBY[id], g = m.ans[id] || null, ok = gradeOnly(q, g); byCat[q.cat].total++; if (ok) byCat[q.cat].right++; return { id: id, ok: ok, given: g }; });
+    var score = items.filter(function (x) { return x.ok; }).length, met = masteryMeets(score);
+    P.masteryResults.push({ date: new Date().toISOString(), score: score, total: items.length, met: met, byCat: byCat, missed: items.filter(function (x) { return !x.ok; }).map(function (x) { return x.id; }) });
+    if (P.masteryResults.length > 10) P.masteryResults = P.masteryResults.slice(-10);
+    P.mastery = null; P.resume = null; saveP();
+    go({ v: 'masteryResult', items: items, score: score, met: met, byCat: byCat });
+  }
+  function screenMasteryResult() {
+    var n = view.items.length, need = MASTERY_BENCHMARK - view.score;
+    var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">Verb Mastery Challenge results</h1><p class="score">' + view.score + ' of ' + n + ' correct</p>';
+    h += view.met ? '<p class="msg good mresult">Benchmark met: ' + MASTERY_BENCHMARK + ' or more of ' + n + ' with no help. <span aria-hidden="true">⭐</span></p>'
+      : '<p class="msg fix mresult">Not yet. The goal is ' + MASTERY_BENCHMARK + ' of ' + n + '. ' + need + ' more correct sentence' + (need > 1 ? 's' : '') + ' will reach it. Practice the skills below, then try again.</p>';
+    h += '</section><div class="card"><h2>Results by skill</h2>' + catTable(view.byCat) + '</div>';
+    var missed = view.items.filter(function (x) { return !x.ok; });
+    if (missed.length) {
+      var cats = []; missed.forEach(function (it) { var c = QBY[it.id].cat; if (cats.indexOf(c) < 0) cats.push(c); });
+      h += '<div class="card"><h2>Recommended practice</h2><div class="end-btns">';
+      MASTERY_CATS.filter(function (c) { return cats.indexOf(c.id) >= 0; }).forEach(function (c) {
+        var l = lessonForSkill('verbs', c.skill);
+        h += '<button type="button" class="btn big" data-act="lessonV" data-l="' + l.id + '" data-fkey="l' + c.id + '">Lesson ' + l.id + ': ' + esc(l.title) + '</button>';
+        h += btn('practiceSkill', 'Guided practice: ' + esc(skillById('verbs', c.skill).name), { attrs: 'data-a="verbs" data-sk="' + c.skill + '" data-mode="guided"', key: 'p' + c.id }, 'big');
+      });
+      h += '</div></div><h2 class="section-h">Sentences to learn from (' + missed.length + ')</h2>';
+      missed.forEach(function (it) {
+        var q = QBY[it.id], sel = it.given && it.given.sel ? it.given.sel.slice().sort(function (x, y) { return x - y; }) : [];
+        var cat = MASTERY_CATS.filter(function (c) { return c.id === q.cat; })[0], l = lessonForSkill('verbs', cat.skill);
+        h += '<div class="card review missed-item"><p class="rq">' + esc(plainSentence(q)) + '</p>' + sentenceHTML(q, { show: true });
+        h += '<p><b>Your selections:</b> <span class="your-sel">' + esc(sel.length ? sel.map(function (i) { return q.toks[i].w; }).join(', ') : '(none)') + '</span></p>';
+        h += '<p><b>Correct verb words:</b> ' + esc(q.ans.map(function (i) { return q.toks[i].w; }).join(', ')) + '</p>';
+        h += '<p class="msg fix">' + esc(verbDiagnosis(q, sel).join(' ')) + '</p><p class="msg info">' + esc(q.ex) + '</p>';
+        h += '<p class="small"><b>Practice:</b> Lesson ' + l.id + ' – ' + esc(l.title) + ' (' + esc(cat.name) + ')</p></div>';
+      });
+    }
+    h += '<div class="end-btns">' + btn('area', 'Back to Verbs', { attrs: 'data-a="verbs"' }, 'primary big') + btn('home', '⌂ Home', null, 'big') + '</div>';
     return h;
   }
 
@@ -1109,6 +1274,11 @@
       case 'guides': return screenGuides();
       case 'sheet': return screenSheet();
       case 'grown': return screenGrown();
+      case 'masteryIntro': return screenMasteryIntro();
+      case 'mastery': return screenMastery();
+      case 'masteryBreak': return screenMasteryBreak();
+      case 'masteryReview': return screenMasteryReview();
+      case 'masteryResult': return screenMasteryResult();
     }
     return screenHome();
   }
@@ -1159,6 +1329,7 @@
       case 'area': return go({ v: 'area', a: A('a') || view.a });
       case 'learn': return go({ v: 'learn', a: view.a });
       case 'lesson': return startLesson(view.a, A('l'), 0);
+      case 'lessonV': return startLesson('verbs', A('l'), 0);
       case 'pick': return go({ v: 'pick', a: view.a, mode: A('mode') });
       case 'startRound': return startRound(view.a, view.mode, A('sk') || null, null);
       case 'startStory': return startRound('reading', view.mode, null, A('p'));
@@ -1212,6 +1383,21 @@
       case 'treview': view.ans[view.qs.q.id] = saveAnswer(view.qs); view.v = 'testReview'; saveResume(); return render(true);
       case 'tback': view.v = 'test'; view.qs = newQS(QBY[view.ids[view.i]], 'test', view.ans[view.ids[view.i]]); return render(true);
       case 'submitTest': return submitTest();
+      case 'masteryIntro': return go({ v: 'masteryIntro' });
+      case 'mStart': return startMastery(false);
+      case 'mRestartAsk': view.confirmRestart = true; return render();
+      case 'mRestartNo': view.confirmRestart = false; return render(true);
+      case 'mRestart': return startMastery(true);
+      case 'mPrev': case 'mNext': case 'mJump': {
+        if (view.v === 'mastery') P.mastery.ans[view.qs.q.id] = saveAnswer(view.qs);
+        var cur = P.mastery.i;
+        if (act === 'mNext' && (cur + 1) % 10 === 0 && cur + 1 < MASTERY_IDS.length) { P.mastery.i = cur + 1; saveP(); return go({ v: 'masteryBreak', done: cur + 1 }); }
+        return openMasteryQ(act === 'mNext' ? cur + 1 : act === 'mPrev' ? cur - 1 : parseInt(A('i'), 10));
+      }
+      case 'mResume': return openMasteryQ(P.mastery.i);
+      case 'mPause': if (view.v === 'mastery') P.mastery.ans[view.qs.q.id] = saveAnswer(view.qs); saveP(); return go({ v: 'home' });
+      case 'mReview': P.mastery.ans[view.qs.q.id] = saveAnswer(view.qs); saveP(); return go({ v: 'masteryReview' });
+      case 'mSubmit': return submitMastery();
       case 'quitTest': P.resume = null; saveP(); return go({ v: 'area', a: view.a });
       // question actions
       case 'tok': case 'choice': case 'sort': case 'ev': case 'hint': case 'check': case 'showme':
@@ -1220,7 +1406,7 @@
   });
 
   /* Test hooks for automated checks (harmless in normal use) */
-  window.__CLC = { QBY: QBY, AREA_Q: AREA_Q, gradeOnly: gradeOnly, evaluate: function (q, sel) { return evaluate({ q: q, sel: sel, phase: null }); }, lessonQ: lessonQ, P: function () { return P; }, view: function () { return view; } };
+  window.__CLC = { QBY: QBY, AREA_Q: AREA_Q, gradeOnly: gradeOnly, evaluate: function (q, sel) { return evaluate({ q: q, sel: sel, phase: null }); }, lessonQ: lessonQ, P: function () { return P; }, view: function () { return view; }, CHECK_Q: CHECK_Q, MASTERY_Q: MASTERY_Q, masteryMeets: masteryMeets };
 
   render(true);
 })();

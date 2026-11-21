@@ -24,7 +24,8 @@ var SKILLS = {
     { id: 'team', name: 'Whole verb teams', lesson: 'D' },
     { id: 'long', name: 'Longer verb teams', lesson: 'E', optional: true },
     { id: 'endings', name: 'Ending clues (-ed, -ing)', lesson: 'F' },
-    { id: 'challenge', name: 'Challenge: words in between', lesson: 'G', optional: true }
+    { id: 'challenge', name: 'Challenge: words in between', lesson: 'G', optional: true },
+    { id: 'multi', name: 'Finding every verb', lesson: 'H' }
   ],
   nouns: [
     { id: 'people', name: 'People nouns', lesson: 'A' },
@@ -420,6 +421,15 @@ var LESSONS = {
       { t: 'show', title: 'Another one', mode: 'verb', s: 'She [can] easily [catch] the ball.', labels: { can: 'helper', catch: 'main verb', easily: 'tells how' }, text: ['Verb words: can, catch', 'Easily tells how. It is not a verb.'] },
       { t: 'guided', coach: 'Find the helper and the main verb. Skip the word in between.', q: { mode: 'verb', s: 'We [will] soon [eat] dinner.', ask: 'What will we do?', h: 'Soon tells when. Skip it.', ex: 'Will and eat are the verb words. Soon is not a verb.', notes: { soon: 'Soon tells WHEN. It is not a verb.', dinner: 'Dinner is a thing.' } } },
       { t: 'try', q: { mode: 'verb', s: '[Can] you [hit] the ball?', ask: 'What can you do?', h: 'In a question, the helper can come first.', ex: 'Can and hit are the verb words. In a question, the helper moves to the front.', notes: { you: 'You is a pronoun. It is not a verb.' } } }
+    ] },
+    { id: 'H', title: 'Find Every Verb', skill: 'multi', key: 'A sentence can have more than one verb or verb team. Find them all.', steps: [
+      { t: 'explain', title: 'More than one verb', text: ['A sentence can have more than one verb.', 'Words like and, so, while, and when often join two actions.', 'Find EVERY verb and every verb team.'] },
+      { t: 'show', title: 'Watch me find them', mode: 'verb', s: 'Chris [ran:a] and [jumped:b].', labels: { ran: 'verb 1', jumped: 'verb 2' }, text: ['Ran is one action. Jumped is another action.', 'And is not a verb. It joins the two actions.'] },
+      { t: 'show', title: 'A verb team plus a verb', mode: 'verb', s: 'The boy [was:a] [singing:a] while his sister [danced:b].', labels: { was: 'helper', singing: 'main verb', danced: 'verb 2' }, text: ['Verb team 1: was singing', 'Verb 2: danced', 'While joins the two parts. It is not a verb.'] },
+      { t: 'explain', title: 'Coach tip: keep going!', text: ['After you find one verb, do not stop.', 'Read to the end. Ask: Does anything else happen?', 'Tap every verb word you find.'] },
+      { t: 'guided', coach: 'Find what Mia did FIRST. Then keep reading. What else did she do?', q: { mode: 'verb', s: 'Mia [kicked:a] the ball and [ran:b] to first base.', h: 'Mia did two things. Find both actions.', ex: 'Kicked and ran are both verbs. And joins them.', notes: { and: 'And joins the two actions. It is not a verb.', base: 'Base is a place.' } } },
+      { t: 'try', q: { mode: 'verb', s: 'We [will:a] [eat:a] lunch, and then we [will:b] [play:b] tag.', h: 'There are two verb teams. Each one has a helper.', ex: 'Will eat is one verb team. Will play is another verb team.', notes: { then: 'Then tells when. It is not a verb.', lunch: 'Lunch is a thing.', tag: 'Tag is a game (a thing) here.' } } },
+      { t: 'try', q: { mode: 'verb', s: 'The dog [barked:a] when the doorbell [rang:b].', h: 'What did the dog do? What did the doorbell do?', ex: 'Barked and rang are both verbs. When joins the two parts.', notes: { when: 'When joins the two parts of the sentence. It is not a verb.' } } }
     ] }
   ],
 
@@ -593,4 +603,115 @@ var HELPER_FAMILIES = [
   { name: 'HAVE family', words: ['have', 'has', 'had'] },
   { name: 'DO family', words: ['do', 'does', 'did'] },
   { name: 'OTHER HELPERS', words: ['can', 'could', 'may', 'might', 'must', 'shall', 'should', 'will', 'would'] }
+];
+
+
+/* Lesson H practice (multiple verbs). Kept separate from the original 59 practice sentences. */
+var VERB_MULTI_PRACTICE = [
+  { id: 'vh1', sk: 'multi', s: 'The cat [stretched:a] and [yawned:b].', h: 'The cat did two things.', ex: 'Stretched and yawned are both verbs.', notes: { and: 'And joins the two actions. It is not a verb.' } },
+  { id: 'vh2', sk: 'multi', s: 'I [am:a] [reading:a], and my brother [is:b] [drawing:b].', h: 'Find two verb teams: one for me and one for my brother.', ex: 'Am reading is one team. Is drawing is another team.' },
+  { id: 'vh3', sk: 'multi', s: 'When the game [ended:a], we [cheered:b].', h: 'What did the game do? What did we do?', ex: 'Ended and cheered are both verbs.', notes: { when: 'When joins the two parts. It is not a verb.', game: 'Game is a thing.' } },
+  { id: 'vh4', sk: 'multi', s: 'Grandpa [smiled:a] because we [had:b] [cleaned:b] the kitchen.', h: 'Find one verb for Grandpa and a verb team for we.', ex: 'Smiled is one verb. Had cleaned is a verb team.', notes: { because: 'Because joins the two parts. It is not a verb.' } },
+  { id: 'vh5', sk: 'multi', s: 'She [opened:a] the box and [found:b] a puppy.', h: 'She did two things. Find both.', ex: 'Opened and found are both verbs.', notes: { box: 'Box is a thing.', puppy: 'Puppy is an animal.' } },
+  { id: 'vh6', sk: 'multi', s: 'The ducks [swam:a] while the geese [waited:b] on the shore.', h: 'What did the ducks do? What did the geese do?', ex: 'Swam and waited are both verbs.', notes: { while: 'While joins the two parts. It is not a verb.' } }
+];
+
+/* Verb CHECK MY SKILLS bank: separate from practice sentences and from the mastery challenge. */
+var VERB_CHECK = [
+  { id: 'vc1', sk: 'action', s: 'The goalie [blocked] the hard kick.', h: 'What did the goalie do?', ex: 'Blocked tells what the goalie did.' },
+  { id: 'vc2', sk: 'action', s: 'My friend [whispered] a secret.', h: 'What did my friend do?', ex: 'Whispered tells what my friend did.' },
+  { id: 'vc3', sk: 'action', s: 'The happy baby [clapped] her hands.', h: 'Happy describes the baby. What did she do?', ex: 'Clapped is the verb. Happy describes the baby.' },
+  { id: 'vc4', sk: 'action', s: 'Ben [carried] the heavy box upstairs.', h: 'What did Ben do with the box?', ex: 'Carried is the verb. Heavy describes the box.' },
+  { id: 'vc5', sk: 'being', s: 'The soup [is] hot.', h: 'Find the being word.', ex: 'Is is the verb. Hot describes the soup.' },
+  { id: 'vc6', sk: 'being', s: 'We [were] late for the bus.', h: 'Find the being word.', ex: 'Were is the verb. Late describes us.' },
+  { id: 'vc7', sk: 'being', s: 'My uncle [has] a green truck.', h: 'Is there another verb after has?', ex: 'Has is the main verb here.' },
+  { id: 'vc8', sk: 'team', s: 'The frogs [are] [hopping] across the path.', h: 'What are the frogs doing?', ex: 'Are hopping is the verb team.' },
+  { id: 'vc9', sk: 'team', s: 'Lena [will] [bring] the snacks.', h: 'What will Lena do?', ex: 'Will bring is the verb team.' },
+  { id: 'vc10', sk: 'team', s: 'I [can] [tie] my shoes.', h: 'What can I do?', ex: 'Can tie is the verb team.' },
+  { id: 'vc11', sk: 'team', s: 'They [had] [eaten] all the grapes.', h: 'Had is a helper here.', ex: 'Had eaten is the verb team.' },
+  { id: 'vc12', sk: 'long', s: 'The kids [have] [been] [swimming] all afternoon.', h: 'Find two helpers and the main verb.', ex: 'Have been swimming is the verb team.' },
+  { id: 'vc13', sk: 'long', s: 'We [will] [be] [singing] at the concert.', h: 'Find two helpers and the main verb.', ex: 'Will be singing is the verb team.' },
+  { id: 'vc14', sk: 'long', s: 'He [should] [have] [asked] first.', h: 'Find two helpers and the main verb.', ex: 'Should have asked is the verb team.' },
+  { id: 'vc15', sk: 'endings', s: 'The sleeping cat [is] fluffy.', h: 'Does sleeping describe the cat here?', ex: 'Is is the verb. Sleeping describes the cat.' },
+  { id: 'vc16', sk: 'endings', s: 'My drawing [won] a ribbon.', h: 'Drawing names a thing here.', ex: 'Won is the verb. Drawing is a thing in this sentence.' },
+  { id: 'vc17', sk: 'endings', s: 'Sam [painted] a bird.', h: 'Look for the -ed clue.', ex: 'Painted tells what Sam did.' },
+  { id: 'vc18', sk: 'multi', s: 'Ella [laughed:a] and [clapped:b].', h: 'Ella did two things.', ex: 'Laughed and clapped are both verbs.' },
+  { id: 'vc19', sk: 'multi', s: 'I [was:a] [eating:a] when you [called:b].', h: 'Find a verb team and one more verb.', ex: 'Was eating is a verb team. Called is another verb.' }
+];
+var HELPER_CHECK = [
+  { id: 'hc1', sk: 'helpers', q: 'Finish the BE family: am, ___, are', c: ['has', 'is', 'do'], a: 1, h: 'am, ?, are', ex: 'am, IS, are.' },
+  { id: 'hc2', sk: 'helpers', q: 'Which word is in the HAVE family?', c: ['hat', 'hid', 'had'], a: 2, h: 'have, has, ...', ex: 'have, has, HAD.' },
+  { id: 'hc3', sk: 'helpers', q: 'Finish the chant: could, may, ___, must', c: ['might', 'make', 'more'], a: 0, h: 'It starts with m.', ex: 'could, may, MIGHT, must.' }
+];
+
+/* ───────────── VERB MASTERY CHALLENGE: 59 new sentences, used ONLY in the final assessment ───────────── */
+var MASTERY_BENCHMARK = 54;
+var MASTERY_CATS = [
+  { id: 'action', name: 'Single action verbs (with describing words nearby)', count: 8, skill: 'action' },
+  { id: 'being', name: 'Standalone being / having / doing verbs', count: 8, skill: 'being' },
+  { id: 'team2', name: 'Two-word verb teams', count: 18, skill: 'team' },
+  { id: 'team3', name: 'Three-word verb teams', count: 12, skill: 'long' },
+  { id: 'between', name: 'Words between verb-team words', count: 8, skill: 'challenge' },
+  { id: 'multi', name: 'More than one verb in a sentence', count: 5, skill: 'multi' }
+];
+var VERB_MASTERY = [
+  { id: 'm1', cat: 'action', s: 'The excited puppy [chased] the bouncing ball across the yard.', ex: 'Chased is the only verb. Excited describes the puppy, and bouncing describes the ball.' },
+  { id: 'm2', cat: 'action', s: 'My older brother quickly [painted] the wooden fence.', ex: 'Painted is the verb. Quickly tells how, and older and wooden are describing words.' },
+  { id: 'm3', cat: 'action', s: 'The tired runner [crossed] the finish line slowly.', ex: 'Crossed is the verb. Tired describes the runner; slowly tells how.' },
+  { id: 'm4', cat: 'action', s: 'A loud, buzzing bee [landed] on the purple flower.', ex: 'Landed is the verb. Buzzing describes the bee, so it is not a verb here.' },
+  { id: 'm5', cat: 'action', s: 'Our smiling teacher [gave] us shiny gold stickers.', ex: 'Gave is the verb. Smiling describes the teacher.' },
+  { id: 'm6', cat: 'action', s: 'The broken swing [creaked] in the cold wind.', ex: 'Creaked is the verb. Broken describes the swing.' },
+  { id: 'm7', cat: 'action', s: 'Grandma carefully [stirred] the steaming soup.', ex: 'Stirred is the verb. Steaming describes the soup; carefully tells how.' },
+  { id: 'm8', cat: 'action', s: 'The talking parrot [repeated] every funny word.', ex: 'Repeated is the verb. Talking describes the parrot.' },
+  { id: 'm9', cat: 'being', s: 'The museum [was] quiet on Tuesday morning.', ex: 'Was is the only verb. Quiet describes the museum.' },
+  { id: 'm10', cat: 'being', s: 'Those sneakers [are] too small for my feet.', ex: 'Are is the only verb. Small describes the sneakers.' },
+  { id: 'm11', cat: 'being', s: 'My cousins [were] at the lake all summer.', ex: 'Were is the only verb. It tells where my cousins were.' },
+  { id: 'm12', cat: 'being', s: 'I [am] the tallest player on my team.', ex: 'Am is the only verb. Tallest describes the player.' },
+  { id: 'm13', cat: 'being', s: 'Our classroom [has] three tall windows.', ex: 'Has is the main verb. No other verb comes with it.' },
+  { id: 'm14', cat: 'being', s: 'The twins [have] matching red jackets.', ex: 'Have is the main verb. Matching describes the jackets, so it is not a verb.' },
+  { id: 'm15', cat: 'being', s: 'Our class [did] a puppet show for the first graders.', ex: 'Did is the main verb here. It tells what our class did.' },
+  { id: 'm16', cat: 'being', s: 'My aunt [had] a bad cold last week.', ex: 'Had is the main verb. No other verb comes with it.' },
+  { id: 'm17', cat: 'team2', s: 'The pitcher [is] [stretching] near the dugout.', ex: 'Is helps stretching. The team is is stretching.' },
+  { id: 'm18', cat: 'team2', s: 'My little sister [was] [giggling] during the movie.', ex: 'Was helps giggling. The team is was giggling.' },
+  { id: 'm19', cat: 'team2', s: 'The students [were] [writing] poems about autumn.', ex: 'Were helps writing. The team is were writing.' },
+  { id: 'm20', cat: 'team2', s: 'Our neighbor [has] [planted] tulips by the mailbox.', ex: 'Has helps planted. The team is has planted.' },
+  { id: 'm21', cat: 'team2', s: 'The bakers [had] [baked] fifty muffins before sunrise.', ex: 'Had helps baked. The team is had baked.' },
+  { id: 'm22', cat: 'team2', s: 'You [should] [drink] water after recess.', ex: 'Should helps drink. The team is should drink.' },
+  { id: 'm23', cat: 'team2', s: 'The firefighters [will] [visit] our school on Friday.', ex: 'Will helps visit. The team is will visit.' },
+  { id: 'm24', cat: 'team2', s: 'Marcus [can] [whistle] a whole song.', ex: 'Can helps whistle. The team is can whistle.' },
+  { id: 'm25', cat: 'team2', s: 'That storm [could] [damage] the old barn.', ex: 'Could helps damage. The team is could damage.' },
+  { id: 'm26', cat: 'team2', s: 'We [might] [see] a rainbow later.', ex: 'Might helps see. The team is might see. Later tells when.' },
+  { id: 'm27', cat: 'team2', s: 'Everyone [must] [wear] a helmet on the bike trail.', ex: 'Must helps wear. The team is must wear.' },
+  { id: 'm28', cat: 'team2', s: 'The chorus [would] [sing] at every assembly.', ex: 'Would helps sing. The team is would sing.' },
+  { id: 'm29', cat: 'team2', s: 'You [may] [use] my markers for your poster.', ex: 'May helps use. The team is may use.' },
+  { id: 'm30', cat: 'team2', s: 'The kittens [are] [chasing] a striped ribbon.', ex: 'Are helps chasing. The team is are chasing. Striped describes the ribbon.' },
+  { id: 'm31', cat: 'team2', s: 'Our class [has] [collected] forty cans for the food drive.', ex: 'Has helps collected. The team is has collected.' },
+  { id: 'm32', cat: 'team2', s: 'The girls [did] [remember] their library books.', ex: 'Did helps remember. The team is did remember.' },
+  { id: 'm33', cat: 'team2', s: 'We [shall] [begin] the science fair now.', ex: 'Shall helps begin. The team is shall begin.' },
+  { id: 'm34', cat: 'team2', s: 'The crowd [was] [waving] colorful flags.', ex: 'Was helps waving. The team is was waving.' },
+  { id: 'm35', cat: 'team3', s: 'The swimmers [have] [been] [training] since August.', ex: 'Have and been help training. The team is have been training.' },
+  { id: 'm36', cat: 'team3', s: 'My grandparents [will] [be] [arriving] after lunch.', ex: 'Will and be help arriving. The team is will be arriving.' },
+  { id: 'm37', cat: 'team3', s: 'The baby [had] [been] [crying] all night.', ex: 'Had and been help crying. The team is had been crying.' },
+  { id: 'm38', cat: 'team3', s: 'We [should] [have] [left] earlier.', ex: 'Should and have help left. The team is should have left.' },
+  { id: 'm39', cat: 'team3', s: 'The puppies [have] [been] [sleeping] in the basket.', ex: 'Have and been help sleeping. The team is have been sleeping.' },
+  { id: 'm40', cat: 'team3', s: 'I [would] [have] [helped] you with the poster.', ex: 'Would and have help helped. The team is would have helped.' },
+  { id: 'm41', cat: 'team3', s: 'Our class [will] [be] [taking] a field trip soon.', ex: 'Will and be help taking. The team is will be taking.' },
+  { id: 'm42', cat: 'team3', s: 'The tomatoes [must] [have] [grown] during the rainy week.', ex: 'Must and have help grown. The team is must have grown.' },
+  { id: 'm43', cat: 'team3', s: 'She [could] [have] [spelled] every word correctly.', ex: 'Could and have help spelled. The team is could have spelled.' },
+  { id: 'm44', cat: 'team3', s: 'The new playground [is] [being] [built] next to the gym.', ex: 'Is and being help built. The team is is being built.' },
+  { id: 'm45', cat: 'team3', s: 'You [might] [be] [feeling] better tomorrow.', ex: 'Might and be help feeling. The team is might be feeling.' },
+  { id: 'm46', cat: 'team3', s: 'The coaches [had] [been] [planning] the picnic for weeks.', ex: 'Had and been help planning. The team is had been planning.' },
+  { id: 'm47', cat: 'between', s: 'The bus [has] already [left] the station.', ex: 'Has and left are the verb words. Already tells when; it is not a verb.' },
+  { id: 'm48', cat: 'between', s: 'My dog [does] not [like] thunder.', ex: 'Does and like are the verb words. Not is not a verb.' },
+  { id: 'm49', cat: 'between', s: 'We [will] probably [eat] turkey on Thursday.', ex: 'Will and eat are the verb words. Probably is not a verb.' },
+  { id: 'm50', cat: 'between', s: 'The players [were] still [celebrating] after the game.', ex: 'Were and celebrating are the verb words. Still is not a verb.' },
+  { id: 'm51', cat: 'between', s: '[Did] your brother [finish] his science project?', ex: 'Did and finish are the verb words. In a question, the helper comes first.' },
+  { id: 'm52', cat: 'between', s: 'Grandpa [can] almost [touch] the ceiling.', ex: 'Can and touch are the verb words. Almost is not a verb.' },
+  { id: 'm53', cat: 'between', s: 'The baby [is] finally [sleeping].', ex: 'Is and sleeping are the verb words. Finally is not a verb.' },
+  { id: 'm54', cat: 'between', s: '[Will] the bus [stop] at our corner?', ex: 'Will and stop are the verb words. In a question, the helper comes first.' },
+  { id: 'm55', cat: 'multi', s: 'Tasha [grabbed:a] her backpack and [raced:b] to the bus.', ex: 'Grabbed and raced are both verbs. And is not a verb.' },
+  { id: 'm56', cat: 'multi', s: 'The rain [stopped:a], so we [played:b] outside.', ex: 'Stopped and played are both verbs. So joins the two parts.' },
+  { id: 'm57', cat: 'multi', s: 'Dad [was:a] [cooking:a] while Mom [set:b] the table.', ex: 'Was cooking is a verb team, and set is another verb.' },
+  { id: 'm58', cat: 'multi', s: 'When the bell [rang:a], the students [hurried:b] inside.', ex: 'Rang and hurried are both verbs. When is not a verb.' },
+  { id: 'm59', cat: 'multi', s: 'Jamal [has:a] [read:a] the book, and he [will:b] [write:b] a report.', ex: 'Has read is one verb team, and will write is another verb team.' }
 ];

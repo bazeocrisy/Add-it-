@@ -13,7 +13,7 @@ const path = require('path');
     const ids = new Set();
     Object.values(C.QBY).forEach(q => {
       if (ids.has(q.id)) fail('dup ' + q.id); ids.add(q.id);
-      if (!q.h || !q.ex) fail('missing hint/explain ' + q.id);
+      if ((!q.h && !q.cat) || !q.ex) fail('missing hint/explain ' + q.id);
       if (!SKILLS[q.area].some(s => s.id === q.sk)) fail('bad skill ' + q.id + ' ' + q.sk);
       if (q.kind === 'select') {
         if (!C.gradeOnly(q, { sel: q.ans.slice() })) fail('answer fails ' + q.id);

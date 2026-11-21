@@ -13,3 +13,4 @@ Rebuild after editing: `python3 learning-club/build.py`
 Checks (need Node + Playwright):
 - `node learning-club/test-data.js`: answer keys, 59 verb sentences, partial verb teams fail, etc.
 - `node learning-club/test-ui.js`: clicks through every lesson, practice, checks, guides, storage failure, mobile layout
+- `node learning-club/test-mastery.js`: 59-sentence Verb Mastery Challenge (counts, no reuse, no leaks, save/resume, 53 vs 54 benchmark), Lesson H, bank separation
