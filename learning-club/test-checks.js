@@ -70,7 +70,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
       for (let i = 0; i < info.ids.length; i++) {
         const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, c: q.c ? q.c.length : 0, ok: q.ok, items: q.items, toks: q.toks ? q.toks.length : 0 }; });
         const wrong = i === wrongAt;
-        if (k.kind === 'select') { if (wrong) { const e = [...Array(k.toks).keys()].find(x => !k.ans.includes(x) && x > 0); for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); await pg.click(`[data-act="tok"][data-i="${e}"]`); } else for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); }
+        if (k.kind === 'select') { if (wrong) { const e = await pg.evaluate(ans => [...document.querySelectorAll('button[data-act="tok"]')].map(b => +b.dataset.i).find(x => !ans.includes(x)), k.ans); for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); await pg.click(`[data-act="tok"][data-i="${e}"]`); } else for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); }
         if (k.kind === 'mc') await pg.click(`[data-act="choice"][data-i="${wrong ? (k.a + 1) % k.c : k.a}"]`);
         if (k.kind === 'sort') for (let j = 0; j < k.items.length; j++) await pg.click(`[data-act="sort"][data-i="${j}"][data-b="${wrong && j === 0 ? 1 - k.items[j][1] : k.items[j][1]}"]`);
         if (k.kind === 'ev') { let p = k.ok[0]; if (wrong) { p = 0; while (k.ok.includes(p)) p++; } await pg.click(`[data-act="ev"][data-i="${p}"]`); }
