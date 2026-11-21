@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   var D = document;
+  var HOSTED = !!window.__CLC_HOSTED; // claude.ai hosted copy: printing and downloads are blocked there
   var app = D.getElementById('app');
 
   /* ───────────── small helpers ───────────── */
@@ -1089,7 +1090,8 @@
     var h = topNav([btn('home', '⌂ Home')]);
     h += '<h1 id="scr-title" tabindex="-1">Printable learning guides</h1>';
     h += '<div class="card"><h2>Verb Memory Guide (PDF, 4 pages)</h2><p>The 23 helping verbs by family, action verbs, whole verb-team examples, -ed/-ing clues, and a short practice page with a separate answer key.</p>';
-    if (hasPDF()) h += '<div class="end-btns">' + btn('pdfDownload', '⬇ Download the PDF', null, 'primary big') + btn('pdfOpen', 'Open PDF to print', null, 'big') + '</div><p class="muted small">This is the real PDF file, saved inside the app. No internet needed.</p>';
+    if (HOSTED) h += '<p class="msg info">This online version cannot download or print files. To get the PDF and print the sheets, download chriss-learning-club.html and open it in a browser.</p>';
+    else if (hasPDF()) h += '<div class="end-btns">' + btn('pdfDownload', '⬇ Download the PDF', null, 'primary big') + btn('pdfOpen', 'Open PDF to print', null, 'big') + '</div><p class="muted small">This is the real PDF file, saved inside the app. No internet needed.</p>';
     else h += '<p class="muted">The PDF is not included in this copy. Use the Verb Teams Quick Sheet below.</p>';
     h += '</div><h2 class="section-h">Reference sheets (print or save as PDF)</h2><div class="pick-grid">';
     Object.keys(SHEETS).forEach(function (k) { h += '<button type="button" class="pick" data-act="sheet" data-k="' + k + '" data-fkey="sh' + k + '"><b>' + esc(SHEETS[k].title) + '</b><span>Open, then Print / Save as PDF</span></button>'; });
@@ -1147,7 +1149,7 @@
     return h;
   }
   function screenSheet() {
-    var h = '<div class="no-print">' + topNav([btn('guides', '← Guides'), btn('home', '⌂ Home')]) + '<h1 id="scr-title" tabindex="-1" class="sr-only">' + esc(SHEETS[view.k].title) + '</h1><div class="end-btns">' + btn('print', '🖨️ Print / Save as PDF', null, 'primary big') + '</div><p class="muted small">To make a PDF, choose “Save as PDF” in the print window.</p></div>';
+    var h = '<div class="no-print">' + topNav([btn('guides', '← Guides'), btn('home', '⌂ Home')]) + '<h1 id="scr-title" tabindex="-1" class="sr-only">' + esc(SHEETS[view.k].title) + '</h1>' + (HOSTED ? '<p class="msg info">This online version cannot print. To print this sheet, open the downloaded chriss-learning-club.html file in a browser.</p>' : '<div class="end-btns">' + btn('print', '🖨️ Print / Save as PDF', null, 'primary big') + '</div><p class="muted small">To make a PDF, choose “Save as PDF” in the print window.</p>') + '</div>';
     return h + sheetHTML(view.k);
   }
 

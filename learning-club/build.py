@@ -13,3 +13,12 @@ for key, val in [('/*CSS*/', (here/'app.css').read_text()), ('/*CONTENT*/', (her
 out = here.parent / 'chriss-learning-club.html'
 out.write_text(t)
 print(out, len(t.encode()), 'bytes; pdf sha256', hashlib.sha256(pdf).hexdigest()[:16])
+
+# Hosted (claude.ai artifact) build: page fragment, no PDF bytes, print/download replaced by a note.
+import sys
+if len(sys.argv) > 1:
+    body = t.split('<body>', 1)[1].split('</body>', 1)[0]
+    body = body.split('<noscript>')[0] + '<script>window.__CLC_HOSTED = true;</script>\n<script>\n' + (here/'content.js').read_text() + '\n</script>\n<script>\n' + (here/'app.js').read_text() + '\n</script>\n'
+    frag = "<title>Chris's Learning Club</title>\n<style>\n" + (here/'app.css').read_text() + '\n</style>\n' + body
+    pathlib.Path(sys.argv[1]).write_text(frag)
+    print('hosted build', sys.argv[1], len(frag.encode()), 'bytes')
