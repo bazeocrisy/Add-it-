@@ -215,13 +215,33 @@
     });
   }
   function markStory(pid) { P.serve++; var s = P.stats['story:' + pid] || (P.stats['story:' + pid] = { n: 0, last: 0 }); s.last = P.serve; s.n++; saveP(); }
+  /* Exposure: a check question, check passage, or mastery sentence counts as seen once it is SHOWN. */
+  function expo(kind) { var k = 'seen_' + kind; return P.stats[k] || (P.stats[k] = {}); }
+  function markShown() {
+    var changed = false, id;
+    if (view.v === 'test' && view.qs) {
+      id = view.qs.q.id; if (!expo('q')[id]) { expo('q')[id] = 1; changed = true; }
+      var p = view.qs.q.passage; if (p && !expo('p')[p.id]) { expo('p')[p.id] = 1; changed = true; }
+    }
+    if (view.v === 'mastery' && view.qs) { id = view.qs.q.id; if (!expo('m')[id]) { expo('m')[id] = 1; changed = true; } }
+    if (changed) saveP();
+  }
   function testPick(a, n) {
     var core = SKILLS[a].filter(function (s) { return !s.optional || (s.id === 'long' && lessonDone(a, 'E')); });
-    var src = CHECK_Q[a] || bankFor(a);
-    var bySk = core.map(function (s) { return shuffle(src.filter(function (q) { return q.sk === s.id; })); }).filter(function (l) { return l.length; });
-    var out = [], i = 0;
-    while (out.length < n && bySk.some(function (l) { return l.length; })) { var l = bySk[i % bySk.length]; if (l.length) out.push(l.pop()); i++; }
+    var src = CHECK_Q[a] || bankFor(a), seen = expo('q');
+    var inCore = src.filter(function (q) { return core.some(function (s) { return s.id === q.sk; }); });
+    var out = [];
+    // pass 1: unseen questions, spread across skills; pass 2: fill with already-seen questions
+    [false, true].forEach(function (wantSeen) {
+      var bySk = core.map(function (s) { return shuffle(inCore.filter(function (q) { return q.sk === s.id && !!seen[q.id] === wantSeen && out.indexOf(q) < 0; })); }).filter(function (l) { return l.length; });
+      var i = 0;
+      while (out.length < n && bySk.some(function (l) { return l.length; })) { var l = bySk[i % bySk.length]; if (l.length) out.push(l.pop()); i++; }
+    });
     return shuffle(out).map(function (q) { return q.id; });
+  }
+  function newLeft(a) {
+    if (a === 'reading') return { n: CHECK_PASSAGES.filter(function (p) { return !expo('p')[p.id]; }).length, of: CHECK_PASSAGES.length, unit: 'stories' };
+    var src = CHECK_Q[a] || []; return { n: src.filter(function (q) { return !expo('q')[q.id]; }).length, of: src.length, unit: 'questions' };
   }
 
   /* ───────────── question state ───────────── */
@@ -490,7 +510,7 @@
     var v = view, r = null;
     if (v.v === 'lesson') r = { v: 'lesson', a: v.a, l: v.l, step: v.step };
     else if (v.v === 'round') r = { v: 'round', a: v.a, mode: v.mode, sk: v.sk || null, story: v.story || null, ids: v.ids, i: v.i, res: v.res };
-    else if (v.v === 'test' || v.v === 'testReview') r = { v: 'test', a: v.a, ids: v.ids, i: v.i, ans: v.ans };
+    else if (v.v === 'test' || v.v === 'testReview') r = { v: 'test', a: v.a, ids: v.ids, i: v.i, ans: v.ans, priorQ: v.priorQ || [], priorP: v.priorP || [] };
     else if (v.v === 'mastery' || v.v === 'masteryBreak' || v.v === 'masteryReview') r = { v: 'mastery', a: 'verbs' };
     if (r) { P.resume = r; saveP(); }
     else if (v.v === 'roundEnd' || v.v === 'testResult' || v.v === 'lessonEnd' || v.v === 'masteryResult') { P.resume = null; saveP(); }
@@ -509,7 +529,7 @@
       if (r.v === 'lesson') { var l = lessonById(r.a, r.l); if (!l) throw 0; return startLesson(r.a, r.l, Math.min(r.step, l.steps.length - 1)); }
       if (r.v === 'round') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var v = { v: 'round', a: r.a, mode: r.mode, sk: r.sk, story: r.story, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), res: r.res || [] }; v.qs = newQS(QBY[v.ids[v.i]], r.mode); return go(v); }
       if (r.v === 'mastery') { if (!validMastery(P.mastery)) throw 0; return openMasteryQ(P.mastery.i); }
-      if (r.v === 'test') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var t = { v: 'test', a: r.a, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), ans: r.ans || {} }; t.qs = newQS(QBY[t.ids[t.i]], 'test', t.ans[t.ids[t.i]]); return go(t); }
+      if (r.v === 'test') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var t = { v: 'test', a: r.a, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), ans: r.ans || {}, priorQ: r.priorQ || [], priorP: r.priorP || [] }; t.qs = newQS(QBY[t.ids[t.i]], 'test', t.ans[t.ids[t.i]]); return go(t); }
     } catch (e) { /* fall through */ }
     P.resume = null; saveP(); go({ v: 'home' });
   }
@@ -519,7 +539,7 @@
   var MODE_LEGEND = {
     verb: 'Your choice gets <span class="sel-verb demo">two lines</span>.',
     noun: 'Your choice gets <span class="sel-noun demo">one line</span>.',
-    adj: 'Your choice gets a <span class="sel-adj demo">gold highlight</span>.',
+    adj: 'Your choice gets a <span class="sel-adj demo">gold highlight</span>. Gray words like <i>the</i>, <i>a</i>, and <i>my</i> cannot be tapped: we look for words that tell what kind, which one, or how many.',
     adv: 'Your choice gets a <span class="sel-adv demo">teal highlight</span>.'
   };
   function sentenceHTML(q, opt) {
@@ -537,7 +557,10 @@
       var badge = mark === 'ok' ? '<span class="badge ok" aria-hidden="true">✓</span>' : mark === 'no' ? '<span class="badge no" aria-hidden="true">✕</span>' : mark === 'reveal' ? '<span class="badge rv" aria-hidden="true">★</span>' : '';
       var srState = mark === 'ok' ? ', correct' : mark === 'no' ? ', not this one' : mark === 'reveal' ? ', answer' : mark === 'info' ? ', skip this word' : '';
       h += '<span class="w">' + (t.pre ? '<span class="punct">' + esc(t.pre) + '</span>' : '');
-      if (opt.interactive) {
+      var fixed = opt.interactive && q.mode === 'adj' && IGNORE_ADJ[t.lw] && q.ans.indexOf(t.i) < 0;
+      if (fixed) {
+        h += '<span class="tok fixed" data-ti="' + t.i + '">' + esc(t.w) + '</span>';
+      } else if (opt.interactive) {
         h += '<button type="button" class="' + c + '" data-act="tok" data-i="' + t.i + '" data-ti="' + t.i + '" data-fkey="tok' + t.i + '" aria-pressed="' + (on ? 'true' : 'false') + '" aria-label="' + esc(t.w + (on ? ', chosen' : '') + srState) + '"' + linkAttr + '>' + esc(t.w) + badge + '</button>';
       } else {
         h += '<span class="' + c + '" data-ti="' + t.i + '"' + linkAttr + '>' + esc(t.w) + badge + '</span>';
@@ -948,18 +971,23 @@
     var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' }), btn('home', '⌂ Home')]);
     h += '<h1 id="scr-title" tabindex="-1">Check My Skills: ' + esc(a.short) + '</h1>';
     h += '<div class="card"><ul class="rules"><li>No timer. Take your time.</li><li>No hints. Show what YOU know.</li><li>You can go back and change answers.</li><li>You find out how you did at the end.</li></ul>';
-    h += '<div class="end-btns">' + btn('startTest', '5 questions', { attrs: 'data-n="5"', key: '5' }, 'primary big') + btn('startTest', '10 questions', { attrs: 'data-n="10"', key: '10' }, 'big') + '</div></div>';
+    h += '<div class="end-btns">' + btn('startTest', '5 questions', { attrs: 'data-n="5"', key: '5' }, 'primary big') + btn('startTest', '10 questions', { attrs: 'data-n="10"', key: '10' }, 'big') + '</div>';
+    var nl = newLeft(a.id);
+    h += '<p class="muted small center">For grown-ups: ' + nl.n + ' of ' + nl.of + ' check ' + nl.unit + ' are still unseen. New ones are used first' + (a.id === 'reading' ? ' (a 5-question check uses one story, 10 uses two).' : '.') + (nl.n === 0 ? ' All have been seen, so a new check will repeat questions.' : '') + '</p></div>';
     return h;
   }
   function startTest(a, n) {
     var ids;
     if (a === 'reading') {
       /* Reading checks use CHECK_PASSAGES only, never the practice stories */
-      var order = CHECK_PASSAGES.slice().sort(function (x, y) { return ((P.stats['story:' + x.id] || {}).last || 0) - ((P.stats['story:' + y.id] || {}).last || 0); });
+      var ps = expo('p');
+      var order = CHECK_PASSAGES.slice().sort(function (x, y) { return ((ps[x.id] ? 1e9 : 0) + ((P.stats['story:' + x.id] || {}).last || 0)) - ((ps[y.id] ? 1e9 : 0) + ((P.stats['story:' + y.id] || {}).last || 0)); });
       var stories = order.slice(0, n >= 10 ? 2 : 1);
       ids = []; stories.forEach(function (p) { markStory(p.id); p.qs.forEach(function (q) { ids.push(q.id); }); });
     } else ids = testPick(a, n);
-    var v = { v: 'test', a: a, ids: ids, i: 0, ans: {} };
+    var priorQ = ids.filter(function (id) { return expo('q')[id]; });
+    var priorP = []; ids.forEach(function (id) { var p = QBY[id].passage; if (p && expo('p')[p.id] && priorP.indexOf(p.id) < 0) priorP.push(p.id); });
+    var v = { v: 'test', a: a, ids: ids, i: 0, ans: {}, priorQ: priorQ, priorP: priorP };
     v.qs = newQS(QBY[ids[0]], 'test');
     go(v);
   }
@@ -993,13 +1021,12 @@
     var per = {};
     items.forEach(function (it) { var q = QBY[it.id]; per[q.sk] = per[q.sk] || { right: 0, total: 0 }; per[q.sk].total++; if (it.ok) per[q.sk].right++; });
     Object.keys(per).forEach(function (sk) { var r = skillRec(view.a, sk); r.chkRight += per[sk].right; r.chkTotal += per[sk].total; r.lastChk = per[sk]; });
-    var seen = P.stats.checkSeen || (P.stats.checkSeen = {});
-    var repeat = items.filter(function (it) { return seen[it.id]; }).length;
-    items.forEach(function (it) { seen[it.id] = 1; });
-    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, repeat: repeat, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
+    var repeat = (view.priorQ || []).length, passRepeat = (view.priorP || []).length;
+    var unseen = !repeat && !passRepeat;
+    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, repeat: repeat, passRepeat: passRepeat, unseen: unseen, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
     if (P.checks.length > 50) P.checks = P.checks.slice(-50);
     saveP();
-    go({ v: 'testResult', a: view.a, items: items, score: score, per: per });
+    go({ v: 'testResult', a: view.a, items: items, score: score, per: per, repeat: repeat, passRepeat: passRepeat, unseen: unseen });
   }
   function givenText(q, g) {
     if (!g) return 'No answer';
@@ -1019,10 +1046,15 @@
     if (q.kind === 'select') return promptFor(q) + '  “' + plainSentence(q) + '”';
     return q.q.replace(/\n/g, ' ');
   }
+  function exposureNote(r) {
+    var t = r.unseen ? 'For grown-ups: every question' + (r.a === 'reading' ? ' and story' : '') + ' was new to him, so this is an unseen check.'
+      : 'For grown-ups: ' + (r.repeat ? r.repeat + ' of ' + (r.items ? r.items.length : r.n) + ' questions were seen in an earlier check. ' : '') + (r.passRepeat ? 'The story was read in an earlier check. ' : '') + 'This is not a fully unseen check.';
+    return '<p class="muted small exposure">' + esc(t) + '</p>';
+  }
   function screenTestResult() {
     var a = areaById(view.a), n = view.items.length;
     var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">You finished! <span aria-hidden="true">⭐</span></h1><p class="score">' + view.score + ' of ' + n + ' correct</p>';
-    h += '<p class="lead">' + (view.score === n ? 'Every single one. Amazing!' : 'Let’s look at the ones to practice. Mistakes help us learn.') + '</p></section>';
+    h += '<p class="lead">' + (view.score === n ? 'Every single one. Amazing!' : 'Let’s look at the ones to practice. Mistakes help us learn.') + '</p>' + exposureNote(view) + '</section>';
     var missed = view.items.filter(function (x) { return !x.ok; });
     if (missed.length) {
       h += '<h2 class="section-h">Let’s learn from these</h2>';
@@ -1105,8 +1137,8 @@
       h += '<section class="sh-sec sh-key"><h2>Answer key</h2><p>1. quickly (how) &nbsp; 2. yesterday (when) &nbsp; 3. outside (where) &nbsp; 4. well (how)</p></section>';
     } else if (k === 'vowels') {
       h += '<h1>Vowel Patterns Reference Sheet</h1><p class="sh-sub">Vowel letters: a, e, i, o, u</p>';
-      h += sec('Short vowels (one vowel between consonants)', '<p>cap, bed, kit, hop, tub</p>');
-      h += sec('Silent e (often makes the vowel say its name)', '<p>cap → cape &nbsp; kit → kite &nbsp; hop → hope &nbsp; tub → tube</p><p class="sh-note">Not always: have and give end in e, but the vowel is short.</p>');
+      h += sec('Short vowels (one vowel between consonants)', '<p>cap, bed, kit, hop, cub</p>');
+      h += sec('Silent e (often makes the vowel say its name)', '<p>cap → cape &nbsp; kit → kite &nbsp; hop → hope &nbsp; cub → cube</p><p class="sh-note">Not always: have and give end in e, but the vowel is short.</p>');
       h += sec('Vowel teams', ul(['<b>ai</b> often says long a: rain, tail, paint', '<b>ee</b> says long e: feet, seed, tree', '<b>ea</b> often says long e: team, seat, beach (sometimes short e: bread)', '<b>oa</b> says long o: boat, coat, road']));
       h += sec('Practice: write S (short) or L (long)', '<ol class="sh-practice"><li>cape ___</li><li>hop ___</li><li>rain ___</li><li>pet ___</li><li>boat ___</li></ol>');
       h += '<section class="sh-sec sh-key"><h2>Answer key</h2><p>1. L &nbsp; 2. S &nbsp; 3. L &nbsp; 4. S &nbsp; 5. L</p></section>';
@@ -1139,11 +1171,11 @@
     h += '<div class="card"><h2>Verb Mastery Challenge</h2><p class="muted small">59 sentences used only in this final check. Benchmark: ' + MASTERY_BENCHMARK + ' of ' + MASTERY_IDS.length + ' with no help. Every verb word must be found; a partial verb team or an extra word makes that sentence wrong.</p>';
     if (validMastery(P.mastery)) h += '<p><b>In progress:</b> ' + mAnswered() + ' of ' + MASTERY_IDS.length + ' answered (saved).</p>';
     if (!P.masteryResults.length) h += '<p class="muted">Not taken yet.</p>';
-    P.masteryResults.slice(-5).reverse().forEach(function (r) { var d = new Date(r.date); h += '<p>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ': <b>' + r.score + ' of ' + r.total + '</b> \u00B7 ' + (r.met ? 'benchmark met' : 'benchmark not met yet') + '</p>' + catTable(r.byCat); });
+    P.masteryResults.slice(-5).reverse().forEach(function (r) { var d = new Date(r.date); h += '<p>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ': <b>' + r.score + ' of ' + r.total + '</b> \u00B7 ' + (r.met ? 'benchmark met' : 'benchmark not met yet') + (r.prior ? ' \u00B7 <span class="tag">repeat attempt: ' + r.prior + ' sentences seen before</span>' : ' \u00B7 <span class="tag">unseen</span>') + '</p>' + catTable(r.byCat); });
     h += '</div>';
     h += '<div class="card"><h2>Check My Skills history</h2>';
     if (!P.checks.length) h += '<p class="muted">No checks yet.</p>';
-    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.repeat ? ' <span class="tag">' + c.repeat + ' repeated question' + (c.repeat > 1 ? 's' : '') + '</span>' : '') + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
+    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.unseen ? ' <span class="tag">unseen</span>' : (c.repeat ? ' <span class="tag">' + c.repeat + ' repeated question' + (c.repeat > 1 ? 's' : '') + '</span>' : '') + (c.passRepeat ? ' <span class="tag">story seen before</span>' : '')) + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
     h += '</div><div class="card"><h2>Settings</h2>' + btn('editNameG', 'Change nickname (now: ' + esc(P.nick) + ')');
     if (view.confirmReset) h += '<div class="confirm" role="alertdialog" aria-label="Confirm reset"><p><b>Erase all progress on this device?</b> This cannot be undone.</p>' + btn('doReset', 'Yes, erase everything', null, 'danger') + ' ' + btn('cancelReset', 'Cancel') + '</div>';
     else h += ' ' + btn('askReset', 'Reset all progress', null, 'ghost');
@@ -1156,7 +1188,7 @@
   function validMastery(m) { return !!(m && Array.isArray(m.order) && m.order.length === MASTERY_IDS.length && m.order.every(function (id) { return MASTERY_IDS.indexOf(id) >= 0; }) && typeof m.i === 'number' && m.ans && typeof m.ans === 'object'); }
   function mAnswered() { var m = P.mastery; if (!validMastery(m)) return 0; return m.order.filter(function (id) { var a = m.ans[id]; return a && a.sel && a.sel.length; }).length; }
   function startMastery(fresh) {
-    if (fresh || !validMastery(P.mastery)) P.mastery = { order: shuffle(MASTERY_IDS), i: 0, ans: {}, started: new Date().toISOString() };
+    if (fresh || !validMastery(P.mastery)) P.mastery = { order: shuffle(MASTERY_IDS), i: 0, ans: {}, started: new Date().toISOString(), prior: MASTERY_IDS.filter(function (id) { return expo('m')[id]; }).length };
     saveP(); openMasteryQ(P.mastery.i);
   }
   function openMasteryQ(i) {
@@ -1234,17 +1266,18 @@
     var m = P.mastery, byCat = {};
     MASTERY_CATS.forEach(function (c) { byCat[c.id] = { right: 0, total: 0 }; });
     var items = MASTERY_IDS.map(function (id) { var q = QBY[id], g = m.ans[id] || null, ok = gradeOnly(q, g); byCat[q.cat].total++; if (ok) byCat[q.cat].right++; return { id: id, ok: ok, given: g }; });
-    var score = items.filter(function (x) { return x.ok; }).length, met = masteryMeets(score);
-    P.masteryResults.push({ date: new Date().toISOString(), score: score, total: items.length, met: met, byCat: byCat, missed: items.filter(function (x) { return !x.ok; }).map(function (x) { return x.id; }) });
+    var score = items.filter(function (x) { return x.ok; }).length, met = masteryMeets(score), prior = m.prior || 0;
+    P.masteryResults.push({ date: new Date().toISOString(), score: score, total: items.length, met: met, byCat: byCat, prior: prior, missed: items.filter(function (x) { return !x.ok; }).map(function (x) { return x.id; }) });
     if (P.masteryResults.length > 10) P.masteryResults = P.masteryResults.slice(-10);
     P.mastery = null; P.resume = null; saveP();
-    go({ v: 'masteryResult', items: items, score: score, met: met, byCat: byCat });
+    go({ v: 'masteryResult', items: items, score: score, met: met, byCat: byCat, prior: prior });
   }
   function screenMasteryResult() {
     var n = view.items.length, need = MASTERY_BENCHMARK - view.score;
     var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">Verb Mastery Challenge results</h1><p class="score">' + view.score + ' of ' + n + ' correct</p>';
     h += view.met ? '<p class="msg good mresult">Benchmark met: ' + MASTERY_BENCHMARK + ' or more of ' + n + ' with no help. <span aria-hidden="true">⭐</span></p>'
       : '<p class="msg fix mresult">Not yet. The goal is ' + MASTERY_BENCHMARK + ' of ' + n + '. ' + need + ' more correct sentence' + (need > 1 ? 's' : '') + ' will reach it. Practice the skills below, then try again.</p>';
+    h += '<p class="muted small exposure">' + (view.prior ? 'For grown-ups: ' + view.prior + ' of ' + n + ' sentences were seen in an earlier attempt, so this is not a fully unseen result.' : 'For grown-ups: all ' + n + ' sentences were new on this attempt (unseen result).') + '</p>';
     h += '</section><div class="card"><h2>Results by skill</h2>' + catTable(view.byCat) + '</div>';
     var missed = view.items.filter(function (x) { return !x.ok; });
     if (missed.length) {
@@ -1304,6 +1337,7 @@
   }
   function render(focusTitle) {
     var active = D.activeElement, fkey = active && active.getAttribute ? active.getAttribute('data-fkey') : null;
+    markShown();
     app.innerHTML = screenHTML();
     D.body.setAttribute('data-view', view.v);
     renderNotice();

@@ -152,8 +152,8 @@ span.tok:not(.sel-adj):not(.sel-adv):not(.noun-found) { padding-left: 1px; paddi
 .tok { position: relative; font: inherit; line-height: 1.25; background: transparent; border: 2px solid transparent; border-radius: 10px; padding: 2px 6px 8px; margin: 2px 0; color: var(--ink); text-decoration: none; }
 button.tok { cursor: pointer; border-color: #e3dccd; background: var(--white); min-height: 48px; min-width: 44px; }
 button.tok:hover { border-color: var(--teal); }
-.tok.sel-verb { text-decoration: underline double var(--navy); text-decoration-thickness: 3px; text-underline-offset: 8px; }
-.tok.sel-noun { text-decoration: underline solid var(--navy); text-decoration-thickness: 4px; text-underline-offset: 8px; }
+.tok.sel-verb { -webkit-text-decoration: underline double var(--navy); text-decoration-line: underline; text-decoration-style: double; text-decoration-color: var(--navy); text-decoration-thickness: 3px; text-underline-offset: 8px; }
+.tok.sel-noun { -webkit-text-decoration: underline solid var(--navy); text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--navy); text-decoration-thickness: 4px; text-underline-offset: 8px; }
 .tok.sel-adj { background: var(--gold-l) !important; border-color: var(--gold) !important; }
 .tok.sel-adv { background: var(--teal-l) !important; border-color: var(--teal) !important; }
 button.tok[aria-pressed="true"] { border-color: var(--navy); }
@@ -169,8 +169,8 @@ button.tok[aria-pressed="true"] { border-color: var(--navy); }
 .badge.no { background: var(--fix); }
 .badge.rv { background: var(--gold-d); }
 .sel-verb.demo, .sel-noun.demo { padding: 0 4px; }
-.sel-verb.demo { text-decoration: underline double var(--navy); text-decoration-thickness: 2px; text-underline-offset: 5px; }
-.sel-noun.demo { text-decoration: underline solid var(--navy); text-decoration-thickness: 3px; text-underline-offset: 5px; }
+.sel-verb.demo { -webkit-text-decoration: underline double var(--navy); text-decoration-line: underline; text-decoration-style: double; text-decoration-color: var(--navy); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.sel-noun.demo { -webkit-text-decoration: underline solid var(--navy); text-decoration-line: underline; text-decoration-style: solid; text-decoration-color: var(--navy); text-decoration-thickness: 3px; text-underline-offset: 5px; }
 .sel-adj.demo { background: var(--gold-l); border: 2px solid var(--gold); border-radius: 6px; padding: 0 4px; }
 .sel-adv.demo { background: var(--teal-l); border: 2px solid var(--teal); border-radius: 6px; padding: 0 4px; }
 .legend { font-size: 16px; color: var(--muted); margin: 4px 0; }
@@ -297,6 +297,10 @@ button.rdot.now { border-color: var(--navy); background: var(--gold-l); }
 .mbar span { display: block; height: 100%; background: var(--teal); }
 .jump-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .jump-grid .btn { min-width: 52px; }
+
+button, .btn, .tok, .choice, .bucket, .sent-btn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.tok.fixed { color: #6b7280; border: 2px dashed #e3dccd; background: transparent; min-height: 48px; display: inline-flex; align-items: center; }
+.exposure { margin-top: 10px; }
 
 </style>
 </head>
@@ -1222,7 +1226,7 @@ var VERB_BANK = [
   { id: 'v7', sk: 'action', s: 'I [think] about my next turn at bat.', ask: 'What do I do?', h: 'Some actions happen inside your head. Find that action.', ex: 'Think is an action that happens in your brain. It is a verb.', notes: { turn: 'Here turn is a thing (my turn). It is a noun in this sentence.', next: 'Next tells which turn. It is not a verb.' } },
   { id: 'v8', sk: 'action', s: 'We [learned] a new song in music class.', ask: 'What did we do?', h: 'Look for a word with an -ed ending. Then check that it shows what we did.', ex: 'Learned tells what we did. The -ed ending shows it happened in the past.', notes: { song: 'Song is a thing (a noun).', music: 'Music tells what kind of class.' } },
   { id: 'v9', sk: 'action', s: 'Jamal [wrote] a letter to his cousin.', ask: 'What did Jamal do?', h: 'Write changes to a new word in the past. Find it.', ex: 'Wrote is the past form of write. It tells what Jamal did.', notes: { letter: 'Letter is the thing Jamal made. Find the action.' } },
-  { id: 'v10', sk: 'action', s: 'The players [jump] over the puddle.', ask: 'What do the players do?', h: 'What do the players do to get over the puddle?', ex: 'Jump tells what the players do.', notes: { over: 'Over tells where. It is not a verb.' } },
+  { id: 'v10', sk: 'action', s: 'The players [jump] over the puddle.', ask: 'What do the players do?', h: 'What do the players do to get over the puddle?', ex: 'Jump tells what the players do.', notes: { over: 'Over is part of “over the puddle,” which tells where. It is not a verb.' } },
   { id: 'v11', sk: 'action', s: 'My sister [knows] the answer.', ask: 'What does my sister do?', h: 'This is a thinking action. What does she do with the answer?', ex: 'Knows is a thinking verb. It tells what my sister does in her mind.', notes: { answer: 'Here answer is a thing she knows, so it is a noun.' } },
   { id: 'v12', sk: 'action', s: 'The coach [clapped] for the team.', ask: 'What did the coach do?', h: 'What did the coach do with his hands?', ex: 'Clapped tells what the coach did.', notes: { team: 'Team is a group of people (a noun).' } },
   { id: 'v13', sk: 'action', s: 'Dad [ate] two slices of pie.', ask: 'What did Dad do?', h: 'Eat changes to a new word in the past. Find it.', ex: 'Ate is the past form of eat. It tells what Dad did.', notes: { slices: 'Slices are things.', two: 'Two tells how many.' } },
@@ -1230,7 +1234,7 @@ var VERB_BANK = [
 
   // Standalone being / having / doing verbs
   { id: 'v15', sk: 'being', s: 'He [is] happy.', h: 'Which word tells about being? Happy describes him.', ex: 'Is tells about being. Happy describes him. Happy is not a verb.', notes: { happy: 'Happy describes him. It is not a verb.' } },
-  { id: 'v16', sk: 'being', s: 'The ball [was] in the grass.', h: 'Nobody is doing an action. Which word tells about being?', ex: 'Was tells where the ball was being. It is the only verb.', notes: { grass: 'Grass is a thing.', in: 'In tells where.' } },
+  { id: 'v16', sk: 'being', s: 'The ball [was] in the grass.', h: 'Nobody is doing an action. Which word tells about being?', ex: 'Was is the being verb. In the grass tells where the ball was.', notes: { grass: 'Grass is a thing.', in: 'In is part of “in the grass,” which tells where. It is not a verb.' } },
   { id: 'v17', sk: 'being', s: 'I [am] ready for the game.', h: 'Look for a BE family word.', ex: 'Am is a being verb. Ready describes me.', notes: { ready: 'Ready describes me. It is not a verb.' } },
   { id: 'v18', sk: 'being', s: 'The players [were] hungry after practice.', h: 'Look for a BE family word. Hungry describes the players.', ex: 'Were is the being verb. Hungry describes the players.', notes: { hungry: 'Hungry describes the players. It is not a verb.', practice: 'Here practice is a thing (after practice), so it is a noun in this sentence.' } },
   { id: 'v19', sk: 'being', s: 'My shoes [are] muddy.', h: 'Which word tells about being? Muddy describes the shoes.', ex: 'Are is the being verb. Muddy describes my shoes.', notes: { muddy: 'Muddy describes the shoes. It is not a verb.' } },
@@ -1242,36 +1246,36 @@ var VERB_BANK = [
 
   // Two-word verb teams
   { id: 'v25', sk: 'team', s: 'The boy [was] [playing] yesterday.', ask: 'What was the boy doing?', h: 'Ask: What was the boy doing? Find every word in that answer.', ex: 'Was is the helper. Playing is the main verb. The whole verb team is was playing.', notes: { yesterday: 'Yesterday tells when. It is not a verb.' } },
-  { id: 'v26', sk: 'team', s: 'We [are] [reading].', ask: 'What are we doing?', h: 'Ask: What are we doing?', ex: 'Are helps reading. The verb team is are reading.' },
-  { id: 'v27', sk: 'team', s: 'She [has] [finished].', ask: 'What has she done?', h: 'Has can help another verb. Which verb does it help?', ex: 'Has helps finished. The verb team is has finished.' },
-  { id: 'v28', sk: 'team', s: 'He [can] [swim].', ask: 'What can he do?', h: 'Can is a helper. What can he do?', ex: 'Can helps swim. The verb team is can swim.' },
-  { id: 'v29', sk: 'team', s: 'They [will] [practice].', ask: 'What will they do?', h: 'Will is a helper. What will they do?', ex: 'Will helps practice. The verb team is will practice.' },
-  { id: 'v30', sk: 'team', s: 'I [am] [packing] my bag.', ask: 'What am I doing?', h: 'Ask: What am I doing?', ex: 'Am helps packing. The verb team is am packing.', notes: { bag: 'Bag is a thing.' } },
-  { id: 'v31', sk: 'team', s: 'The fans [were] [cheering] loudly.', ask: 'What were the fans doing?', h: 'Ask: What were the fans doing? Stop before the word that tells how.', ex: 'Were helps cheering. The verb team is were cheering.', notes: { loudly: 'Loudly tells HOW they cheered. It is an adverb, not a verb.' } },
-  { id: 'v32', sk: 'team', s: 'Mia [is] [running] to second base.', ask: 'What is Mia doing?', h: 'Ask: What is Mia doing?', ex: 'Is helps running. The verb team is is running.', notes: { base: 'Base is a place.', second: 'Second tells which base.' } },
-  { id: 'v33', sk: 'team', s: 'I [have] [packed] my bag.', ask: 'What have I done?', h: 'Here have helps another verb. Find both words.', ex: 'Have helps packed. The verb team is have packed.', notes: { bag: 'Bag is a thing.' } },
-  { id: 'v34', sk: 'team', s: 'Dad [had] [cooked] the turkey before noon.', ask: 'What had Dad done?', h: 'Had is a helper here. What had Dad done?', ex: 'Had helps cooked. The verb team is had cooked.', notes: { turkey: 'Turkey is a thing.', noon: 'Noon tells a time. It is not a verb.' } },
-  { id: 'v35', sk: 'team', s: 'You [should] [wear] your helmet.', ask: 'What should you do?', h: 'Should is a helper. What should you do?', ex: 'Should helps wear. The verb team is should wear.', notes: { helmet: 'Helmet is a thing.' } },
-  { id: 'v36', sk: 'team', s: 'Our team [might] [win] today.', ask: 'What might our team do?', h: 'Might is a helper. What might the team do?', ex: 'Might helps win. The verb team is might win.', notes: { today: 'Today tells when. It is not a verb.', team: 'Team is a group of people (a noun).' } },
-  { id: 'v37', sk: 'team', s: 'We [could] [hear] the crowd.', ask: 'What could we do?', h: 'Could is a helper. What could we do?', ex: 'Could helps hear. The verb team is could hear.', notes: { crowd: 'Crowd is a group of people (a noun).' } },
-  { id: 'v38', sk: 'team', s: 'We [did] [finish] the puzzle!', ask: 'What did we do?', h: 'Did can help another verb. Look right after it.', ex: 'Did helps finish. The verb team is did finish.', notes: { puzzle: 'Puzzle is a thing.' } },
-  { id: 'v39', sk: 'team', s: 'She [must] [stretch] before the race.', ask: 'What must she do?', h: 'Must is a helper. What must she do?', ex: 'Must helps stretch. The verb team is must stretch.', notes: { race: 'Race is a thing (an event).' } },
-  { id: 'v40', sk: 'team', s: 'My cousin [would] [like] some pie.', ask: 'What would my cousin do?', h: 'Would is a helper. Which verb does it help?', ex: 'Would helps like. The verb team is would like.', notes: { pie: 'Pie is a thing.' } },
-  { id: 'v41', sk: 'team', s: 'You [may] [borrow] my glove.', ask: 'What may you do?', h: 'May is a helper. What may you do?', ex: 'May helps borrow. The verb team is may borrow.', notes: { glove: 'Glove is a thing.' } },
-  { id: 'v42', sk: 'team', s: 'The puppy [was] [sleeping] on the rug.', ask: 'What was the puppy doing?', h: 'Ask: What was the puppy doing?', ex: 'Was helps sleeping. The verb team is was sleeping.', notes: { rug: 'Rug is a thing.' } },
-  { id: 'v43', sk: 'team', s: 'The coaches [have] [planned] a fun practice.', ask: 'What have the coaches done?', h: 'Have is a helper here. Which -ed word does it help?', ex: 'Have helps planned. The verb team is have planned. Practice is a thing here.', notes: { practice: 'Here practice is a thing (a fun practice), so it is a noun.', fun: 'Fun describes the practice.' } },
+  { id: 'v26', sk: 'team', s: 'We [are] [reading].', ask: 'What are we doing?', h: 'Ask: What are we doing?', ex: 'Are helps reading. The verb team: are reading.' },
+  { id: 'v27', sk: 'team', s: 'She [has] [finished].', ask: 'What has she done?', h: 'Has can help another verb. Which verb does it help?', ex: 'Has helps finished. The verb team: has finished.' },
+  { id: 'v28', sk: 'team', s: 'He [can] [swim].', ask: 'What can he do?', h: 'Can is a helper. What can he do?', ex: 'Can helps swim. The verb team: can swim.' },
+  { id: 'v29', sk: 'team', s: 'They [will] [practice].', ask: 'What will they do?', h: 'Will is a helper. What will they do?', ex: 'Will helps practice. The verb team: will practice.' },
+  { id: 'v30', sk: 'team', s: 'I [am] [packing] my bag.', ask: 'What am I doing?', h: 'Ask: What am I doing?', ex: 'Am helps packing. The verb team: am packing.', notes: { bag: 'Bag is a thing.' } },
+  { id: 'v31', sk: 'team', s: 'The fans [were] [cheering] loudly.', ask: 'What were the fans doing?', h: 'Ask: What were the fans doing? Stop before the word that tells how.', ex: 'Were helps cheering. The verb team: were cheering.', notes: { loudly: 'Loudly tells HOW they cheered. It is an adverb, not a verb.' } },
+  { id: 'v32', sk: 'team', s: 'Mia [is] [running] to second base.', ask: 'What is Mia doing?', h: 'Ask: What is Mia doing?', ex: 'Is helps running. The verb team: is running.', notes: { base: 'Base is a place.', second: 'Second tells which base.' } },
+  { id: 'v33', sk: 'team', s: 'I [have] [packed] my bag.', ask: 'What have I done?', h: 'Here have helps another verb. Find both words.', ex: 'Have helps packed. The verb team: have packed.', notes: { bag: 'Bag is a thing.' } },
+  { id: 'v34', sk: 'team', s: 'Dad [had] [cooked] the turkey before noon.', ask: 'What had Dad done?', h: 'Had is a helper here. What had Dad done?', ex: 'Had helps cooked. The verb team: had cooked.', notes: { turkey: 'Turkey is a thing.', noon: 'Noon tells a time. It is not a verb.' } },
+  { id: 'v35', sk: 'team', s: 'You [should] [wear] your helmet.', ask: 'What should you do?', h: 'Should is a helper. What should you do?', ex: 'Should helps wear. The verb team: should wear.', notes: { helmet: 'Helmet is a thing.' } },
+  { id: 'v36', sk: 'team', s: 'Our team [might] [win] today.', ask: 'What might our team do?', h: 'Might is a helper. What might the team do?', ex: 'Might helps win. The verb team: might win.', notes: { today: 'Today tells when. It is not a verb.', team: 'Team is a group of people (a noun).' } },
+  { id: 'v37', sk: 'team', s: 'We [could] [hear] the crowd.', ask: 'What could we do?', h: 'Could is a helper. What could we do?', ex: 'Could helps hear. The verb team: could hear.', notes: { crowd: 'Crowd is a group of people (a noun).' } },
+  { id: 'v38', sk: 'team', s: 'We [did] [finish] the puzzle!', ask: 'What did we do?', h: 'Did can help another verb. Look right after it.', ex: 'Did helps finish. The verb team: did finish.', notes: { puzzle: 'Puzzle is a thing.' } },
+  { id: 'v39', sk: 'team', s: 'She [must] [stretch] before the race.', ask: 'What must she do?', h: 'Must is a helper. What must she do?', ex: 'Must helps stretch. The verb team: must stretch.', notes: { race: 'Race is a thing (an event).' } },
+  { id: 'v40', sk: 'team', s: 'My cousin [would] [like] some pie.', ask: 'What would my cousin like?', h: 'Would is a helper. Which verb does it help?', ex: 'Would helps like. The verb team: would like.', notes: { pie: 'Pie is a thing.' } },
+  { id: 'v41', sk: 'team', s: 'You [may] [borrow] my glove.', ask: 'What may you do?', h: 'May is a helper. What may you do?', ex: 'May helps borrow. The verb team: may borrow.', notes: { glove: 'Glove is a thing.' } },
+  { id: 'v42', sk: 'team', s: 'The puppy [was] [sleeping] on the rug.', ask: 'What was the puppy doing?', h: 'Ask: What was the puppy doing?', ex: 'Was helps sleeping. The verb team: was sleeping.', notes: { rug: 'Rug is a thing.' } },
+  { id: 'v43', sk: 'team', s: 'The coaches [have] [planned] a fun practice.', ask: 'What have the coaches done?', h: 'Have is a helper here. Which -ed word does it help?', ex: 'Have helps planned. The verb team: have planned. Practice is a thing here.', notes: { practice: 'Here practice is a thing (a fun practice), so it is a noun.', fun: 'Fun describes the practice.' } },
 
   // Three-word verb teams
-  { id: 'v44', sk: 'long', s: 'He [has] [been] [practicing].', ask: 'What has he been doing?', h: 'This team has more than two verb words.', ex: 'Has and been are helpers. Practicing is the main verb. The team is has been practicing.' },
-  { id: 'v45', sk: 'long', s: 'We [will] [be] [reading].', ask: 'What will we be doing?', h: 'Find two helpers and one main verb.', ex: 'Will and be are helpers. Reading is the main verb. The team is will be reading.' },
-  { id: 'v46', sk: 'long', s: 'She [had] [been] [waiting] for the bus.', ask: 'What had she been doing?', h: 'Start at had. Keep going until you reach the main verb.', ex: 'Had and been help waiting. The team is had been waiting.', notes: { bus: 'Bus is a thing.' } },
-  { id: 'v47', sk: 'long', s: 'The team [should] [have] [won].', ask: 'What should the team have done?', h: 'Won is the past form of win. Which helpers come before it?', ex: 'Should and have help won. The team is should have won.' },
-  { id: 'v48', sk: 'long', s: 'I [will] [have] [finished] my book by Friday.', ask: 'What will I have done?', h: 'Find two helpers before the -ed main verb.', ex: 'Will and have help finished. The team is will have finished.', notes: { friday: 'Friday names a day. It is a noun.', book: 'Book is a thing.' } },
-  { id: 'v49', sk: 'long', s: 'The players [have] [been] [running] laps.', ask: 'What have the players been doing?', h: 'There are two helpers before the main verb.', ex: 'Have and been help running. The team is have been running.', notes: { laps: 'Laps are things the players run.' } },
+  { id: 'v44', sk: 'long', s: 'He [has] [been] [practicing].', ask: 'What has he been doing?', h: 'This team has more than two verb words.', ex: 'Has and been are helpers. Practicing is the main verb. The whole team: has been practicing.' },
+  { id: 'v45', sk: 'long', s: 'We [will] [be] [reading].', ask: 'What will we be doing?', h: 'Find two helpers and one main verb.', ex: 'Will and be are helpers. Reading is the main verb. The whole team: will be reading.' },
+  { id: 'v46', sk: 'long', s: 'She [had] [been] [waiting] for the bus.', ask: 'What had she been doing?', h: 'Start at had. Keep going until you reach the main verb.', ex: 'Had and been help waiting. The whole team: had been waiting.', notes: { bus: 'Bus is a thing.' } },
+  { id: 'v47', sk: 'long', s: 'The team [should] [have] [won].', ask: 'What should the team have done?', h: 'Won is the past form of win. Which helpers come before it?', ex: 'Should and have help won. The whole team: should have won.' },
+  { id: 'v48', sk: 'long', s: 'I [will] [have] [finished] my book by Friday.', ask: 'What will I have done?', h: 'Find two helpers before the -ed main verb.', ex: 'Will and have help finished. The whole team: will have finished.', notes: { friday: 'Friday names a day. It is a noun.', book: 'Book is a thing.' } },
+  { id: 'v49', sk: 'long', s: 'The players [have] [been] [running] laps.', ask: 'What have the players been doing?', h: 'There are two helpers before the main verb.', ex: 'Have and been help running. The whole team: have been running.', notes: { laps: 'Laps are things the players run.' } },
 
   // Ending clues
   { id: 'v50', sk: 'endings', s: 'The running shoes [are] red.', h: 'Careful! Does running tell what someone is doing here, or does it describe the shoes?', ex: 'Are is the verb. Running describes the shoes, so it is not a verb here.', notes: { running: 'Here running describes the shoes (running shoes). It is not a verb in this sentence.', red: 'Red describes the shoes.' } },
-  { id: 'v51', sk: 'endings', s: 'The boy [is] [running].', ask: 'What is the boy doing?', h: 'Here running tells what the boy is doing. Does it have a helper?', ex: 'Is helps running. The verb team is is running.' },
+  { id: 'v51', sk: 'endings', s: 'The boy [is] [running].', ask: 'What is the boy doing?', h: 'Here running tells what the boy is doing. Does it have a helper?', ex: 'Is helps running. The verb team: is running.' },
   { id: 'v52', sk: 'endings', s: 'My painting [hangs] on the wall.', h: 'Painting has -ing, but read the sentence. What does the painting do?', ex: 'Hangs is the verb. Painting names a thing here.', notes: { painting: 'Here painting names a thing (my painting). The -ing ending does not make it a verb.', wall: 'Wall is a thing.' } },
   { id: 'v53', sk: 'endings', s: 'The singing bird [is] pretty.', h: 'Does singing describe the bird here? Find the being verb.', ex: 'Is is the verb. Singing describes which bird, and pretty describes the bird.', notes: { singing: 'Here singing describes the bird. It is not a verb in this sentence.', pretty: 'Pretty describes the bird.' } },
   { id: 'v54', sk: 'endings', s: 'Jada [jumped] over the rope.', ask: 'What did Jada do?', h: 'Look for an -ed ending. Does that word show what Jada did?', ex: 'Jumped tells what Jada did. The -ed ending shows the past.', notes: { rope: 'Rope is a thing.' } },
@@ -1286,7 +1290,7 @@ var VERB_BANK = [
 
 /* Helper-word memory questions (multiple choice) */
 var HELPER_MC = [
-  { id: 'h1', sk: 'helpers', q: 'Finish the BE family: am, is, are, was, ___', c: ['were', 'has', 'do'], a: 0, h: 'The BE family goes: am, is, are, was, ... then the plural past word.', ex: 'am, is, are, was, WERE, be, being, been.' },
+  { id: 'h1', sk: 'helpers', q: 'Finish the BE family: am, is, are, was, ___', c: ['were', 'has', 'do'], a: 0, h: 'Think: they ___ happy yesterday. Which BE word fits?', ex: 'am, is, are, was, WERE, be, being, been.' },
   { id: 'h2', sk: 'helpers', q: 'Finish the HAVE family: have, has, ___', c: ['his', 'had', 'hat'], a: 1, h: 'Which word is the past of have?', ex: 'have, has, HAD. Only three words!' },
   { id: 'h3', sk: 'helpers', q: 'Finish the DO family: do, does, ___', c: ['dog', 'dot', 'did'], a: 2, h: 'Which one is the past of do?', ex: 'do, does, DID.' },
   { id: 'h4', sk: 'helpers', q: 'Which word is one of the 23 helping verbs?', c: ['shoe', 'should', 'shell'], a: 1, h: 'Think of the OTHER HELPERS: can, could, may, might, must, shall, ...', ex: 'Should is in the OTHER HELPERS group.' },
@@ -1363,7 +1367,7 @@ var ADV_BANK = [
   { id: 'd9', sk: 'when', s: 'The bus will come [soon@come:when].', h: 'When will the bus come?', ex: 'Soon tells WHEN the bus will come.' },
   { id: 'd10', sk: 'when', s: 'I will clean my room [later@clean:when].', h: 'When will I clean?', ex: 'Later tells WHEN I will clean.' },
   { id: 'd11', sk: 'when', s: 'We will eat pie [tonight@eat:when].', h: 'When will we eat pie?', ex: 'Tonight tells WHEN we will eat.' },
-  { id: 'd12', sk: 'when', s: 'I finished my snack [first@finished:when].', h: 'When did I finish? Before or after?', ex: 'First tells WHEN I finished.' },
+  { id: 'd12', sk: 'when', s: 'We ate lunch [early@ate:when].', h: 'When did we eat lunch?', ex: 'Early tells WHEN we ate lunch.' },
   { id: 'd13', sk: 'where', s: 'The children played [outside@played:where].', h: 'Where did the children play?', ex: 'Outside tells WHERE the children played.' },
   { id: 'd14', sk: 'where', s: 'Please come [here@come:where].', h: 'Where should you come?', ex: 'Here tells WHERE to come.' },
   { id: 'd15', sk: 'where', s: 'The cat ran [upstairs@ran:where].', h: 'Where did the cat run?', ex: 'Upstairs tells WHERE the cat ran.' },
@@ -1391,12 +1395,12 @@ var VOWEL_BANK = [
   { id: 'o10', sk: 'teams', k: 'sort', q: 'Sort each word by its vowel team.', b: ['ai', 'oa'], items: [['rain', 0], ['boat', 1], ['tail', 0], ['coat', 1], ['paint', 0], ['road', 1]], h: 'Look at the two vowel letters in the middle of each word.', ex: 'rain, tail, paint have ai. boat, coat, road have oa.' },
   { id: 'o11', sk: 'teams', k: 'sort', q: 'Sort each word by its vowel team.', b: ['ee', 'ea'], items: [['feet', 0], ['team', 1], ['seed', 0], ['seat', 1], ['tree', 0], ['beach', 1]], h: 'Is it two e letters, or e then a?', ex: 'feet, seed, tree have ee. team, seat, beach have ea. Both teams say long e here.' },
   { id: 'o12', sk: 'short', k: 'mc', q: 'Which word has a short u sound, like in cup?', c: ['tube', 'tub', 'cute'], a: 1, say: true, h: 'Look for a word with no silent e and one vowel between consonants.', ex: 'Tub has the short u pattern t-u-b. Tube and cute end with silent e.' },
-  { id: 'o13', sk: 'long', k: 'mc', q: 'Which word has a long u, like in cute?', c: ['tube', 'tub', 'cut'], a: 0, say: true, h: 'Which word ends with a silent e?', ex: 'Tube ends with silent e, so the u says its name.' },
+  { id: 'o13', sk: 'long', k: 'mc', q: 'Which word has a long u, like in cute?', c: ['cube', 'cub', 'cut'], a: 0, say: true, h: 'Which word ends with a silent e?', ex: 'Cube ends with silent e, so the u says its name.' },
   { id: 'o14', sk: 'silente', k: 'mc', q: 'cap → cape. What changed when we added e?', c: ['The a now says its name (long a).', 'The a now says a short sound.', 'The word lost a vowel.'], a: 0, say: true, h: 'Silent e often helps the vowel before it say its name.', ex: 'In cape, the silent e helps the a say its name: long a.' },
   { id: 'o15', sk: 'silente', k: 'mc', q: 'Which pair shows short vowel → long vowel with silent e?', c: ['hop → hope', 'hop → hip', 'hope → home'], a: 0, h: 'Look for a pair where the only change is an e added at the end.', ex: 'hop + e = hope. The o changes from short to long.' },
   { id: 'o16', sk: 'letters', k: 'mc', q: 'How many vowel letters are in the word tent?', c: ['1', '2', '3'], a: 0, h: 'The vowel letters are a, e, i, o, u. Check each letter in t-e-n-t.', ex: 'Tent has one vowel letter: e.' },
   { id: 'o17', sk: 'short', k: 'mc', q: 'Which word has a short i sound, like in pig?', c: ['fine', 'bike', 'fin'], a: 2, say: true, h: 'Find the word with no silent e.', ex: 'Fin has the short i pattern f-i-n. Fine and bike end with silent e.' },
-  { id: 'o18', sk: 'short', k: 'mc', q: 'Which word has a short o sound, like in dog?', c: ['hot', 'hope', 'boat'], a: 0, say: true, h: 'Find the word with one vowel between two consonants.', ex: 'Hot has the short o pattern h-o-t.' },
+  { id: 'o18', sk: 'short', k: 'mc', q: 'Which word has a short o sound, like in pot?', c: ['hot', 'hope', 'boat'], a: 0, say: true, h: 'Find the word with one vowel between two consonants.', ex: 'Hot has the short o pattern h-o-t.' },
   { id: 'o19', sk: 'short', k: 'mc', q: 'Which word has a short e sound, like in bed?', c: ['feet', 'these', 'pet'], a: 2, say: true, h: 'Find the word with one e between two consonants.', ex: 'Pet has the short e pattern p-e-t. Feet has ee and these has silent e: both long e.' },
   { id: 'o20', sk: 'teams', k: 'mc', q: 'Which word fits and has the vowel team ai?\n“We waited for the ___ to stop.”', c: ['ran', 'run', 'rain'], a: 2, h: 'Which word makes sense AND has a and i together?', ex: 'Rain makes sense and has the ai team.' },
   { id: 'o21', sk: 'teams', k: 'mc', q: 'Which word has a vowel team that says long o?', c: ['rod', 'road', 'rid'], a: 1, say: true, h: 'Look for o and a side by side.', ex: 'Road has the team oa, which says long o.' },
@@ -1411,15 +1415,15 @@ var PASSAGES = [
     id: 'p1', title: 'Teamwork on the Baseball Field', type: 'Nonfiction', topic: 'Baseball teamwork',
     paras: [
       ['A baseball team has nine players on the field.', 'Each player has a job.', 'The pitcher throws the ball to the batter.', 'The catcher squats behind home plate and catches the pitches.', 'Other players stand in the field to stop the ball.'],
-      ['Players must help each other.', 'When a ball is hit far, one player may throw it to another player who is closer to the base.', 'This is called a relay.', 'A relay gets the ball there faster than one long throw.'],
+      ['Players must help each other.', 'Sometimes a ball is hit very far.', 'One player throws it to a teammate.', 'That teammate is closer to the base.', 'This is called a relay.', 'A relay gets the ball there faster than one long throw.'],
       ['Players also talk to each other.', 'If two players run for the same ball, one calls, “I got it!”', 'Then the other player moves out of the way.', 'That keeps them from crashing.'],
       ['A team wins more games when every player does a job and helps the others.']
     ],
     qs: [
       { id: 'p1q1', sk: 'main', q: 'What is this passage mostly about?', c: ['How baseball players work together as a team', 'How to throw a fast pitch', 'Why the catcher wears a mask', 'How to buy a baseball glove'], a: 0, h: 'Read the first sentence of each paragraph and the last sentence. What do they all talk about?', ex: 'Every part tells how players do jobs, help, and talk to each other. The last sentence says it too.', why: [null, 'The passage says the pitcher throws, but it never tells how to throw fast.', 'A mask is never mentioned in the passage.', 'Buying a glove is never mentioned.'] },
       { id: 'p1q2', sk: 'detail', q: 'What does the catcher do?', c: ['Stands far away in the field', 'Squats behind home plate and catches pitches', 'Throws the ball to the batter', 'Calls the game on the radio'], a: 1, h: 'Find the word catcher in the first paragraph.', ex: 'The passage says: “The catcher squats behind home plate and catches the pitches.”', why: ['That is what the other players in the field do.', null, 'That is the pitcher’s job.', 'The passage does not say that.'] },
-      { id: 'p1q3', sk: 'vocab', q: 'What does the word relay mean in this passage?', c: ['A kind of baseball bat', 'A long, slow walk', 'Passing the ball from one player to another to get it there faster', 'A cheer the fans yell'], a: 2, h: 'Read the sentence before “This is called a relay” and the sentence after it.', ex: 'The passage says one player throws to another player who is closer, and a relay gets the ball there faster.' },
-      { id: 'p1q4', sk: 'evidence', k: 'ev', q: 'Tap the sentence that shows how players talk to stay safe.', ok: [10, 12], h: 'Look in the paragraph that starts “Players also talk to each other.”', ex: 'One player calls “I got it!” and that keeps them from crashing. Both sentences show talking keeps players safe.' },
+      { id: 'p1q3', sk: 'vocab', q: 'What does the word relay mean in this passage?', c: ['A kind of baseball bat', 'A long, slow walk', 'Passing the ball from one player to another to get it there faster', 'A cheer the fans yell'], a: 2, h: 'Read the sentences before “This is called a relay” and the sentence after it.', ex: 'The passage says one player throws to a teammate who is closer to the base, and a relay gets the ball there faster.' },
+      { id: 'p1q4', sk: 'evidence', k: 'ev', q: 'Tap the sentence that shows how players talk to stay safe.', ok: [12, 13, 14], h: 'Look in the paragraph that starts “Players also talk to each other.”', ex: 'One player calls “I got it!”, the other player moves out of the way, and that keeps them from crashing.' },
       { id: 'p1q5', sk: 'sequence', q: 'What happens right after one player calls “I got it!”?', c: ['The game ends.', 'The other player moves out of the way.', 'The pitcher throws a new ball.', 'Both players crash.'], a: 1, h: 'Find “I got it!” Then read the very next sentence.', ex: 'The next sentence says: “Then the other player moves out of the way.”', why: [null, null, null, 'The passage says calling out keeps them FROM crashing.'] }
     ]
   },
@@ -1435,7 +1439,7 @@ var PASSAGES = [
       { id: 'p2q1', sk: 'sequence', q: 'What did Malik and Ava do FIRST to build the puzzle?', c: ['They worked on the barn.', 'They found all the edge pieces.', 'They pressed in the final piece.', 'They sorted the pumpkin pieces.'], a: 1, h: 'Look for the signal word First in the second paragraph.', ex: 'The story says: “First, they found all the edge pieces.”', why: ['Malik worked on the barn after they found the edges.', null, 'That happened at the very end.', 'That came Next, not first.'] },
       { id: 'p2q2', sk: 'vocab', q: 'What does frustrated mean in this story?', c: ['Very sleepy', 'Upset because something is hard', 'Hungry for pie', 'Excited to win'], a: 1, h: 'Read the whole sentence: a piece would not fit. How would that feel?', ex: 'Malik felt frustrated when a piece would not fit. That means upset because something was hard.' },
       { id: 'p2q3', sk: 'inference', q: 'How did Malik most likely feel when the piece clicked into place?', c: ['Glad that it finally fit', 'Angry at Ava', 'Bored with the puzzle', 'Scared of the barn'], a: 0, h: 'Use a clue from the story (the ! mark and “clicked into place”) and what you know about fixing a hard problem.', ex: 'The piece finally fit after he was frustrated. The exclamation mark is a clue. Most people feel glad when a hard part finally works.', why: [null, 'Ava helped him. Nothing in the story shows he was angry at her.', 'He kept working and cheered at the end, so he was not bored.', 'Nothing in the story shows he was scared.'] },
-      { id: 'p2q4', sk: 'evidence', k: 'ev', q: 'Tap the sentence that shows Ava helped Malik.', ok: [10], h: 'Look for something Ava SAID when Malik was stuck.', ex: 'Ava said, “Turn it around and try again.” That advice helped Malik make the piece fit.' },
+      { id: 'p2q4', sk: 'evidence', k: 'ev', q: 'Tap what Ava SAID that helped Malik.', ok: [10], h: 'Look for something Ava SAID when Malik was stuck.', ex: 'Ava said, “Turn it around and try again.” That advice helped Malik make the piece fit.' },
       { id: 'p2q5', sk: 'main', q: 'What is this story mostly about?', c: ['How to bake sweet potato pie', 'A family working together to finish a puzzle', 'A red barn on a farm', 'Why Malik does not like puzzles'], a: 1, h: 'What do the characters do from the beginning to the end?', ex: 'The family starts, works on, and finishes a puzzle together. Malik even says, “We finished it together.”', why: ['The pie is only mentioned in the first sentence.', null, 'The barn is only in the puzzle picture.', 'Malik grins at the end, so he did not dislike it.'] }
     ]
   },
@@ -1450,7 +1454,7 @@ var PASSAGES = [
     ],
     qs: [
       { id: 'p3q1', sk: 'inference', q: 'How did Omar most likely feel at the start of recess?', c: ['Lonely and shy', 'Angry and loud', 'Silly and playful', 'Tired and sleepy'], a: 0, h: 'Clues: Omar stood alone and kept looking down. What do you know about how that looks?', ex: 'Omar stood alone, looked at the ground, and said he did not know anyone. Those clues show he felt lonely and shy.' },
-      { id: 'p3q2', sk: 'evidence', k: 'ev', q: 'Tap a sentence that is a clue that Omar felt alone.', ok: [0, 2, 8], h: 'Look at what Omar did or said at the beginning, before he played.', ex: 'Good clues: he stood alone by the fence, he kept looking down, and he said, “I don’t know anyone here.”' },
+      { id: 'p3q2', sk: 'evidence', k: 'ev', q: 'Tap something Omar did or said that shows he felt alone.', ok: [0, 2, 8], h: 'Look at what Omar did or said at the beginning, before he played.', ex: 'Good clues: he stood alone by the fence, he kept looking down, and he said, “I don’t know anyone here.”' },
       { id: 'p3q3', sk: 'detail', q: 'Why did Deshawn walk over to Omar?', c: ['He wanted Omar’s soccer ball.', 'The teacher told him to.', 'He remembered feeling lonely on his own first day.', 'He wanted to go inside.'], a: 2, h: 'Read the second paragraph. What did Deshawn remember?', ex: 'The story says Deshawn remembered his first day at a new school and that he had felt lonely too.', why: ['The story never says he wanted the ball.', 'No teacher is in the story.', null, 'He stayed outside to play.'] },
       { id: 'p3q4', sk: 'sequence', q: 'What happened right after Deshawn waved to Lila and Ben?', c: ['The bell rang.', 'Omar said his name.', 'The four of them passed the ball across the grass.', 'Deshawn saw Omar by the fence.'], a: 2, h: 'Find the sentence about waving. Read the next sentence.', ex: 'The next sentence says: “Soon the four of them were passing the ball across the grass.”' },
       { id: 'p3q5', sk: 'main', q: 'What lesson does this story show?', c: ['Soccer is better than baseball.', 'Being kind can help someone feel welcome.', 'Recess should be longer.', 'New kids should stay by the fence.'], a: 1, h: 'How did Omar change from the beginning to the end? What caused it?', ex: 'Omar started alone and ended up smiling because Deshawn was kind. Kindness helped him feel welcome.' }
@@ -1476,8 +1480,8 @@ var PASSAGES = [
     id: 'p5', title: 'How Squirrels Get Ready for Winter', type: 'Nonfiction', topic: 'Animals and nature',
     paras: [
       ['In the fall, you might see squirrels running back and forth across a yard.', 'They are busy getting ready for winter.'],
-      ['Gray squirrels gather nuts and seeds.', 'They dig small holes and bury the food in many different places.', 'Hiding food to eat later is called caching.', 'One squirrel can hide thousands of nuts in a single fall!'],
-      ['How do squirrels find the food later?', 'They have a strong sense of smell.', 'They also remember where many of their hiding spots are.', 'Even so, they do not find every nut.', 'Some forgotten nuts grow into new trees.'],
+      ['Gray squirrels gather nuts and seeds.', 'They dig small holes and bury the food in many different places.', 'Hiding food to eat later is called caching (say: CASH-ing).', 'One squirrel can hide thousands of nuts in a single fall!'],
+      ['How do squirrels find the food later?', 'They have a strong sense of smell.', 'They also remember where many of their hiding spots are.', 'But they do not find every nut.', 'Some forgotten nuts grow into new trees.'],
       ['Squirrels also build nests out of leaves and twigs high in the trees.', 'The nests keep them warm and dry on cold days.']
     ],
     qs: [
@@ -1492,7 +1496,7 @@ var PASSAGES = [
     id: 'p6', title: 'Too Fast', type: 'Fiction', topic: 'Learning from a mistake',
     paras: [
       ['Kendra loved being the first to finish.', 'On Monday, her teacher handed out a spelling test.', 'Kendra wrote fast.', 'She was done in two minutes and put her pencil down with a smile.'],
-      ['On Wednesday, she got her test back.', 'There were five red marks on it.', 'She had written “wen” instead of “when” and “frend” instead of “friend.”', 'Kendra knew those words!', 'She had just rushed.'],
+      ['On Wednesday, she got her test back.', 'There were five red marks on it.', 'For example, she had written “wen” instead of “when” and “frend” instead of “friend.”', 'Kendra knew those words!', 'She had just rushed.'],
       ['At home, Kendra told her mom, “I went too fast.”', 'Mom nodded and asked, “What could you do next time?”', 'Kendra thought about it.', '“I can check each word before I turn it in,” she said.'],
       ['The next Monday, Kendra took her time.', 'She read every word twice.', 'When she got her test back, it had a big gold star.']
     ],
@@ -1621,7 +1625,7 @@ var LESSONS = {
 
   adjectives: [
     { id: 'A', title: 'What Kind?', skill: 'kind', key: 'An adjective describes a noun.', steps: [
-      { t: 'explain', title: 'Adjectives', text: ['An adjective describes a noun.', 'It can tell what kind, which one, or how many.'] },
+      { t: 'explain', title: 'Adjectives', text: ['An adjective describes a noun.', 'It can tell what kind, which one, or how many.', 'Little words like the, a, and my will be gray. You do not tap them here.'] },
       { t: 'show', title: 'Watch me find it', mode: 'adj', s: 'The [red@ball] ball rolled.', text: ['Red describes ball.', 'It tells what kind of ball.'] },
       { t: 'show', title: 'Another one', mode: 'adj', s: 'The [small@puppy] puppy sleeps.', text: ['Small describes puppy.'] },
       { t: 'guided', coach: 'First find the noun. Then find the word that describes it.', q: { mode: 'adj', s: 'The [brown@dog] dog barked.', h: 'What kind of dog?', ex: 'Brown describes dog.' } },
@@ -1683,7 +1687,7 @@ var LESSONS = {
     ] },
     { id: 'B', title: 'Short Vowel Sounds', skill: 'short', key: 'One vowel between two consonants often makes a short sound.', steps: [
       { t: 'explain', title: 'Short vowels', text: ['When one vowel sits between two consonants, it often makes a short sound.', 'This is called the CVC pattern, like c-a-t.'] },
-      { t: 'words', title: 'Short vowel words', say: true, groups: [ { name: 'short a', words: ['cap', 'cat'] }, { name: 'short e', words: ['bed', 'ten'] }, { name: 'short i', words: ['kit', 'pig'] }, { name: 'short o', words: ['hop', 'dog'] }, { name: 'short u', words: ['cup', 'tub'] } ] },
+      { t: 'words', title: 'Short vowel words', say: true, groups: [ { name: 'short a', words: ['cap', 'cat'] }, { name: 'short e', words: ['bed', 'ten'] }, { name: 'short i', words: ['kit', 'pig'] }, { name: 'short o', words: ['hop', 'pot'] }, { name: 'short u', words: ['cup', 'tub'] } ] },
       { t: 'mc', q: { q: 'Which word has the CVC pattern for a short vowel?', c: ['cape', 'hop', 'rain'], a: 1, say: true, h: 'Find one vowel between two consonants.', ex: 'Hop is h-o-p: one vowel between two consonants.' } }
     ] },
     { id: 'C', title: 'Long Vowel Sounds', skill: 'long', key: 'A long vowel says its own name.', steps: [
@@ -1692,7 +1696,7 @@ var LESSONS = {
     ] },
     { id: 'D', title: 'Silent e', skill: 'silente', key: 'Silent e often helps the earlier vowel say its name.', steps: [
       { t: 'explain', title: 'The silent e', text: ['Silent e often helps the earlier vowel say its name.', 'You do not hear the e at the end.'] },
-      { t: 'table', title: 'Add an e and watch', say: true, head: ['Short', 'Add silent e → Long'], rows: [['cap', 'cape'], ['kit', 'kite'], ['hop', 'hope'], ['tub', 'tube']] },
+      { t: 'table', title: 'Add an e and watch', say: true, head: ['Short', 'Add silent e → Long'], rows: [['cap', 'cape'], ['kit', 'kite'], ['hop', 'hope'], ['cub', 'cube']] },
       { t: 'explain', title: 'Not always!', text: ['Silent e does not ALWAYS work this way.', 'In have and give, the e is silent, but the vowel is short.', 'So use it as a strong clue, not a promise.'] },
       { t: 'mc', q: { q: 'Add silent e to hop. What new word do you make?', c: ['hope', 'hip', 'hops'], a: 0, say: true, h: 'Write hop, then put e at the end.', ex: 'hop + e = hope. The o now says its name.' } }
     ] },
@@ -1802,50 +1806,50 @@ var MASTERY_CATS = [
 var VERB_MASTERY = [
   { id: 'm1', cat: 'action', s: 'The excited puppy [chased] the bouncing ball across the yard.', ex: 'Chased is the only verb. Excited describes the puppy, and bouncing describes the ball.' },
   { id: 'm2', cat: 'action', s: 'My older brother quickly [painted] the wooden fence.', ex: 'Painted is the verb. Quickly tells how, and older and wooden are describing words.' },
-  { id: 'm3', cat: 'action', s: 'The tired runner [crossed] the finish line slowly.', ex: 'Crossed is the verb. Tired describes the runner; slowly tells how.' },
+  { id: 'm3', cat: 'action', s: 'The tired runner [crossed] the line slowly.', ex: 'Crossed is the verb. Tired describes the runner; slowly tells how.' },
   { id: 'm4', cat: 'action', s: 'A loud, buzzing bee [landed] on the purple flower.', ex: 'Landed is the verb. Buzzing describes the bee, so it is not a verb here.' },
   { id: 'm5', cat: 'action', s: 'Our smiling teacher [gave] us shiny gold stickers.', ex: 'Gave is the verb. Smiling describes the teacher.' },
-  { id: 'm6', cat: 'action', s: 'The broken swing [creaked] in the cold wind.', ex: 'Creaked is the verb. Broken describes the swing.' },
+  { id: 'm6', cat: 'action', s: 'The broken swing [creaked] in the cold wind.', ex: 'Creaked is the verb. Swing is a thing here, and broken describes it.' },
   { id: 'm7', cat: 'action', s: 'Grandma carefully [stirred] the steaming soup.', ex: 'Stirred is the verb. Steaming describes the soup; carefully tells how.' },
   { id: 'm8', cat: 'action', s: 'The talking parrot [repeated] every funny word.', ex: 'Repeated is the verb. Talking describes the parrot.' },
   { id: 'm9', cat: 'being', s: 'The museum [was] quiet on Tuesday morning.', ex: 'Was is the only verb. Quiet describes the museum.' },
   { id: 'm10', cat: 'being', s: 'Those sneakers [are] too small for my feet.', ex: 'Are is the only verb. Small describes the sneakers.' },
-  { id: 'm11', cat: 'being', s: 'My cousins [were] at the lake all summer.', ex: 'Were is the only verb. It tells where my cousins were.' },
+  { id: 'm11', cat: 'being', s: 'My cousins [were] at the lake all summer.', ex: 'Were is the only verb. At the lake tells where my cousins were.' },
   { id: 'm12', cat: 'being', s: 'I [am] the tallest player on my team.', ex: 'Am is the only verb. Tallest describes the player.' },
   { id: 'm13', cat: 'being', s: 'Our classroom [has] three tall windows.', ex: 'Has is the main verb. No other verb comes with it.' },
   { id: 'm14', cat: 'being', s: 'The twins [have] matching red jackets.', ex: 'Have is the main verb. Matching describes the jackets, so it is not a verb.' },
   { id: 'm15', cat: 'being', s: 'Our class [did] a puppet show for the first graders.', ex: 'Did is the main verb here. It tells what our class did.' },
   { id: 'm16', cat: 'being', s: 'My aunt [had] a bad cold last week.', ex: 'Had is the main verb. No other verb comes with it.' },
-  { id: 'm17', cat: 'team2', s: 'The pitcher [is] [stretching] near the dugout.', ex: 'Is helps stretching. The team is is stretching.' },
-  { id: 'm18', cat: 'team2', s: 'My little sister [was] [giggling] during the movie.', ex: 'Was helps giggling. The team is was giggling.' },
-  { id: 'm19', cat: 'team2', s: 'The students [were] [writing] poems about autumn.', ex: 'Were helps writing. The team is were writing.' },
-  { id: 'm20', cat: 'team2', s: 'Our neighbor [has] [planted] tulips by the mailbox.', ex: 'Has helps planted. The team is has planted.' },
-  { id: 'm21', cat: 'team2', s: 'The bakers [had] [baked] fifty muffins before sunrise.', ex: 'Had helps baked. The team is had baked.' },
-  { id: 'm22', cat: 'team2', s: 'You [should] [drink] water after recess.', ex: 'Should helps drink. The team is should drink.' },
-  { id: 'm23', cat: 'team2', s: 'The firefighters [will] [visit] our school on Friday.', ex: 'Will helps visit. The team is will visit.' },
-  { id: 'm24', cat: 'team2', s: 'Marcus [can] [whistle] a whole song.', ex: 'Can helps whistle. The team is can whistle.' },
-  { id: 'm25', cat: 'team2', s: 'That storm [could] [damage] the old barn.', ex: 'Could helps damage. The team is could damage.' },
-  { id: 'm26', cat: 'team2', s: 'We [might] [see] a rainbow later.', ex: 'Might helps see. The team is might see. Later tells when.' },
-  { id: 'm27', cat: 'team2', s: 'Everyone [must] [wear] a helmet on the bike trail.', ex: 'Must helps wear. The team is must wear.' },
-  { id: 'm28', cat: 'team2', s: 'The chorus [would] [sing] at every assembly.', ex: 'Would helps sing. The team is would sing.' },
-  { id: 'm29', cat: 'team2', s: 'You [may] [use] my markers for your poster.', ex: 'May helps use. The team is may use.' },
-  { id: 'm30', cat: 'team2', s: 'The kittens [are] [chasing] a striped ribbon.', ex: 'Are helps chasing. The team is are chasing. Striped describes the ribbon.' },
-  { id: 'm31', cat: 'team2', s: 'Our class [has] [collected] forty cans for the food drive.', ex: 'Has helps collected. The team is has collected.' },
-  { id: 'm32', cat: 'team2', s: 'The girls [did] [remember] their library books.', ex: 'Did helps remember. The team is did remember.' },
-  { id: 'm33', cat: 'team2', s: 'We [shall] [begin] the science fair now.', ex: 'Shall helps begin. The team is shall begin.' },
-  { id: 'm34', cat: 'team2', s: 'The crowd [was] [waving] colorful flags.', ex: 'Was helps waving. The team is was waving.' },
-  { id: 'm35', cat: 'team3', s: 'The swimmers [have] [been] [training] since August.', ex: 'Have and been help training. The team is have been training.' },
-  { id: 'm36', cat: 'team3', s: 'My grandparents [will] [be] [arriving] after lunch.', ex: 'Will and be help arriving. The team is will be arriving.' },
-  { id: 'm37', cat: 'team3', s: 'The baby [had] [been] [crying] all night.', ex: 'Had and been help crying. The team is had been crying.' },
-  { id: 'm38', cat: 'team3', s: 'We [should] [have] [left] earlier.', ex: 'Should and have help left. The team is should have left.' },
-  { id: 'm39', cat: 'team3', s: 'The puppies [have] [been] [sleeping] in the basket.', ex: 'Have and been help sleeping. The team is have been sleeping.' },
-  { id: 'm40', cat: 'team3', s: 'I [would] [have] [helped] you with the poster.', ex: 'Would and have help helped. The team is would have helped.' },
-  { id: 'm41', cat: 'team3', s: 'Our class [will] [be] [taking] a field trip soon.', ex: 'Will and be help taking. The team is will be taking.' },
-  { id: 'm42', cat: 'team3', s: 'The tomatoes [must] [have] [grown] during the rainy week.', ex: 'Must and have help grown. The team is must have grown.' },
-  { id: 'm43', cat: 'team3', s: 'She [could] [have] [spelled] every word correctly.', ex: 'Could and have help spelled. The team is could have spelled.' },
-  { id: 'm44', cat: 'team3', s: 'The new playground [is] [being] [built] next to the gym.', ex: 'Is and being help built. The team is is being built.' },
-  { id: 'm45', cat: 'team3', s: 'You [might] [be] [feeling] better tomorrow.', ex: 'Might and be help feeling. The team is might be feeling.' },
-  { id: 'm46', cat: 'team3', s: 'The coaches [had] [been] [planning] the picnic for weeks.', ex: 'Had and been help planning. The team is had been planning.' },
+  { id: 'm17', cat: 'team2', s: 'The pitcher [is] [stretching] near the dugout.', ex: 'Is helps stretching. The whole team: is stretching.' },
+  { id: 'm18', cat: 'team2', s: 'My little sister [was] [giggling] during the movie.', ex: 'Was helps giggling. The whole team: was giggling.' },
+  { id: 'm19', cat: 'team2', s: 'The students [were] [writing] poems about autumn.', ex: 'Were helps writing. The whole team: were writing.' },
+  { id: 'm20', cat: 'team2', s: 'Our neighbor [has] [planted] tulips by the mailbox.', ex: 'Has helps planted. The whole team: has planted.' },
+  { id: 'm21', cat: 'team2', s: 'The bakers [had] [baked] fifty muffins before sunrise.', ex: 'Had helps baked. The whole team: had baked.' },
+  { id: 'm22', cat: 'team2', s: 'You [should] [drink] water after recess.', ex: 'Should helps drink. The whole team: should drink.' },
+  { id: 'm23', cat: 'team2', s: 'The firefighters [will] [visit] our school on Friday.', ex: 'Will helps visit. The whole team: will visit.' },
+  { id: 'm24', cat: 'team2', s: 'Marcus [can] [whistle] a whole song.', ex: 'Can helps whistle. The whole team: can whistle.' },
+  { id: 'm25', cat: 'team2', s: 'That storm [could] [damage] the old barn.', ex: 'Could helps damage. The whole team: could damage.' },
+  { id: 'm26', cat: 'team2', s: 'We [might] [see] a rainbow later.', ex: 'Might helps see. The whole team: might see. Later tells when.' },
+  { id: 'm27', cat: 'team2', s: 'Everyone [must] [wear] a helmet on the bike trail.', ex: 'Must helps wear. The whole team: must wear.' },
+  { id: 'm28', cat: 'team2', s: 'I [would] [choose] the red bike.', ex: 'Would helps choose. The whole team: would choose.' },
+  { id: 'm29', cat: 'team2', s: 'You [may] [use] my markers for your poster.', ex: 'May helps use. The whole team: may use.' },
+  { id: 'm30', cat: 'team2', s: 'The kittens [are] [chasing] a striped ribbon.', ex: 'Are helps chasing. The whole team: are chasing. Striped describes the ribbon.' },
+  { id: 'm31', cat: 'team2', s: 'Our class [has] [collected] forty cans for the food bank.', ex: 'Has helps collected. The whole team: has collected.' },
+  { id: 'm32', cat: 'team2', s: 'The girls [did] [remember] their library books.', ex: 'Did helps remember. The whole team: did remember.' },
+  { id: 'm33', cat: 'team2', s: 'We [shall] [begin] the science fair now.', ex: 'Shall helps begin. The whole team: shall begin.' },
+  { id: 'm34', cat: 'team2', s: 'The crowd [was] [waving] colorful flags.', ex: 'Was helps waving. The whole team: was waving.' },
+  { id: 'm35', cat: 'team3', s: 'The swimmers [have] [been] [training] since August.', ex: 'Have and been help training. The whole team: have been training.' },
+  { id: 'm36', cat: 'team3', s: 'My grandparents [will] [be] [arriving] after lunch.', ex: 'Will and be help arriving. The whole team: will be arriving.' },
+  { id: 'm37', cat: 'team3', s: 'The baby [had] [been] [crying] all night.', ex: 'Had and been help crying. The whole team: had been crying.' },
+  { id: 'm38', cat: 'team3', s: 'We [should] [have] [left] earlier.', ex: 'Should and have help left. The whole team: should have left.' },
+  { id: 'm39', cat: 'team3', s: 'The puppies [have] [been] [sleeping] in the basket.', ex: 'Have and been help sleeping. The whole team: have been sleeping.' },
+  { id: 'm40', cat: 'team3', s: 'I [would] [have] [helped] you with the poster.', ex: 'Would and have are helpers. Helped is the main verb. The whole team: would have helped.' },
+  { id: 'm41', cat: 'team3', s: 'Our class [will] [be] [taking] a field trip soon.', ex: 'Will and be help taking. The whole team: will be taking.' },
+  { id: 'm42', cat: 'team3', s: 'The tomatoes [must] [have] [grown] during the rainy week.', ex: 'Must and have help grown. The whole team: must have grown.' },
+  { id: 'm43', cat: 'team3', s: 'She [could] [have] [spelled] every word correctly.', ex: 'Could and have help spelled. The whole team: could have spelled.' },
+  { id: 'm44', cat: 'team3', s: 'The workers [have] [been] [building] a new playground next to the gym.', ex: 'Have and been are helpers. Building is the main verb. The whole team: have been building.' },
+  { id: 'm45', cat: 'team3', s: 'You [might] [be] [feeling] better tomorrow.', ex: 'Might and be help feeling. The whole team: might be feeling.' },
+  { id: 'm46', cat: 'team3', s: 'The coaches [had] [been] [planning] the picnic for weeks.', ex: 'Had and been help planning. The whole team: had been planning.' },
   { id: 'm47', cat: 'between', s: 'The bus [has] already [left] the station.', ex: 'Has and left are the verb words. Already tells when; it is not a verb.' },
   { id: 'm48', cat: 'between', s: 'My dog [does] not [like] thunder.', ex: 'Does and like are the verb words. Not is not a verb.' },
   { id: 'm49', cat: 'between', s: 'We [will] probably [eat] turkey on Thursday.', ex: 'Will and eat are the verb words. Probably is not a verb.' },
@@ -1867,7 +1871,7 @@ var NOUN_CHECK = [
   { id: 'nc2', sk: 'multi', s: 'The [mailman:p] left a [package:t] on our [porch:l].', h: 'Who? What? Where?', ex: 'Mailman is a person, package is a thing, and porch is a place.' },
   { id: 'nc3', sk: 'people', s: 'The [nurse:p] checked my [ears:t].', want: 'p', h: 'Who checked?', ex: 'Nurse names a person. Ears are things.' },
   { id: 'nc4', sk: 'places', s: 'We ate [sandwiches:t] at the [zoo:l].', want: 'l', h: 'Where did we eat?', ex: 'Zoo names a place. Sandwiches are things.' },
-  { id: 'nc5', sk: 'things', s: 'My [cousin:p] dropped her [crayons:t].', want: 't', h: 'What did my cousin drop?', ex: 'Crayons names things. Cousin is a person.', notes: { her: 'Her tells whose. It is not a noun here.' } },
+  { id: 'nc5', sk: 'things', s: 'My [cousin:p] dropped her [crayons:t].', want: 't', h: 'What did my cousin drop?', ex: 'Crayons name things. Cousin is a person.', notes: { her: 'Her tells whose. It is not a noun here.' } },
   { id: 'nc6', sk: 'proper', s: '[Andre:pP] flew to [Texas:lP] in a [plane:t].', want: 'P', h: 'Look for special names with capital letters.', ex: 'Andre and Texas are proper nouns. Plane is a common noun.' },
   { id: 'nc7', sk: 'proper', s: 'Our [puppy:t] [Biscuit:tP] chewed a [sock:t].', want: 'c', h: 'Common nouns are not special names.', ex: 'Puppy and sock are common nouns. Biscuit is the puppy’s name, a proper noun.' },
   { id: 'nc8', sk: 'ideas', s: 'The [firefighter:p] showed great [bravery:i].', want: 'i', h: 'Which noun can you not touch?', ex: 'Bravery names an idea. Firefighter is a person.', notes: { great: 'Great describes bravery. It is not a noun.' } },
@@ -1924,13 +1928,13 @@ var CHECK_PASSAGES = [
       { id: 'cp1q2', sk: 'detail', q: 'What is nectar?', c: ['A yellow powder', 'A sweet liquid from flowers', 'A wax cap', 'A kind of bee'], a: 1, h: 'Look in the first paragraph.', ex: 'The passage says nectar is a sweet liquid that bees collect from flowers.' },
       { id: 'cp1q3', sk: 'sequence', q: 'What happens right after the bees fan their wings over the cells?', c: ['The bees fly to a flower.', 'The moving air dries the nectar.', 'Pollen sticks to their legs.', 'The bees sip the nectar.'], a: 1, h: 'Find the sentence about fanning. Read the next one.', ex: 'The next sentence says the moving air dries the nectar until it becomes honey.' },
       { id: 'cp1q4', sk: 'vocab', q: 'In this passage, what are cells?', c: ['Tiny wax rooms in the hive', 'Phones', 'Parts of a flower', 'Drops of rain'], a: 0, h: 'The passage tells you in the same sentence.', ex: 'The passage says cells are tiny wax rooms.' },
-      { id: 'cp1q5', sk: 'evidence', k: 'ev', q: 'Tap the sentence that shows how bees help plants make fruit.', ok: [11], h: 'Look in the last paragraph.', ex: '“This helps the plants make seeds and fruit.” shows how bees help.' }
+      { id: 'cp1q5', sk: 'evidence', k: 'ev', q: 'Tap the sentence that shows how bees help plants make fruit.', ok: [10, 11], h: 'Look in the last paragraph.', ex: 'The bee carries pollen to the next flower, and this helps the plants make seeds and fruit.' }
     ]
   },
   {
     id: 'cp2', title: 'The Bucket Garden', type: 'Fiction', topic: 'Solving a problem with help',
     paras: [
-      ['Rosa wanted to grow tomatoes, but her backyard was full of rocks.', 'She asked her neighbor, Mr. Okafor, for advice.', '“Try a container,” he said, and he gave her a big empty bucket.'],
+      ['Rosa wanted to grow tomatoes, but her backyard was full of rocks.', 'She asked her neighbor, Mr. Okafor, for help.', '“Try a bucket,” he said, and he gave her a big empty bucket.'],
       ['First, Rosa poked small holes in the bottom of the bucket.', 'Next, she filled it with soil from the garden store.', 'Then she planted a tiny tomato plant and watered it.'],
       ['Every morning, Rosa checked her plant.', 'When the leaves drooped on a hot day, she gave it more water.', 'By the next morning, the leaves stood up straight again.'],
       ['In August, Rosa picked six red tomatoes.', 'She carried the biggest one next door.', '“Thank you for the bucket,” she told Mr. Okafor with a smile.']
@@ -2164,13 +2168,33 @@ var CHECK_PASSAGES = [
     });
   }
   function markStory(pid) { P.serve++; var s = P.stats['story:' + pid] || (P.stats['story:' + pid] = { n: 0, last: 0 }); s.last = P.serve; s.n++; saveP(); }
+  /* Exposure: a check question, check passage, or mastery sentence counts as seen once it is SHOWN. */
+  function expo(kind) { var k = 'seen_' + kind; return P.stats[k] || (P.stats[k] = {}); }
+  function markShown() {
+    var changed = false, id;
+    if (view.v === 'test' && view.qs) {
+      id = view.qs.q.id; if (!expo('q')[id]) { expo('q')[id] = 1; changed = true; }
+      var p = view.qs.q.passage; if (p && !expo('p')[p.id]) { expo('p')[p.id] = 1; changed = true; }
+    }
+    if (view.v === 'mastery' && view.qs) { id = view.qs.q.id; if (!expo('m')[id]) { expo('m')[id] = 1; changed = true; } }
+    if (changed) saveP();
+  }
   function testPick(a, n) {
     var core = SKILLS[a].filter(function (s) { return !s.optional || (s.id === 'long' && lessonDone(a, 'E')); });
-    var src = CHECK_Q[a] || bankFor(a);
-    var bySk = core.map(function (s) { return shuffle(src.filter(function (q) { return q.sk === s.id; })); }).filter(function (l) { return l.length; });
-    var out = [], i = 0;
-    while (out.length < n && bySk.some(function (l) { return l.length; })) { var l = bySk[i % bySk.length]; if (l.length) out.push(l.pop()); i++; }
+    var src = CHECK_Q[a] || bankFor(a), seen = expo('q');
+    var inCore = src.filter(function (q) { return core.some(function (s) { return s.id === q.sk; }); });
+    var out = [];
+    // pass 1: unseen questions, spread across skills; pass 2: fill with already-seen questions
+    [false, true].forEach(function (wantSeen) {
+      var bySk = core.map(function (s) { return shuffle(inCore.filter(function (q) { return q.sk === s.id && !!seen[q.id] === wantSeen && out.indexOf(q) < 0; })); }).filter(function (l) { return l.length; });
+      var i = 0;
+      while (out.length < n && bySk.some(function (l) { return l.length; })) { var l = bySk[i % bySk.length]; if (l.length) out.push(l.pop()); i++; }
+    });
     return shuffle(out).map(function (q) { return q.id; });
+  }
+  function newLeft(a) {
+    if (a === 'reading') return { n: CHECK_PASSAGES.filter(function (p) { return !expo('p')[p.id]; }).length, of: CHECK_PASSAGES.length, unit: 'stories' };
+    var src = CHECK_Q[a] || []; return { n: src.filter(function (q) { return !expo('q')[q.id]; }).length, of: src.length, unit: 'questions' };
   }
 
   /* ───────────── question state ───────────── */
@@ -2439,7 +2463,7 @@ var CHECK_PASSAGES = [
     var v = view, r = null;
     if (v.v === 'lesson') r = { v: 'lesson', a: v.a, l: v.l, step: v.step };
     else if (v.v === 'round') r = { v: 'round', a: v.a, mode: v.mode, sk: v.sk || null, story: v.story || null, ids: v.ids, i: v.i, res: v.res };
-    else if (v.v === 'test' || v.v === 'testReview') r = { v: 'test', a: v.a, ids: v.ids, i: v.i, ans: v.ans };
+    else if (v.v === 'test' || v.v === 'testReview') r = { v: 'test', a: v.a, ids: v.ids, i: v.i, ans: v.ans, priorQ: v.priorQ || [], priorP: v.priorP || [] };
     else if (v.v === 'mastery' || v.v === 'masteryBreak' || v.v === 'masteryReview') r = { v: 'mastery', a: 'verbs' };
     if (r) { P.resume = r; saveP(); }
     else if (v.v === 'roundEnd' || v.v === 'testResult' || v.v === 'lessonEnd' || v.v === 'masteryResult') { P.resume = null; saveP(); }
@@ -2458,7 +2482,7 @@ var CHECK_PASSAGES = [
       if (r.v === 'lesson') { var l = lessonById(r.a, r.l); if (!l) throw 0; return startLesson(r.a, r.l, Math.min(r.step, l.steps.length - 1)); }
       if (r.v === 'round') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var v = { v: 'round', a: r.a, mode: r.mode, sk: r.sk, story: r.story, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), res: r.res || [] }; v.qs = newQS(QBY[v.ids[v.i]], r.mode); return go(v); }
       if (r.v === 'mastery') { if (!validMastery(P.mastery)) throw 0; return openMasteryQ(P.mastery.i); }
-      if (r.v === 'test') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var t = { v: 'test', a: r.a, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), ans: r.ans || {} }; t.qs = newQS(QBY[t.ids[t.i]], 'test', t.ans[t.ids[t.i]]); return go(t); }
+      if (r.v === 'test') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var t = { v: 'test', a: r.a, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), ans: r.ans || {}, priorQ: r.priorQ || [], priorP: r.priorP || [] }; t.qs = newQS(QBY[t.ids[t.i]], 'test', t.ans[t.ids[t.i]]); return go(t); }
     } catch (e) { /* fall through */ }
     P.resume = null; saveP(); go({ v: 'home' });
   }
@@ -2468,7 +2492,7 @@ var CHECK_PASSAGES = [
   var MODE_LEGEND = {
     verb: 'Your choice gets <span class="sel-verb demo">two lines</span>.',
     noun: 'Your choice gets <span class="sel-noun demo">one line</span>.',
-    adj: 'Your choice gets a <span class="sel-adj demo">gold highlight</span>.',
+    adj: 'Your choice gets a <span class="sel-adj demo">gold highlight</span>. Gray words like <i>the</i>, <i>a</i>, and <i>my</i> cannot be tapped: we look for words that tell what kind, which one, or how many.',
     adv: 'Your choice gets a <span class="sel-adv demo">teal highlight</span>.'
   };
   function sentenceHTML(q, opt) {
@@ -2486,7 +2510,10 @@ var CHECK_PASSAGES = [
       var badge = mark === 'ok' ? '<span class="badge ok" aria-hidden="true">✓</span>' : mark === 'no' ? '<span class="badge no" aria-hidden="true">✕</span>' : mark === 'reveal' ? '<span class="badge rv" aria-hidden="true">★</span>' : '';
       var srState = mark === 'ok' ? ', correct' : mark === 'no' ? ', not this one' : mark === 'reveal' ? ', answer' : mark === 'info' ? ', skip this word' : '';
       h += '<span class="w">' + (t.pre ? '<span class="punct">' + esc(t.pre) + '</span>' : '');
-      if (opt.interactive) {
+      var fixed = opt.interactive && q.mode === 'adj' && IGNORE_ADJ[t.lw] && q.ans.indexOf(t.i) < 0;
+      if (fixed) {
+        h += '<span class="tok fixed" data-ti="' + t.i + '">' + esc(t.w) + '</span>';
+      } else if (opt.interactive) {
         h += '<button type="button" class="' + c + '" data-act="tok" data-i="' + t.i + '" data-ti="' + t.i + '" data-fkey="tok' + t.i + '" aria-pressed="' + (on ? 'true' : 'false') + '" aria-label="' + esc(t.w + (on ? ', chosen' : '') + srState) + '"' + linkAttr + '>' + esc(t.w) + badge + '</button>';
       } else {
         h += '<span class="' + c + '" data-ti="' + t.i + '"' + linkAttr + '>' + esc(t.w) + badge + '</span>';
@@ -2897,18 +2924,23 @@ var CHECK_PASSAGES = [
     var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' }), btn('home', '⌂ Home')]);
     h += '<h1 id="scr-title" tabindex="-1">Check My Skills: ' + esc(a.short) + '</h1>';
     h += '<div class="card"><ul class="rules"><li>No timer. Take your time.</li><li>No hints. Show what YOU know.</li><li>You can go back and change answers.</li><li>You find out how you did at the end.</li></ul>';
-    h += '<div class="end-btns">' + btn('startTest', '5 questions', { attrs: 'data-n="5"', key: '5' }, 'primary big') + btn('startTest', '10 questions', { attrs: 'data-n="10"', key: '10' }, 'big') + '</div></div>';
+    h += '<div class="end-btns">' + btn('startTest', '5 questions', { attrs: 'data-n="5"', key: '5' }, 'primary big') + btn('startTest', '10 questions', { attrs: 'data-n="10"', key: '10' }, 'big') + '</div>';
+    var nl = newLeft(a.id);
+    h += '<p class="muted small center">For grown-ups: ' + nl.n + ' of ' + nl.of + ' check ' + nl.unit + ' are still unseen. New ones are used first' + (a.id === 'reading' ? ' (a 5-question check uses one story, 10 uses two).' : '.') + (nl.n === 0 ? ' All have been seen, so a new check will repeat questions.' : '') + '</p></div>';
     return h;
   }
   function startTest(a, n) {
     var ids;
     if (a === 'reading') {
       /* Reading checks use CHECK_PASSAGES only, never the practice stories */
-      var order = CHECK_PASSAGES.slice().sort(function (x, y) { return ((P.stats['story:' + x.id] || {}).last || 0) - ((P.stats['story:' + y.id] || {}).last || 0); });
+      var ps = expo('p');
+      var order = CHECK_PASSAGES.slice().sort(function (x, y) { return ((ps[x.id] ? 1e9 : 0) + ((P.stats['story:' + x.id] || {}).last || 0)) - ((ps[y.id] ? 1e9 : 0) + ((P.stats['story:' + y.id] || {}).last || 0)); });
       var stories = order.slice(0, n >= 10 ? 2 : 1);
       ids = []; stories.forEach(function (p) { markStory(p.id); p.qs.forEach(function (q) { ids.push(q.id); }); });
     } else ids = testPick(a, n);
-    var v = { v: 'test', a: a, ids: ids, i: 0, ans: {} };
+    var priorQ = ids.filter(function (id) { return expo('q')[id]; });
+    var priorP = []; ids.forEach(function (id) { var p = QBY[id].passage; if (p && expo('p')[p.id] && priorP.indexOf(p.id) < 0) priorP.push(p.id); });
+    var v = { v: 'test', a: a, ids: ids, i: 0, ans: {}, priorQ: priorQ, priorP: priorP };
     v.qs = newQS(QBY[ids[0]], 'test');
     go(v);
   }
@@ -2942,13 +2974,12 @@ var CHECK_PASSAGES = [
     var per = {};
     items.forEach(function (it) { var q = QBY[it.id]; per[q.sk] = per[q.sk] || { right: 0, total: 0 }; per[q.sk].total++; if (it.ok) per[q.sk].right++; });
     Object.keys(per).forEach(function (sk) { var r = skillRec(view.a, sk); r.chkRight += per[sk].right; r.chkTotal += per[sk].total; r.lastChk = per[sk]; });
-    var seen = P.stats.checkSeen || (P.stats.checkSeen = {});
-    var repeat = items.filter(function (it) { return seen[it.id]; }).length;
-    items.forEach(function (it) { seen[it.id] = 1; });
-    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, repeat: repeat, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
+    var repeat = (view.priorQ || []).length, passRepeat = (view.priorP || []).length;
+    var unseen = !repeat && !passRepeat;
+    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, repeat: repeat, passRepeat: passRepeat, unseen: unseen, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
     if (P.checks.length > 50) P.checks = P.checks.slice(-50);
     saveP();
-    go({ v: 'testResult', a: view.a, items: items, score: score, per: per });
+    go({ v: 'testResult', a: view.a, items: items, score: score, per: per, repeat: repeat, passRepeat: passRepeat, unseen: unseen });
   }
   function givenText(q, g) {
     if (!g) return 'No answer';
@@ -2968,10 +2999,15 @@ var CHECK_PASSAGES = [
     if (q.kind === 'select') return promptFor(q) + '  “' + plainSentence(q) + '”';
     return q.q.replace(/\n/g, ' ');
   }
+  function exposureNote(r) {
+    var t = r.unseen ? 'For grown-ups: every question' + (r.a === 'reading' ? ' and story' : '') + ' was new to him, so this is an unseen check.'
+      : 'For grown-ups: ' + (r.repeat ? r.repeat + ' of ' + (r.items ? r.items.length : r.n) + ' questions were seen in an earlier check. ' : '') + (r.passRepeat ? 'The story was read in an earlier check. ' : '') + 'This is not a fully unseen check.';
+    return '<p class="muted small exposure">' + esc(t) + '</p>';
+  }
   function screenTestResult() {
     var a = areaById(view.a), n = view.items.length;
     var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">You finished! <span aria-hidden="true">⭐</span></h1><p class="score">' + view.score + ' of ' + n + ' correct</p>';
-    h += '<p class="lead">' + (view.score === n ? 'Every single one. Amazing!' : 'Let’s look at the ones to practice. Mistakes help us learn.') + '</p></section>';
+    h += '<p class="lead">' + (view.score === n ? 'Every single one. Amazing!' : 'Let’s look at the ones to practice. Mistakes help us learn.') + '</p>' + exposureNote(view) + '</section>';
     var missed = view.items.filter(function (x) { return !x.ok; });
     if (missed.length) {
       h += '<h2 class="section-h">Let’s learn from these</h2>';
@@ -3054,8 +3090,8 @@ var CHECK_PASSAGES = [
       h += '<section class="sh-sec sh-key"><h2>Answer key</h2><p>1. quickly (how) &nbsp; 2. yesterday (when) &nbsp; 3. outside (where) &nbsp; 4. well (how)</p></section>';
     } else if (k === 'vowels') {
       h += '<h1>Vowel Patterns Reference Sheet</h1><p class="sh-sub">Vowel letters: a, e, i, o, u</p>';
-      h += sec('Short vowels (one vowel between consonants)', '<p>cap, bed, kit, hop, tub</p>');
-      h += sec('Silent e (often makes the vowel say its name)', '<p>cap → cape &nbsp; kit → kite &nbsp; hop → hope &nbsp; tub → tube</p><p class="sh-note">Not always: have and give end in e, but the vowel is short.</p>');
+      h += sec('Short vowels (one vowel between consonants)', '<p>cap, bed, kit, hop, cub</p>');
+      h += sec('Silent e (often makes the vowel say its name)', '<p>cap → cape &nbsp; kit → kite &nbsp; hop → hope &nbsp; cub → cube</p><p class="sh-note">Not always: have and give end in e, but the vowel is short.</p>');
       h += sec('Vowel teams', ul(['<b>ai</b> often says long a: rain, tail, paint', '<b>ee</b> says long e: feet, seed, tree', '<b>ea</b> often says long e: team, seat, beach (sometimes short e: bread)', '<b>oa</b> says long o: boat, coat, road']));
       h += sec('Practice: write S (short) or L (long)', '<ol class="sh-practice"><li>cape ___</li><li>hop ___</li><li>rain ___</li><li>pet ___</li><li>boat ___</li></ol>');
       h += '<section class="sh-sec sh-key"><h2>Answer key</h2><p>1. L &nbsp; 2. S &nbsp; 3. L &nbsp; 4. S &nbsp; 5. L</p></section>';
@@ -3088,11 +3124,11 @@ var CHECK_PASSAGES = [
     h += '<div class="card"><h2>Verb Mastery Challenge</h2><p class="muted small">59 sentences used only in this final check. Benchmark: ' + MASTERY_BENCHMARK + ' of ' + MASTERY_IDS.length + ' with no help. Every verb word must be found; a partial verb team or an extra word makes that sentence wrong.</p>';
     if (validMastery(P.mastery)) h += '<p><b>In progress:</b> ' + mAnswered() + ' of ' + MASTERY_IDS.length + ' answered (saved).</p>';
     if (!P.masteryResults.length) h += '<p class="muted">Not taken yet.</p>';
-    P.masteryResults.slice(-5).reverse().forEach(function (r) { var d = new Date(r.date); h += '<p>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ': <b>' + r.score + ' of ' + r.total + '</b> \u00B7 ' + (r.met ? 'benchmark met' : 'benchmark not met yet') + '</p>' + catTable(r.byCat); });
+    P.masteryResults.slice(-5).reverse().forEach(function (r) { var d = new Date(r.date); h += '<p>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ': <b>' + r.score + ' of ' + r.total + '</b> \u00B7 ' + (r.met ? 'benchmark met' : 'benchmark not met yet') + (r.prior ? ' \u00B7 <span class="tag">repeat attempt: ' + r.prior + ' sentences seen before</span>' : ' \u00B7 <span class="tag">unseen</span>') + '</p>' + catTable(r.byCat); });
     h += '</div>';
     h += '<div class="card"><h2>Check My Skills history</h2>';
     if (!P.checks.length) h += '<p class="muted">No checks yet.</p>';
-    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.repeat ? ' <span class="tag">' + c.repeat + ' repeated question' + (c.repeat > 1 ? 's' : '') + '</span>' : '') + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
+    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.unseen ? ' <span class="tag">unseen</span>' : (c.repeat ? ' <span class="tag">' + c.repeat + ' repeated question' + (c.repeat > 1 ? 's' : '') + '</span>' : '') + (c.passRepeat ? ' <span class="tag">story seen before</span>' : '')) + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : s; }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
     h += '</div><div class="card"><h2>Settings</h2>' + btn('editNameG', 'Change nickname (now: ' + esc(P.nick) + ')');
     if (view.confirmReset) h += '<div class="confirm" role="alertdialog" aria-label="Confirm reset"><p><b>Erase all progress on this device?</b> This cannot be undone.</p>' + btn('doReset', 'Yes, erase everything', null, 'danger') + ' ' + btn('cancelReset', 'Cancel') + '</div>';
     else h += ' ' + btn('askReset', 'Reset all progress', null, 'ghost');
@@ -3105,7 +3141,7 @@ var CHECK_PASSAGES = [
   function validMastery(m) { return !!(m && Array.isArray(m.order) && m.order.length === MASTERY_IDS.length && m.order.every(function (id) { return MASTERY_IDS.indexOf(id) >= 0; }) && typeof m.i === 'number' && m.ans && typeof m.ans === 'object'); }
   function mAnswered() { var m = P.mastery; if (!validMastery(m)) return 0; return m.order.filter(function (id) { var a = m.ans[id]; return a && a.sel && a.sel.length; }).length; }
   function startMastery(fresh) {
-    if (fresh || !validMastery(P.mastery)) P.mastery = { order: shuffle(MASTERY_IDS), i: 0, ans: {}, started: new Date().toISOString() };
+    if (fresh || !validMastery(P.mastery)) P.mastery = { order: shuffle(MASTERY_IDS), i: 0, ans: {}, started: new Date().toISOString(), prior: MASTERY_IDS.filter(function (id) { return expo('m')[id]; }).length };
     saveP(); openMasteryQ(P.mastery.i);
   }
   function openMasteryQ(i) {
@@ -3183,17 +3219,18 @@ var CHECK_PASSAGES = [
     var m = P.mastery, byCat = {};
     MASTERY_CATS.forEach(function (c) { byCat[c.id] = { right: 0, total: 0 }; });
     var items = MASTERY_IDS.map(function (id) { var q = QBY[id], g = m.ans[id] || null, ok = gradeOnly(q, g); byCat[q.cat].total++; if (ok) byCat[q.cat].right++; return { id: id, ok: ok, given: g }; });
-    var score = items.filter(function (x) { return x.ok; }).length, met = masteryMeets(score);
-    P.masteryResults.push({ date: new Date().toISOString(), score: score, total: items.length, met: met, byCat: byCat, missed: items.filter(function (x) { return !x.ok; }).map(function (x) { return x.id; }) });
+    var score = items.filter(function (x) { return x.ok; }).length, met = masteryMeets(score), prior = m.prior || 0;
+    P.masteryResults.push({ date: new Date().toISOString(), score: score, total: items.length, met: met, byCat: byCat, prior: prior, missed: items.filter(function (x) { return !x.ok; }).map(function (x) { return x.id; }) });
     if (P.masteryResults.length > 10) P.masteryResults = P.masteryResults.slice(-10);
     P.mastery = null; P.resume = null; saveP();
-    go({ v: 'masteryResult', items: items, score: score, met: met, byCat: byCat });
+    go({ v: 'masteryResult', items: items, score: score, met: met, byCat: byCat, prior: prior });
   }
   function screenMasteryResult() {
     var n = view.items.length, need = MASTERY_BENCHMARK - view.score;
     var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">Verb Mastery Challenge results</h1><p class="score">' + view.score + ' of ' + n + ' correct</p>';
     h += view.met ? '<p class="msg good mresult">Benchmark met: ' + MASTERY_BENCHMARK + ' or more of ' + n + ' with no help. <span aria-hidden="true">⭐</span></p>'
       : '<p class="msg fix mresult">Not yet. The goal is ' + MASTERY_BENCHMARK + ' of ' + n + '. ' + need + ' more correct sentence' + (need > 1 ? 's' : '') + ' will reach it. Practice the skills below, then try again.</p>';
+    h += '<p class="muted small exposure">' + (view.prior ? 'For grown-ups: ' + view.prior + ' of ' + n + ' sentences were seen in an earlier attempt, so this is not a fully unseen result.' : 'For grown-ups: all ' + n + ' sentences were new on this attempt (unseen result).') + '</p>';
     h += '</section><div class="card"><h2>Results by skill</h2>' + catTable(view.byCat) + '</div>';
     var missed = view.items.filter(function (x) { return !x.ok; });
     if (missed.length) {
@@ -3253,6 +3290,7 @@ var CHECK_PASSAGES = [
   }
   function render(focusTitle) {
     var active = D.activeElement, fkey = active && active.getAttribute ? active.getAttribute('data-fkey') : null;
+    markShown();
     app.innerHTML = screenHTML();
     D.body.setAttribute('data-view', view.v);
     renderNotice();

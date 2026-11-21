@@ -93,6 +93,49 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   }
   await pg.click('[data-act="home"] >> nth=0'); await pg.click('[data-act="grown"] >> nth=0');
   ok('grown-up history labels repeated questions', /repeated question/.test(await pg.textContent('#app')));
+  // ---------- exposure tracking (fresh browser profile) ----------
+  const ctx2 = await b.newContext(); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(FILE);
+  const runCheck = async (a, n, quitAfter) => {
+    await p2.click('[data-act="home"] >> nth=0'); await p2.click(`[data-act="area"][data-a="${a}"]`); await p2.click('[data-act="testSetup"]');
+    const left = (await p2.textContent('.card')).match(/(\d+) of (\d+) check/);
+    await p2.click(`[data-act="startTest"][data-n="${n}"]`);
+    const ids = await p2.evaluate(() => window.__CLC.view().ids);
+    if (quitAfter) { for (let i = 1; i < quitAfter; i++) await p2.click('[data-act="tnext"]'); await p2.click('[data-act="quitTest"]'); return { ids, left: left && left[1] }; }
+    for (let i = 0; i < ids.length - 1; i++) await p2.click('[data-act="tnext"]');
+    await p2.click('[data-act="treview"]'); await p2.click('[data-act="submitTest"]');
+    const last = await p2.evaluate(() => { const P = window.__CLC.P(); return P.checks[P.checks.length - 1]; });
+    return { ids, last, note: (await p2.textContent('.exposure')).trim(), left: left && left[1] };
+  };
+  const n1 = await runCheck('nouns', 5), n2 = await runCheck('nouns', 5), n3 = await runCheck('nouns', 5);
+  ok('nouns: 2nd five-question check uses the 5 unused questions', n2.ids.every(id => !n1.ids.includes(id)) && n2.last.unseen === true && n2.last.repeat === 0, n2.ids.join(','));
+  ok('nouns: both first checks labeled unseen', n1.last.unseen && /unseen check/.test(n1.note) && /unseen check/.test(n2.note));
+  ok('nouns: 3rd check repeats and is labeled', n3.last.repeat === 5 && !n3.last.unseen && /5 of 5 questions were seen/.test(n3.note) && n3.left === '0', n3.note + ' | left before=' + n3.left);
+  const a1 = await runCheck('adjectives', 5, 3); // looks at 3 questions then quits
+  const a2 = await runCheck('adjectives', 10);
+  const shownA1 = a1.ids.slice(0, 3);
+  ok('quit check: questions actually shown count as seen', a2.last.repeat === 3 && a2.left === '7', 'repeat=' + a2.last.repeat + ' left=' + a2.left);
+  ok('quit check: unshown questions still count as new', a1.ids.slice(3).every(id => a2.ids.includes(id)) && shownA1.every(id => a2.ids.includes(id)));
+  const r1 = await runCheck('reading', 5), r2 = await runCheck('reading', 5), r3 = await runCheck('reading', 5);
+  ok('reading: 2nd check uses the other unseen story', r1.ids[0].slice(0, 3) !== r2.ids[0].slice(0, 3) && r2.last.unseen, r1.ids[0] + ' then ' + r2.ids[0]);
+  ok('reading: 3rd check flags story seen before', r3.last.passRepeat === 1 && !r3.last.unseen && /story was read in an earlier check/.test(r3.note), r3.note);
+  // reading: questions new but passage seen -> not unseen. Simulate: mark passage seen only.
+  await p2.evaluate(() => { const P = window.__CLC.P(); P.stats.seen_q = {}; P.stats.seen_p = { cp1: 1, cp2: 1 }; });
+  const r4 = await runCheck('reading', 5);
+  ok('reading: new questions about a seen story are NOT labeled unseen', r4.last.repeat === 0 && r4.last.passRepeat === 1 && !r4.last.unseen, JSON.stringify(r4.last));
+  // mastery exposure
+  await p2.click('[data-act="home"] >> nth=0'); await p2.click('[data-act="area"][data-a="verbs"]'); await p2.click('[data-act="masteryIntro"]'); await p2.click('[data-act="mStart"]');
+  ok('mastery first attempt prior=0', await p2.evaluate(() => window.__CLC.P().mastery.prior === 0));
+  await p2.click('[data-act="mNext"]'); await p2.click('[data-act="mNext"]');
+  await p2.click('[data-act="mPause"]'); await p2.click('[data-act="area"][data-a="verbs"]'); await p2.click('[data-act="masteryIntro"]'); await p2.click('[data-act="mRestartAsk"]'); await p2.click('[data-act="mRestart"]');
+  ok('mastery restart counts sentences already shown', await p2.evaluate(() => window.__CLC.P().mastery.prior === 3), await p2.evaluate(() => window.__CLC.P().mastery.prior));
+  await p2.click('[data-act="mPause"]'); await p2.click('[data-act="grown"] >> nth=0');
+  ok('grown-up history shows unseen/repeat tags', /unseen/.test(await p2.textContent('#app')) && /repeated question/.test(await p2.textContent('#app')) && /story seen before/.test(await p2.textContent('#app')));
+  // adjective convention: articles/possessives not tappable
+  await p2.click('[data-act="home"] >> nth=0'); await p2.click('[data-act="area"][data-a="adjectives"]'); await p2.click('[data-act="pick"][data-mode="practice"]'); await p2.click('[data-act="startRound"][data-sk=""]');
+  const adj = await p2.evaluate(() => { const q = window.__CLC.view().qs.q; const ign = q.toks.filter(t => ['a','an','the','my','our','her','his','your','their','its'].includes(t.lw) && !q.ans.includes(t.i)); return { ign: ign.map(t => t.i), btns: ign.filter(t => document.querySelector(`button[data-act="tok"][data-i="${t.i}"]`)).length, legend: document.querySelector('.legend').textContent }; });
+  ok('adjectives: the/a/my are not tappable and the rule is explained', adj.btns === 0 && /cannot be tapped/.test(adj.legend), 'non-tappable: ' + adj.ign.length);
+  await ctx2.close();
+
   ok('no JS errors', errs.length === 0, errs.join('|'));
   await b.close();
   console.log(R.join('\n')); const f = R.filter(x => x.startsWith('FAIL')).length; console.log(`\n${R.length - f} passed, ${f} failed`); process.exit(f ? 1 : 0);
