@@ -161,6 +161,7 @@
       if (typeof d.serve === 'number') p.serve = d.serve;
       if (d.mastery && typeof d.mastery === 'object') p.mastery = d.mastery;
       if (Array.isArray(d.masteryResults)) p.masteryResults = d.masteryResults.slice(-10);
+      if (d.daily && typeof d.daily === 'object') p.daily = d.daily;
       return p;
     } catch (e) {
       storageNote = 'Saved progress could not be read, so the app started fresh. Old progress was not used.';
@@ -768,6 +769,24 @@
   function topNav(items) { return '<nav class="subnav" aria-label="Screen controls">' + items.join('') + '</nav>'; }
   function btn(act, label, extra, cls) { return '<button type="button" class="btn ' + (cls || '') + '" data-act="' + act + '" data-fkey="' + act + (extra && extra.key ? extra.key : '') + '"' + (extra && extra.attrs ? ' ' + extra.attrs : '') + '>' + label + '</button>'; }
 
+  function todayKey() { return new Date().toDateString(); }
+  function dailyPlan() {
+    var t = todayKey();
+    if (P.daily && P.daily.date === t && areaById(P.daily.a) && skillById(P.daily.a, P.daily.sk)) return P.daily;
+    var ns = nextSkill(); if (!ns) return null;
+    P.daily = { date: t, a: ns.a, sk: ns.sk.id, lesson: false, practice: false }; saveP();
+    return P.daily;
+  }
+  function markDaily(kind) { if (P.daily && P.daily.date === todayKey()) { P.daily[kind] = true; saveP(); } }
+  function dailyHTML() {
+    var d = dailyPlan(); if (!d) return '';
+    var ar = areaById(d.a), sk = skillById(d.a, d.sk), l = lessonById(d.a, sk.lesson);
+    var h = '<section class="card daily"><h2>Today\u2019s plan <span class="muted small">(about 10 minutes)</span></h2><ol class="daily-steps">';
+    h += '<li class="' + (d.lesson ? 'done' : '') + '"><span>' + (d.lesson ? '\u2713 ' : '') + '<b>1 lesson:</b> ' + esc(ar.short) + ' \u2013 Lesson ' + l.id + ': ' + esc(l.title) + '</span>' + (d.lesson ? '' : btn('dayLesson', 'Start lesson', null, 'primary')) + '</li>';
+    h += '<li class="' + (d.practice ? 'done' : '') + '"><span>' + (d.practice ? '\u2713 ' : '') + '<b>5 practice questions:</b> ' + esc(sk.name) + '</span>' + (d.practice ? '' : btn('dayPractice', 'Practice 5', null, d.lesson ? 'primary' : '')) + '</li></ol>';
+    if (d.lesson && d.practice) h += '<p class="good-text">Today\u2019s plan is done! You can stop here, or keep going.</p>';
+    return h + '</section>';
+  }
   function screenHome() {
     var h = '<section class="hero"><div class="hero-art">' + (pic('home', 'hero-pic') || KID) + '</div><div class="hero-text">';
     h += '<h1 id="scr-title" tabindex="-1">Hi, ' + esc(P.nick) + '!</h1>';
@@ -776,6 +795,7 @@
       h += '<form class="name-form" data-form="name"><label for="nick">Your nickname</label><input id="nick" name="nick" maxlength="20" value="' + esc(P.nick === 'Player' ? '' : P.nick) + '" placeholder="Player" autocomplete="off"><button class="btn primary" type="submit">Save</button> <button type="button" class="btn ghost" data-act="cancelName">Cancel</button></form>';
     } else h += '<button type="button" class="btn ghost small" data-act="editName" data-fkey="editName">Change nickname</button>';
     h += '</div></section>';
+    h += dailyHTML();
     var rd = P.resume ? resumeDesc(P.resume) : null;
     if (rd) h += '<section class="card continue"><div><h2>Continue where I stopped</h2><p>' + esc(rd) + '</p></div>' + btn('resume', 'Continue ▶', null, 'primary big') + '</section>';
     h += '<h2 class="section-h">Learning areas</h2><div class="area-grid">';
@@ -790,10 +810,12 @@
   function screenArea() {
     var a = areaById(view.a), ls = LESSONS[a.id];
     var next = ls.filter(function (l) { return !l.optional && !lessonDone(a.id, l.id); })[0];
-    var h = topNav([btn('home', '⌂ Home')]);
+    var h = '';
     h += '<div class="area-head"><span class="area-icon lg">' + ICON[a.icon] + '</span><h1 id="scr-title" tabindex="-1">' + esc(a.name) + '</h1></div>' + (pic(a.id, 'area-pic') ? '<div class="area-pic-wrap">' + pic(a.id, 'area-pic') + '</div>' : '');
+    var nextOpt = a.id === 'verbs' ? ls.filter(function (l) { return l.optional && !lessonDone(a.id, l.id); })[0] : null;
     if (next) h += '<p class="lead">Coach suggests: <b>Lesson ' + next.id + ': ' + esc(next.title) + '</b>.</p>';
-    else h += '<p class="lead">All main lessons are done. Keep practicing!</p>';
+    else if (nextOpt) h += '<p class="lead">Coach suggests: <b>Lesson ' + nextOpt.id + ': ' + esc(nextOpt.title) + '</b>. The Verb Mastery Challenge tests it.</p>';
+    else h += '<p class="lead">All lessons are done. Keep practicing!</p>';
     h += '<div class="path">';
     h += '<button type="button" class="path-step" data-act="learn" data-fkey="learn"><span class="num">1</span><span><b>LEARN</b><span>Short lessons, 2–4 minutes</span></span></button>';
     h += '<button type="button" class="path-step" data-act="pick" data-mode="guided" data-fkey="pickg"><span class="num">2</span><span><b>GUIDED PRACTICE</b><span>The coach helps on every question</span></span></button>';
@@ -809,11 +831,11 @@
 
   function screenLearn() {
     var a = areaById(view.a), ls = LESSONS[a.id];
-    var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' }), btn('home', '⌂ Home')]);
+    var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' })]);
     h += '<h1 id="scr-title" tabindex="-1">' + esc(a.short) + ' lessons</h1><p class="lead">One idea at a time. Pick a lesson.</p><ol class="lesson-list">';
     ls.forEach(function (l) {
       var done = lessonDone(a.id, l.id);
-      h += '<li><button type="button" class="lesson-item' + (done ? ' done' : '') + '" data-act="lesson" data-l="' + l.id + '" data-fkey="les' + l.id + '"><span class="l-id">' + l.id + '</span><span class="l-title">' + esc(l.title) + (l.optional ? ' <span class="tag">optional</span>' : '') + '</span><span class="l-state">' + (done ? '✓ Done' : 'Start') + '</span></button></li>';
+      h += '<li><button type="button" class="lesson-item' + (done ? ' done' : '') + '" data-act="lesson" data-l="' + l.id + '" data-fkey="les' + l.id + '"><span class="l-id">' + l.id + '</span><span class="l-title">' + esc(l.title) + (l.optional ? ' <span class="tag">' + (a.id === 'verbs' ? 'extra \u00B7 on the Mastery Challenge' : 'optional') + '</span>' : '') + '</span><span class="l-state">' + (done ? '✓ Done' : 'Start') + '</span></button></li>';
     });
     h += '</ol>';
     if (a.id === 'verbs') h += '<p class="muted">Want to drill the 23 helping verbs again? Open Lesson C any time.</p>';
@@ -835,7 +857,7 @@
 
   function screenLesson() {
     var a = areaById(view.a), les = lessonById(view.a, view.l), st = les.steps[view.step], n = les.steps.length;
-    var h = topNav([btn('lback', '← Back'), btn('lrepeat', '↻ Repeat lesson'), btn('learn', 'Lessons'), btn('home', '⌂ Home')]);
+    var h = topNav([btn('lrepeat', '↻ Repeat lesson'), btn('learn', 'All lessons')]);
     h += '<p class="crumb">' + esc(a.short) + ' · Lesson ' + les.id + ': ' + esc(les.title) + '</p>';
     h += '<div class="steps-bar" aria-label="Step ' + (view.step + 1) + ' of ' + n + '">';
     for (var i = 0; i < n; i++) h += '<span class="dot' + (i < view.step ? ' past' : i === view.step ? ' now' : '') + '"></span>';
@@ -912,7 +934,7 @@
 
   function screenPick() {
     var a = areaById(view.a), guided = view.mode === 'guided';
-    var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' }), btn('home', '⌂ Home')]);
+    var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' })]);
     h += '<h1 id="scr-title" tabindex="-1">' + (guided ? 'Guided practice' : 'Practice') + ': ' + esc(a.short) + '</h1>';
     h += '<p class="lead">' + (guided ? 'The coach gives a clue on every question. Take your time.' : 'Five questions, one at a time. Hints are there if you need them.') + '</p>';
     h += '<div class="pick-grid">';
@@ -952,7 +974,7 @@
   }
   function screenRound() {
     var a = areaById(view.a), sk = view.sk ? skillById(view.a, view.sk) : null;
-    var h = topNav([btn('quitRound', '← Stop round'), btn('home', '⌂ Home')]);
+    var h = topNav([btn('quitRound', '← Stop round')]);
     var label = view.story ? PBY[view.story].title : sk ? sk.name : 'Mixed skills';
     h += '<p class="crumb">' + esc(a.short) + ' · ' + (view.mode === 'guided' ? 'Guided practice' : 'Practice') + ' · ' + esc(label) + '</p>';
     h += roundDots(view);
@@ -980,7 +1002,7 @@
 
   function screenTestSetup() {
     var a = areaById(view.a);
-    var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' }), btn('home', '⌂ Home')]);
+    var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' })]);
     h += '<h1 id="scr-title" tabindex="-1">Check My Skills: ' + esc(a.short) + '</h1>';
     h += '<div class="card"><ul class="rules"><li>No timer. Take your time.</li><li>No hints. Show what YOU know.</li><li>You can go back and change answers.</li><li>You find out how you did at the end.</li></ul>';
     h += '<div class="end-btns">' + btn('startTest', '5 questions', { attrs: 'data-n="5"', key: '5' }, 'primary big') + btn('startTest', '10 questions', { attrs: 'data-n="10"', key: '10' }, 'big') + '</div>';
@@ -1005,7 +1027,7 @@
   }
   function screenTest() {
     var a = areaById(view.a), n = view.ids.length;
-    var h = topNav([btn('quitTest', '← Stop'), btn('home', '⌂ Home')]);
+    var h = topNav([btn('quitTest', '← Stop')]);
     h += '<p class="crumb">' + esc(a.short) + ' · Check My Skills (no hints)</p>';
     h += '<div class="round-dots" aria-label="Question ' + (view.i + 1) + ' of ' + n + '">';
     view.ids.forEach(function (id, i) { var done = answered(newQS(QBY[id], 'test', view.ans[id])); h += '<button type="button" class="rdot jump' + (i === view.i ? ' now' : '') + (done ? ' answered' : '') + '" data-act="tjump" data-i="' + i + '" data-fkey="tj' + i + '" aria-label="Go to question ' + (i + 1) + (done ? ', answered' : ', not answered') + '">' + (i + 1) + '</button>'; });
@@ -1017,7 +1039,7 @@
   function screenTestReview() {
     var missing = [];
     view.ids.forEach(function (id, i) { if (!answered(newQS(QBY[id], 'test', view.ans[id]))) missing.push(i); });
-    var h = topNav([btn('tback', '← Back to questions'), btn('home', '⌂ Home')]);
+    var h = topNav([btn('tback', '← Back to questions')]);
     h += '<section class="card"><h1 id="scr-title" tabindex="-1">Ready to turn it in?</h1>';
     if (missing.length) {
       h += '<p class="lead">You have <b>' + missing.length + '</b> unanswered question' + (missing.length > 1 ? 's' : '') + ':</p><div class="end-btns">';
@@ -1098,7 +1120,7 @@
   };
   function hasPDF() { var el = D.getElementById('verb-guide-pdf'); return !!(el && el.textContent.trim().length > 100); }
   function screenGuides() {
-    var h = topNav([btn('home', '⌂ Home')]);
+    var h = '';
     h += '<h1 id="scr-title" tabindex="-1">Printable learning guides</h1>';
     h += '<div class="card"><h2>Verb Memory Guide (PDF, 4 pages)</h2><p>The 23 helping verbs by family, action verbs, whole verb-team examples, -ed/-ing clues, and a short practice page with a separate answer key.</p>';
     if (HOSTED) h += '<p class="msg info">This online version cannot download or print files. To get the PDF and print the sheets, download chriss-learning-club.html and open it in a browser.</p>';
@@ -1160,13 +1182,13 @@
     return h;
   }
   function screenSheet() {
-    var h = '<div class="no-print">' + topNav([btn('guides', '← Guides'), btn('home', '⌂ Home')]) + '<h1 id="scr-title" tabindex="-1" class="sr-only">' + esc(SHEETS[view.k].title) + '</h1>' + (HOSTED ? '<p class="msg info">This online version cannot print. To print this sheet, open the downloaded chriss-learning-club.html file in a browser.</p>' : '<div class="end-btns">' + btn('print', '🖨️ Print / Save as PDF', null, 'primary big') + '</div><p class="muted small">To make a PDF, choose “Save as PDF” in the print window.</p>') + '</div>';
+    var h = '<div class="no-print">' + topNav([btn('guides', '← Guides')]) + '<h1 id="scr-title" tabindex="-1" class="sr-only">' + esc(SHEETS[view.k].title) + '</h1>' + (HOSTED ? '<p class="msg info">This online version cannot print. To print this sheet, open the downloaded chriss-learning-club.html file in a browser.</p>' : '<div class="end-btns">' + btn('print', '🖨️ Print / Save as PDF', null, 'primary big') + '</div><p class="muted small">To make a PDF, choose “Save as PDF” in the print window.</p>') + '</div>';
     return h + sheetHTML(view.k);
   }
 
   /* ───────────── grown-up view ───────────── */
   function screenGrown() {
-    var h = topNav([btn('home', '⌂ Home')]);
+    var h = '';
     h += '<h1 id="scr-title" tabindex="-1">Grown-up progress</h1>';
     h += '<div class="card"><p>' + (storageOK ? 'Progress is saved in this browser on this device only. It does not sync to other devices and is never sent anywhere.' : '<b>Progress is not being saved.</b> ' + esc(storageNote)) + '</p>';
     var ns = nextSkill();
@@ -1215,12 +1237,13 @@
       MASTERY_CATS.map(function (c) { var r = byCat[c.id] || { right: 0, total: c.count }; return '<tr><th scope="row">' + esc(c.name) + '</th><td>' + r.right + ' of ' + r.total + '</td></tr>'; }).join('') + '</tbody></table></div>';
   }
   function screenMasteryIntro() {
-    var h = topNav([btn('area', '← Verbs', { attrs: 'data-a="verbs"' }), btn('home', '⌂ Home')]);
+    var h = topNav([btn('area', '← Verbs', { attrs: 'data-a="verbs"' })]);
     h += '<h1 id="scr-title" tabindex="-1">Verb Mastery Challenge</h1>';
     h += '<div class="card"><p class="lead">' + MASTERY_IDS.length + ' brand-new sentences. In each one, tap EVERY verb word: main verbs and their helpers.</p>';
     h += '<ul class="rules"><li>One sentence at a time. Use Back and Next.</li><li>No hints and no answers until you turn it in.</li><li>Your answers save by themselves. Take a break after every 10.</li><li>You do NOT have to finish in one sitting.</li><li>Goal: ' + MASTERY_BENCHMARK + ' of ' + MASTERY_IDS.length + ' correct.</li></ul>';
-    var notDone = LESSONS.verbs.filter(function (l) { return !l.optional && !lessonDone('verbs', l.id); });
-    if (notDone.length) h += '<p class="msg info">Coach tip: finish these verb lessons first: ' + esc(notDone.map(function (l) { return 'Lesson ' + l.id + ' (' + l.title + ')'; }).join(', ')) + '. Lessons E and G are optional, but they help too.</p>';
+    var notDone = LESSONS.verbs.filter(function (l) { return !lessonDone('verbs', l.id); });
+    if (notDone.length) h += '<p class="msg info mastery-ready">Coach tip: before the challenge, finish ' + esc(notDone.map(function (l) { return 'Lesson ' + l.id + ' (' + l.title + ')'; }).join(', ')) + '. The challenge includes 12 three-word verb teams (Lesson E) and 8 sentences with words between verb words (Lesson G), so do Lessons E and G too.</p>';
+    else h += '<p class="msg good mastery-ready">All verb lessons, A through H, are done. You are ready!</p>';
     h += '<div class="end-btns">';
     if (validMastery(P.mastery)) {
       h += btn('mStart', 'Continue at sentence ' + (P.mastery.i + 1) + ' ▶', null, 'primary big');
@@ -1387,6 +1410,8 @@
       case 'editNameG': view = { v: 'home', editName: true }; render(true); var inp2 = D.getElementById('nick'); if (inp2) inp2.focus(); return;
       case 'cancelName': view.editName = false; return render(true);
       case 'resume': return doResume();
+      case 'dayLesson': return startLesson(P.daily.a, lessonById(P.daily.a, skillById(P.daily.a, P.daily.sk).lesson).id, 0);
+      case 'dayPractice': return startRound(P.daily.a, 'practice', P.daily.sk, null);
       case 'area': return go({ v: 'area', a: A('a') || view.a });
       case 'learn': return go({ v: 'learn', a: view.a });
       case 'lesson': return startLesson(view.a, A('l'), 0);
@@ -1414,7 +1439,7 @@
       // lessons
       case 'lnext': {
         var les = lessonById(view.a, view.l);
-        if (view.step >= les.steps.length - 1) { P.lessons[view.a + ':' + view.l] = true; saveP(); return go({ v: 'lessonEnd', a: view.a, l: view.l }); }
+        if (view.step >= les.steps.length - 1) { P.lessons[view.a + ':' + view.l] = true; markDaily('lesson'); saveP(); return go({ v: 'lessonEnd', a: view.a, l: view.l }); }
         view.step++; setLessonQS(view); saveResume(); return render(true);
       }
       case 'lback': {
@@ -1427,7 +1452,7 @@
       case 'reveal': view.cards.covered = false; view.cards.revealed = true; render(); var cv = app.querySelector('[data-fkey="cover"]'); if (cv) cv.focus(); return;
       // practice rounds
       case 'nextQ': {
-        if (view.i >= view.ids.length - 1) return go({ v: 'roundEnd', a: view.a, mode: view.mode, sk: view.sk, story: view.story, ids: view.ids, res: view.res });
+        if (view.i >= view.ids.length - 1) { markDaily('practice'); return go({ v: 'roundEnd', a: view.a, mode: view.mode, sk: view.sk, story: view.story, ids: view.ids, res: view.res }); }
         view.i++; view.qs = newQS(QBY[view.ids[view.i]], view.mode); flash = null; saveResume(); return render(true);
       }
       case 'quitRound': P.resume = null; saveP(); return go({ v: 'area', a: view.a });

@@ -302,3 +302,9 @@ button, .btn, .tok, .choice, .bucket, .sent-btn { touch-action: manipulation; -w
 .passage-pic { max-height: 150px; width: auto; }
 @media (max-width: 640px) { .hero-art .hero-pic { width: 140px; height: 140px; } .area-pic { max-height: 170px; } .lesson-pic { max-height: 160px; } .passage-pic { max-height: 100px; } }
 @media print { .pic { display: none; } }
+
+.daily { border-color: var(--teal); }
+.daily-steps { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 10px; }
+.daily-steps li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: var(--cream); border-radius: 12px; padding: 10px 12px; }
+.daily-steps li span { min-width: 0; flex: 1 1 220px; }
+.daily-steps li.done { background: var(--good-l); color: var(--good); }

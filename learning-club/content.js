@@ -570,7 +570,7 @@ var LESSONS = {
 
   reading: [
     { id: 'A', title: 'Main Idea', skill: 'main', key: 'The main idea is what the whole passage is mostly about.', steps: [
-      { t: 'explain', title: 'Main idea', text: ['The main idea is what a passage is MOSTLY about.', 'It is bigger than one detail.', 'Tip: ask, "What do most sentences talk about?"'] },
+      { t: 'explain', img: 'reading', title: 'Main idea', text: ['The main idea is what a passage is MOSTLY about.', 'It is bigger than one detail.', 'Tip: ask, "What do most sentences talk about?"'] },
       { t: 'reading', mini: ['Dogs help people in many ways.', 'Some dogs guide people who cannot see.', 'Some dogs help find people who are lost.', 'Other dogs visit hospitals to cheer people up.'], q: { q: 'What is this mostly about?', c: ['Dogs visit hospitals.', 'Dogs help people in many ways.', 'Dogs like to play fetch.'], a: 1, h: 'Which answer covers ALL the sentences, not just one?', ex: 'Every sentence tells a way dogs help. Visiting hospitals is only one detail.' } }
     ] },
     { id: 'B', title: 'Supporting Details', skill: 'detail', key: 'Details are facts that tell more about the main idea.', steps: [
