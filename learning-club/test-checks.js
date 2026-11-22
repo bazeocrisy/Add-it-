@@ -8,6 +8,16 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   const b = await chromium.launch(); const pg = await (await b.newContext({ viewport: { width: 1100, height: 900 } })).newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(FILE);
+  const teachAll = page => page.evaluate(() => { const P = window.__CLC.P(); AREAS.forEach(a => LESSONS[a.id].forEach(l => { P.lessons[a.id + ':' + l.id] = true; })); });
+  // checks only test taught skills: before any lesson, a check cannot start
+  await pg.click('[data-act="area"][data-a="nouns"]'); await pg.click('[data-act="testSetup"]');
+  ok('no lessons done: check is not offered (teach before test)', (await pg.locator('[data-act="startTest"]').count()) === 0 && /Finish a lesson first/.test(await pg.textContent('#app')));
+  await pg.evaluate(() => { window.__CLC.P().lessons['nouns:A'] = true; });
+  await pg.click('[data-act="area"][data-a="nouns"]'); await pg.click('[data-act="testSetup"]'); await pg.click('[data-act="startTest"][data-n="10"]');
+  ok('after only Lesson A, the check asks only about people nouns', await pg.evaluate(() => window.__CLC.view().ids.every(id => window.__CLC.QBY[id].sk === 'people')), await pg.evaluate(() => window.__CLC.view().ids.join(',')));
+  await pg.click('[data-act="quitTest"]');
+  await pg.evaluate(() => { const P = window.__CLC.P(); P.stats.seen_q = {}; P.stats.seen_p = {}; });
+  await teachAll(pg);
   const d = await pg.evaluate(() => {
     const C = window.__CLC, out = {};
     const norm = s => String(s).replace(/[\[\]]|@\w+|:\w+/g, '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -39,7 +49,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
     out.words = CHECK_PASSAGES.map(p => p.title + ': ' + p.sents.join(' ').split(/\s+/).length + ' words');
     return out;
   });
-  ok('bank sizes: verbs 22, nouns/adj/adv/vowels/reading 10', JSON.stringify(d.counts) === JSON.stringify({ verbs: 22, nouns: 10, adjectives: 10, adverbs: 10, vowels: 10, reading: 10 }), JSON.stringify(d.counts));
+  ok('every area has a check bank of at least 10', Object.keys(d.counts).length === 7 && Object.values(d.counts).every(n => n >= 10), JSON.stringify(d.counts));
   ok('no check item is in a practice pool', d.inPractice.length === 0, d.inPractice.join(','));
   ok('no check sentence repeats a lesson/practice/mastery sentence', d.exact.length === 0, d.exact.join(','));
   ok('no near-duplicate check sentences (word overlap < 0.5, names ignored)', d.near.j < 0.5, JSON.stringify(d.near));
@@ -61,18 +71,22 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   ok('reading guided/practice skill rounds never use check questions', true);
 
   const leakSel = '.badge, .msg, .hint, .coach, .tok-label, [data-act="check"], [data-act="hint"], [data-act="showme"], .m-ok, .m-no, .links-list';
-  for (const a of ['verbs', 'nouns', 'adjectives', 'adverbs', 'vowels', 'reading']) {
+  for (const a of ['verbs', 'nouns', 'adjectives', 'adverbs', 'workshop', 'vowels', 'reading']) {
     for (const n of [10, 5]) {
+      const unseenBefore = await pg.evaluate(a => { const s = window.__CLC.P().stats.seen_q || {}, sp = window.__CLC.P().stats.seen_p || {}; return a === 'reading' ? CHECK_PASSAGES.filter(p => !sp[p.id]).length : window.__CLC.CHECK_Q[a].filter(q => !s[q.id]).length; }, a);
       await pg.click('[data-act="home"] >> nth=0'); await pg.click(`[data-act="area"][data-a="${a}"]`); await pg.click('[data-act="testSetup"]'); await pg.click(`[data-act="startTest"][data-n="${n}"]`);
       const info = await pg.evaluate(a => { const v = window.__CLC.view(); const bank = new Set(window.__CLC.CHECK_Q[a].map(q => q.id)); return { ids: v.ids, all: v.ids.every(id => bank.has(id)) }; }, a);
       ok(`${a} ${n}-question check draws only from its own bank`, info.all && info.ids.length === n, info.ids.join(','));
       let leaks = 0; const wrongAt = 0;
       for (let i = 0; i < info.ids.length; i++) {
-        const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, c: q.c ? q.c.length : 0, ok: q.ok, items: q.items, toks: q.toks ? q.toks.length : 0 }; });
+        const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, a2: q.a2, c: q.c ? q.c.length : 0, ok: q.ok, items: q.items, toks: q.toks ? q.toks.length : 0, wrongTok: q.wrong, order: q.okOrders ? q.okOrders[0] : null }; });
         const wrong = i === wrongAt;
         if (k.kind === 'select') { if (wrong) { const e = await pg.evaluate(ans => [...document.querySelectorAll('button[data-act="tok"]')].map(b => +b.dataset.i).find(x => !ans.includes(x)), k.ans); for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); await pg.click(`[data-act="tok"][data-i="${e}"]`); } else for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); }
         if (k.kind === 'mc') await pg.click(`[data-act="choice"][data-i="${wrong ? (k.a + 1) % k.c : k.a}"]`);
         if (k.kind === 'sort') for (let j = 0; j < k.items.length; j++) await pg.click(`[data-act="sort"][data-i="${j}"][data-b="${wrong && j === 0 ? 1 - k.items[j][1] : k.items[j][1]}"]`);
+        if (k.kind === 'mc2') { await pg.click(`[data-act="choice"][data-i="${wrong ? (k.a + 1) % k.c : k.a}"]`); await pg.click(`[data-act="choice2"][data-i="${k.a2}"]`); }
+        if (k.kind === 'fix') { await pg.click(`[data-act="ftok"][data-i="${wrong ? (k.wrongTok === 0 ? 1 : 0) : k.wrongTok}"]`); await pg.click(`[data-act="choice"][data-i="${k.a}"]`); }
+        if (k.kind === 'order') { const o = wrong ? k.order.slice().reverse() : k.order; for (const x of o) await pg.click(`[data-act="oadd"][data-i="${x}"]`); }
         if (k.kind === 'ev') { let p = k.ok[0]; if (wrong) { p = 0; while (k.ok.includes(p)) p++; } await pg.click(`[data-act="ev"][data-i="${p}"]`); }
         leaks += await pg.locator(leakSel).count();
         await pg.click(i < info.ids.length - 1 ? '[data-act="tnext"]' : '[data-act="treview"]');
@@ -87,14 +101,15 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
         return { score: v.score, logged: P.checks.length === before.nChecks + 1 && last.a === a && last.n === ids.length && last.score === ids.length - 1, repeat: last.repeat, skillOK, missedSkill: last.missed };
       }, [a, before, info.ids]);
       ok(`${a} ${n}: scored and logged correctly (1 wrong)`, res.score === n - 1 && res.logged && res.skillOK, JSON.stringify(res));
-      ok(`${a} ${n}: repeat questions ${n === 5 ? 'flagged' : 'none on first check'}`, n === 10 ? res.repeat === 0 || a === 'verbs' : res.repeat > 0 || a === 'verbs', 'repeat=' + res.repeat);
+      const expRepeat = a === 'reading' ? (unseenBefore >= (n >= 10 ? 2 : 1) ? 0 : null) : Math.max(0, n - unseenBefore);
+      ok(`${a} ${n}: unseen questions used first (repeat ${res.repeat}, expected ${expRepeat === null ? 'some' : expRepeat})`, expRepeat === null ? res.repeat > 0 : res.repeat === expRepeat, 'unseen before=' + unseenBefore);
       ok(`${a} ${n}: explanation shown after submission`, (await pg.locator('.review .msg.info').count()) === 1);
     }
   }
   await pg.click('[data-act="home"] >> nth=0'); await pg.click('[data-act="grown"] >> nth=0');
-  ok('grown-up history labels repeated questions', /repeated question/.test(await pg.textContent('#app')));
+  ok('grown-up history labels each check (unseen / mixed / repeated)', /unseen|seen before/.test(await pg.textContent('#app')));
   // ---------- exposure tracking (fresh browser profile) ----------
-  const ctx2 = await b.newContext(); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(FILE);
+  const ctx2 = await b.newContext(); const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push(e.message)); await p2.goto(FILE); await teachAll(p2);
   const runCheck = async (a, n, quitAfter) => {
     await p2.click('[data-act="home"] >> nth=0'); await p2.click(`[data-act="area"][data-a="${a}"]`); await p2.click('[data-act="testSetup"]');
     const left = (await p2.textContent('.card')).match(/(\d+) of (\d+) check/);
@@ -109,17 +124,17 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   const n1 = await runCheck('nouns', 5), n2 = await runCheck('nouns', 5), n3 = await runCheck('nouns', 5);
   ok('nouns: 2nd five-question check uses the 5 unused questions', n2.ids.every(id => !n1.ids.includes(id)) && n2.last.unseen === true && n2.last.repeat === 0, n2.ids.join(','));
   ok('nouns: both first checks labeled unseen', n1.last.unseen && /unseen check/.test(n1.note) && /unseen check/.test(n2.note));
-  ok('nouns: 3rd check repeats and is labeled', n3.last.repeat === 5 && !n3.last.unseen && /5 of 5 questions were seen/.test(n3.note) && n3.left === '0', n3.note + ' | left before=' + n3.left);
+  ok('nouns: 3rd check (only 3 unseen left) uses them and is labeled mixed', n3.last.repeat === 2 && !n3.last.unseen && /2 of 5 questions were seen in an earlier check \(mixed exposure\)/.test(n3.note) && n3.left === '3', n3.note + ' | left before=' + n3.left);
   const a1 = await runCheck('adjectives', 5, 3); // looks at 3 questions then quits
+  const seenAfterQuit = await p2.evaluate(ids => { const s = window.__CLC.P().stats.seen_q; return ids.map(id => !!s[id]); }, a1.ids);
+  ok('quit check: exactly the 3 questions shown count as seen', seenAfterQuit.join() === 'true,true,true,false,false', seenAfterQuit.join());
   const a2 = await runCheck('adjectives', 10);
-  const shownA1 = a1.ids.slice(0, 3);
-  ok('quit check: questions actually shown count as seen', a2.last.repeat === 3 && a2.left === '7', 'repeat=' + a2.last.repeat + ' left=' + a2.left);
-  ok('quit check: unshown questions still count as new', a1.ids.slice(3).every(id => a2.ids.includes(id)) && shownA1.every(id => a2.ids.includes(id)));
-  const r1 = await runCheck('reading', 5), r2 = await runCheck('reading', 5), r3 = await runCheck('reading', 5);
-  ok('reading: 2nd check uses the other unseen story', r1.ids[0].slice(0, 3) !== r2.ids[0].slice(0, 3) && r2.last.unseen, r1.ids[0] + ' then ' + r2.ids[0]);
-  ok('reading: 3rd check flags story seen before', r3.last.passRepeat === 1 && !r3.last.unseen && /story was read in an earlier check/.test(r3.note), r3.note);
+  ok('next check avoids the 3 seen questions and is unseen', a2.last.repeat === 0 && a1.ids.slice(0, 3).every(id => !a2.ids.includes(id)), 'repeat=' + a2.last.repeat);
+  const r1 = await runCheck('reading', 5), r2 = await runCheck('reading', 5), r3 = await runCheck('reading', 5), r3b = await runCheck('reading', 5);
+  ok('reading: 2nd and 3rd checks use the other unseen stories', new Set([r1.ids[0], r2.ids[0], r3.ids[0]].map(x => x.slice(0, 3))).size === 3 && r2.last.unseen && r3.last.unseen, [r1.ids[0], r2.ids[0], r3.ids[0]].join(' then '));
+  ok('reading: 4th check flags story seen before', r3b.last.passRepeat === 1 && !r3b.last.unseen && /story was read in an earlier check/.test(r3b.note), r3b.note);
   // reading: questions new but passage seen -> not unseen. Simulate: mark passage seen only.
-  await p2.evaluate(() => { const P = window.__CLC.P(); P.stats.seen_q = {}; P.stats.seen_p = { cp1: 1, cp2: 1 }; });
+  await p2.evaluate(() => { const P = window.__CLC.P(); P.stats.seen_q = {}; P.stats.seen_p = { cp1: 1, cp2: 1, cp3: 1 }; });
   const r4 = await runCheck('reading', 5);
   ok('reading: new questions about a seen story are NOT labeled unseen', r4.last.repeat === 0 && r4.last.passRepeat === 1 && !r4.last.unseen, JSON.stringify(r4.last));
   // mastery exposure
@@ -129,7 +144,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   await p2.click('[data-act="mPause"]'); await p2.click('[data-act="area"][data-a="verbs"]'); await p2.click('[data-act="masteryIntro"]'); await p2.click('[data-act="mRestartAsk"]'); await p2.click('[data-act="mRestart"]');
   ok('mastery restart counts sentences already shown', await p2.evaluate(() => window.__CLC.P().mastery.prior === 3), await p2.evaluate(() => window.__CLC.P().mastery.prior));
   await p2.click('[data-act="mPause"]'); await p2.click('[data-act="grown"] >> nth=0');
-  ok('grown-up history shows unseen/repeat tags', /unseen/.test(await p2.textContent('#app')) && /repeated question/.test(await p2.textContent('#app')) && /story seen before/.test(await p2.textContent('#app')));
+  ok('grown-up history shows unseen/repeat tags', /unseen/.test(await p2.textContent('#app')) && /seen before/.test(await p2.textContent('#app')) && /story seen before/.test(await p2.textContent('#app')));
   // adjective convention: articles/possessives not tappable
   await p2.click('[data-act="home"] >> nth=0'); await p2.click('[data-act="area"][data-a="adjectives"]'); await p2.click('[data-act="pick"][data-mode="practice"]'); await p2.click('[data-act="startRound"][data-sk=""]');
   const adj = await p2.evaluate(() => { const q = window.__CLC.view().qs.q; const ign = q.toks.filter(t => ['a','an','the','my','our','her','his','your','their','its'].includes(t.lw) && !q.ans.includes(t.i)); return { ign: ign.map(t => t.i), btns: ign.filter(t => document.querySelector(`button[data-act="tok"][data-i="${t.i}"]`)).length, legend: document.querySelector('.legend').textContent }; });

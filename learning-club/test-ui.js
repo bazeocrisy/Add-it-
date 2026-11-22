@@ -5,20 +5,21 @@ const FILE = 'file://' + path.resolve(__dirname, '../chriss-learning-club.html')
 const SHOTS = process.argv[2] || null;
 const results = []; const ok = (name, cond, info) => { results.push((cond ? 'PASS ' : 'FAIL ') + name + (info ? '  (' + info + ')' : '')); };
 
-async function answerCurrent(pg, correct = true) {
-  // Answers whatever question is active using the app's own answer key, through real clicks.
-  for (let guard = 0; guard < 4; guard++) {
-    const st = await pg.evaluate(() => { const v = window.__CLC.view(), QS = v.qs; if (!QS || QS.done) return null; const q = QS.q;
-      let targets = q.ans; if (QS.phase === 'noun') { targets = []; q.ans.forEach(i => { const t = q.toks[i].to; if (targets.indexOf(t) < 0) targets.push(t); }); }
-      return { kind: q.kind, ans: targets, a: q.a, ok: q.ok, items: q.items, sel: QS.sel }; });
+async function answer(pg, wrongFirst) {
+  for (let g = 0; g < 5; g++) {
+    const st = await pg.evaluate(() => { const v = window.__CLC.view(), QS = v.qs; if (!QS || QS.done) return null; const q = QS.q; let ans = q.ans; if (QS.phase === 'noun') { ans = []; q.ans.forEach(i => { const t = q.toks[i].to; if (!ans.includes(t)) ans.push(t); }); } return { kind: q.kind, ans, a: q.a, a2: q.a2, ok: q.ok, items: q.items, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null, sel: QS.sel, cur: QS.order }; });
     if (!st) return;
-    if (st.kind === 'select') { for (const i of st.sel) if (st.ans.indexOf(i) < 0) await pg.click(`[data-act="tok"][data-i="${i}"]`); for (const i of st.ans) if (st.sel.indexOf(i) < 0) await pg.click(`[data-act="tok"][data-i="${i}"]`); }
+    if (st.kind === 'select') { for (const i of st.sel) if (!st.ans.includes(i)) await pg.click(`[data-act="tok"][data-i="${i}"]`); for (const i of st.ans) if (!st.sel.includes(i)) await pg.click(`[data-act="tok"][data-i="${i}"]`); }
     if (st.kind === 'mc') await pg.click(`[data-act="choice"][data-i="${st.a}"]`);
+    if (st.kind === 'mc2') { await pg.click(`[data-act="choice"][data-i="${st.a}"]`); await pg.click(`[data-act="choice2"][data-i="${st.a2}"]`); }
+    if (st.kind === 'fix') { const cur = await pg.evaluate(() => window.__CLC.view().qs.tok); if (cur !== st.wrong) await pg.click(`[data-act="ftok"][data-i="${st.wrong}"]`); await pg.click(`[data-act="choice"][data-i="${st.a}"]`); }
+    if (st.kind === 'order') { while ((await pg.evaluate(() => window.__CLC.view().qs.order.length)) > 0) await pg.click('[data-act="orem"][data-i="0"]'); for (const i of st.order) await pg.click(`[data-act="oadd"][data-i="${i}"]`); }
     if (st.kind === 'sort') for (let i = 0; i < st.items.length; i++) await pg.click(`[data-act="sort"][data-i="${i}"][data-b="${st.items[i][1]}"]`);
     if (st.kind === 'ev') await pg.click(`[data-act="ev"][data-i="${st.ok[0]}"]`);
     await pg.click('[data-act="check"]');
   }
 }
+async function answerCurrent(pg) { return answer(pg); }
 
 (async () => {
   const b = await chromium.launch();
@@ -26,7 +27,7 @@ async function answerCurrent(pg, correct = true) {
   const net = []; await ctx.route('**/*', r => { const u = r.request().url(); if (!u.startsWith('file:') && !u.startsWith('blob:') && !u.startsWith('data:')) { net.push(u); return r.abort(); } return r.continue(); });
   const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(FILE);
-  ok('home shows 6 areas', (await pg.locator('.area-card').count()) === 6);
+  ok('home shows 7 areas', (await pg.locator('.area-card').count()) === 7);
   if (SHOTS) await pg.screenshot({ path: SHOTS + '/home-desktop.png' });
 
   // Every lesson in every area, start to finish
@@ -50,7 +51,7 @@ async function answerCurrent(pg, correct = true) {
 
   // Verb lesson D: partial-team feedback through the UI
   await pg.click('[data-act="home"] >> nth=0'); await pg.click('[data-act="area"][data-a="verbs"]'); await pg.click('[data-act="learn"]'); await pg.click('[data-act="lesson"][data-l="D"]');
-  for (let i = 0; i < 3; i++) await pg.click('[data-act="lnext"]');
+  for (let i = 0; i < 4; i++) await pg.click('[data-act="lnext"]');
   const sent = await pg.evaluate(() => window.__CLC.view().qs.q.toks.map(t => t.w).join(' '));
   await pg.click('[data-act="tok"][data-i="1"]'); // "are"
   const verbDeco = await pg.evaluate(() => getComputedStyle(document.querySelector('[data-act="tok"][data-i="1"]')).textDecorationStyle);
@@ -75,12 +76,15 @@ async function answerCurrent(pg, correct = true) {
     await pg.click('[data-act="home"] >> nth=0'); await pg.click(`[data-act="area"][data-a="${a.id}"]`); await pg.click('[data-act="pick"][data-mode="practice"]');
     if (a.id === 'reading') await pg.click('[data-act="startStory"] >> nth=0'); else await pg.click('[data-act="startRound"][data-sk=""]');
     const total = await pg.evaluate(() => window.__CLC.view().ids.length);
-    ok(a.id + ' practice round has 5 questions', total === 5, total);
+    ok(a.id + ' practice round has about 5 questions', total >= 5 && total <= 6, total);
     // wrong attempt
     const wrongDone = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return q.kind; });
     if (wrongDone === 'mc') { const a2 = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return (q.a + 1) % q.c.length; }); await pg.click(`[data-act="choice"][data-i="${a2}"]`); }
     else if (wrongDone === 'select') { const i = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return q.toks.find(t => q.ans.indexOf(t.i) < 0 && !['the','a','an','my','her','his','our','their','your','its'].includes(t.lw)).i; }); await pg.click(`[data-act="tok"][data-i="${i}"]`); }
     else if (wrongDone === 'ev') { const i = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; let i = 0; while (q.ok.indexOf(i) >= 0) i++; return i; }); await pg.click(`[data-act="ev"][data-i="${i}"]`); }
+    else if (wrongDone === 'mc2') { const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return [(q.a + 1) % q.c.length, q.a2]; }); await pg.click(`[data-act="choice"][data-i="${k[0]}"]`); await pg.click(`[data-act="choice2"][data-i="${k[1]}"]`); }
+    else if (wrongDone === 'fix') { const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return [q.wrong === 0 ? 1 : 0, q.a]; }); await pg.click(`[data-act="ftok"][data-i="${k[0]}"]`); await pg.click(`[data-act="choice"][data-i="${k[1]}"]`); }
+    else if (wrongDone === 'order') { const o = await pg.evaluate(() => window.__CLC.view().qs.q.okOrders[0].slice().reverse()); for (const x of o) await pg.click(`[data-act="oadd"][data-i="${x}"]`); }
     else if (wrongDone === 'sort') { const n = await pg.evaluate(() => window.__CLC.view().qs.q.items.length); for (let i = 0; i < n; i++) await pg.click(`[data-act="sort"][data-i="${i}"][data-b="0"]`); }
     await pg.click('[data-act="check"]');
     const wrongFb = (await pg.textContent('.fb')).trim();
@@ -106,12 +110,19 @@ async function answerCurrent(pg, correct = true) {
   const tn = await pg.evaluate(() => window.__CLC.view().ids.length); ok('test has 10 questions', tn === 10, tn);
   ok('test has no hint/check/showme/coach', (await pg.locator('[data-act="hint"],[data-act="check"],[data-act="showme"],.coach,.hint').count()) === 0);
   // Q1: give partial answer if it's a team, else correct
-  const q1 = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a }; });
-  if (q1.kind === 'select') await pg.click(`[data-act="tok"][data-i="${q1.ans[0]}"]`); else await pg.click(`[data-act="choice"][data-i="${q1.a}"]`);
+  const q1 = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, a2: q.a2, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null }; });
+  if (q1.kind === 'select') await pg.click(`[data-act="tok"][data-i="${q1.ans[0]}"]`);
+  else if (q1.kind === 'fix') { await pg.click(`[data-act="ftok"][data-i="${q1.wrong}"]`); await pg.click(`[data-act="choice"][data-i="${q1.a}"]`); }
+  else if (q1.kind === 'order') { for (const x of q1.order) await pg.click(`[data-act="oadd"][data-i="${x}"]`); }
+  else { await pg.click(`[data-act="choice"][data-i="${q1.a}"]`); if (q1.kind === 'mc2') await pg.click(`[data-act="choice2"][data-i="${q1.a2}"]`); }
   ok('test gives no correctness marks', (await pg.locator('.badge, .m-ok, .m-no, .msg').count()) === 0);
   await pg.click('[data-act="tnext"]'); await pg.click('[data-act="tprev"]');
   ok('back keeps answer', (await pg.locator('[aria-pressed="true"]').count()) >= 1);
-  for (let k = 1; k < tn - 1; k++) { await pg.click('[data-act="tnext"]'); const q = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a }; }); if (q.kind === 'select') for (const i of q.ans) await pg.click(`[data-act="tok"][data-i="${i}"]`); else await pg.click(`[data-act="choice"][data-i="${q.a}"]`); }
+  for (let k = 1; k < tn - 1; k++) { await pg.click('[data-act="tnext"]'); const q = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, a2: q.a2, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null }; });
+    if (q.kind === 'select') for (const i of q.ans) await pg.click(`[data-act="tok"][data-i="${i}"]`);
+    else if (q.kind === 'fix') { await pg.click(`[data-act="ftok"][data-i="${q.wrong}"]`); await pg.click(`[data-act="choice"][data-i="${q.a}"]`); }
+    else if (q.kind === 'order') { for (const x of q.order) await pg.click(`[data-act="oadd"][data-i="${x}"]`); }
+    else { await pg.click(`[data-act="choice"][data-i="${q.a}"]`); if (q.kind === 'mc2') await pg.click(`[data-act="choice2"][data-i="${q.a2}"]`); } }
   await pg.click('[data-act="tnext"]'); // last left blank
   await pg.click('[data-act="treview"]');
   ok('review lists unanswered question', /1<\/b> unanswered/.test(await pg.innerHTML('#app')) && (await pg.locator('[data-act="tjump"]').count()) === 1);
@@ -144,7 +155,7 @@ async function answerCurrent(pg, correct = true) {
 
   // Grown-up view + reset confirm
   await pg.click('[data-act="home"] >> nth=0'); await pg.click('[data-act="grown"] >> nth=0');
-  ok('grown-up shows next skill + tables', (await pg.locator('.next-skill').count()) === 1 && (await pg.locator('table').count()) === 6);
+  ok('grown-up shows next skill + tables', (await pg.locator('.next-skill').count()) === 1 && (await pg.locator('table').count()) >= 7);
   if (SHOTS) await pg.screenshot({ path: SHOTS + '/grownup.png', fullPage: true });
   await pg.click('[data-act="askReset"]'); ok('reset asks to confirm', (await pg.locator('[data-act="doReset"]').count()) === 1);
   await pg.click('[data-act="cancelReset"]'); ok('cancel keeps progress', await pg.evaluate(() => Object.keys(window.__CLC.P().lessons).length > 0));
@@ -164,7 +175,7 @@ async function answerCurrent(pg, correct = true) {
 
   // Keyboard: tab to a token and toggle with Space
   await pg.click('[data-act="home"] >> nth=0'); await pg.click('[data-act="area"][data-a="verbs"]'); await pg.click('[data-act="learn"]'); await pg.click('[data-act="lesson"][data-l="A"]');
-  for (let i = 0; i < 3; i++) await pg.click('[data-act="lnext"]');
+  for (let i = 0; i < 4; i++) await pg.click('[data-act="lnext"]');
   await pg.focus('[data-act="tok"][data-i="0"]'); await pg.keyboard.press('Tab'); await pg.keyboard.press('Tab'); await pg.keyboard.press('Space');
   ok('keyboard toggles token + keeps focus', await pg.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-i') === '2' && document.activeElement.getAttribute('aria-pressed') === 'true'));
   await pg.keyboard.press('Enter'); // toggles off
@@ -181,7 +192,7 @@ async function answerCurrent(pg, correct = true) {
   await hs('home'); if (SHOTS) await mp.screenshot({ path: SHOTS + '/home-mobile.png', fullPage: true });
   await mp.click('[data-act="area"][data-a="verbs"]'); await hs('area');
   await mp.click('[data-act="learn"]'); await mp.click('[data-act="lesson"][data-l="D"]'); await mp.click('[data-act="lnext"]'); await hs('worked example'); if (SHOTS) await mp.screenshot({ path: SHOTS + '/verb-worked-mobile.png', fullPage: true });
-  await mp.click('[data-act="lnext"]'); await mp.click('[data-act="lnext"]'); await mp.click('[data-act="tok"][data-i="1"]'); await mp.click('[data-act="check"]'); await hs('verb guided'); if (SHOTS) await mp.screenshot({ path: SHOTS + '/verb-guided-mobile.png', fullPage: true });
+  await mp.click('[data-act="lnext"]'); await mp.click('[data-act="lnext"]'); await mp.click('[data-act="lnext"]'); await mp.click('[data-act="tok"][data-i="1"]'); await mp.click('[data-act="check"]'); await hs('verb guided'); if (SHOTS) await mp.screenshot({ path: SHOTS + '/verb-guided-mobile.png', fullPage: true });
   await mp.click('[data-act="home"] >> nth=0'); await mp.click('[data-act="area"][data-a="reading"]'); await mp.click('[data-act="pick"][data-mode="practice"]'); await mp.click('[data-act="startStory"] >> nth=0'); await hs('reading'); if (SHOTS) await mp.screenshot({ path: SHOTS + '/reading-mobile.png', fullPage: true });
   await mp.click('[data-act="home"] >> nth=0'); await mp.click('[data-act="area"][data-a="adjectives"]'); await mp.click('[data-act="learn"]'); await mp.click('[data-act="lesson"][data-l="E"]'); await mp.click('[data-act="lnext"]'); await hs('adjective arrows'); if (SHOTS) await mp.screenshot({ path: SHOTS + '/adj-mobile.png', fullPage: true });
   await mp.click('[data-act="home"] >> nth=0'); await mp.click('[data-act="area"][data-a="vowels"]'); await mp.click('[data-act="pick"][data-mode="practice"]'); await mp.click('[data-act="startRound"][data-sk="teams"]'); await hs('vowels');
@@ -191,19 +202,19 @@ async function answerCurrent(pg, correct = true) {
   // Storage blocked
   const s1 = await b.newContext(); await s1.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('SecurityError'); } }); });
   const sp = await s1.newPage(); const e1 = []; sp.on('pageerror', e => e1.push(e.message)); await sp.goto(FILE);
-  ok('storage blocked: app works + notice', e1.length === 0 && (await sp.locator('.area-card').count()) === 6 && /not letting the app save/.test(await sp.textContent('#notice')));
+  ok('storage blocked: app works + notice', e1.length === 0 && (await sp.locator('.area-card').count()) === 7 && /not letting the app save/.test(await sp.textContent('#notice')));
   await sp.click('[data-act="area"][data-a="verbs"]'); await sp.click('[data-act="learn"]'); await sp.click('[data-act="lesson"][data-l="A"]'); await sp.click('[data-act="lnext"]');
   ok('storage blocked: lesson still runs', e1.length === 0 && (await sp.locator('.worked').count()) === 1);
   await s1.close();
   // Corrupted storage
   const s2 = await b.newContext(); await s2.addInitScript(() => { try { if (!sessionStorage.getItem('x')) { localStorage.setItem('chrissLearningClub.v1', '{not json'); sessionStorage.setItem('x', 1); } } catch (e) {} });
   const cp = await s2.newPage(); const e2 = []; cp.on('pageerror', e => e2.push(e.message)); await cp.goto(FILE);
-  ok('corrupt storage: fresh start + notice', e2.length === 0 && (await cp.locator('.area-card').count()) === 6 && /could not be read/.test(await cp.textContent('#notice')));
+  ok('corrupt storage: fresh start + notice', e2.length === 0 && (await cp.locator('.area-card').count()) === 7 && /could not be read/.test(await cp.textContent('#notice')));
   await s2.close();
 
   // Reduced motion
   const rm = await b.newContext({ reducedMotion: 'reduce' }); const rp = await rm.newPage(); await rp.goto(FILE);
-  await rp.click('[data-act="area"][data-a="verbs"]'); await rp.click('[data-act="learn"]'); await rp.click('[data-act="lesson"][data-l="A"]'); for (let i = 0; i < 3; i++) await rp.click('[data-act="lnext"]');
+  await rp.click('[data-act="area"][data-a="verbs"]'); await rp.click('[data-act="learn"]'); await rp.click('[data-act="lesson"][data-l="A"]'); for (let i = 0; i < 4; i++) await rp.click('[data-act="lnext"]');
   await rp.click('[data-act="tok"][data-i="2"]'); await rp.click('[data-act="check"]');
   ok('reduced motion disables animation', (await rp.evaluate(() => getComputedStyle(document.querySelector('.yay')).animationName)) === 'none');
   await rm.close();

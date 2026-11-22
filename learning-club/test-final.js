@@ -35,9 +35,9 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   const tip = await p.textContent('.mastery-ready');
   ok('mastery intro recommends Lessons E and G', /Lesson E/.test(tip) && /Lesson G/.test(tip) && /do Lessons E and G too/.test(tip), tip.slice(0, 160));
   // after core lessons, area suggests E then G
-  await p.evaluate(() => { const P = window.__CLC.P(); ['A', 'B', 'C', 'D', 'F', 'H'].forEach(l => P.lessons['verbs:' + l] = true); });
+  await p.evaluate(() => { const P = window.__CLC.P(); ['A', 'B', 'C', 'D', 'F', 'H', 'I', 'J', 'K'].forEach(l => P.lessons['verbs:' + l] = true); });
   await p.click('[data-act="area"][data-a="verbs"]');
-  ok('verbs screen suggests Lesson E for the challenge', /Lesson E: Longer Verb Teams.*Mastery Challenge tests it/.test(await p.textContent('.lead')));
+  ok('verbs screen suggests Lesson E for the challenge', /Lesson E: Longer Verb Teams.*Benchmark tests it/.test(await p.textContent('.lead')));
 
   // daily plan: one lesson + five practice questions, checks off
   const ctx2 = await b.newContext({ viewport: { width: 390, height: 844 } }); const q = await ctx2.newPage(); q.on('pageerror', e => errs.push(e.message)); await q.goto(FILE);

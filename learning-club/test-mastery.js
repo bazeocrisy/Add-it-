@@ -93,7 +93,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   ok('Lesson H: partial second team -> helper clue', /You found a helper!.*This sentence has 2 verbs or verb teams/.test(await pg.textContent('.fb')));
   await pg.click('[data-act="showme"]'); await pg.click('[data-act="lnext"]');
   const st3 = await pg.evaluate(() => window.__CLC.view().qs.q.ans); for (const i of st3) await pg.click(`[data-act="tok"][data-i="${i}"]`); await pg.click('[data-act="check"]'); await pg.click('[data-act="lnext"]');
-  ok('Lesson H completes, offers Mastery Challenge', (await pg.evaluate(() => window.__CLC.view().v)) === 'lessonEnd' && (await pg.locator('[data-act="masteryIntro"]').count()) === 1);
+  ok('Lesson H completes, offers Verb Identification Benchmark', (await pg.evaluate(() => window.__CLC.view().v)) === 'lessonEnd' && (await pg.locator('[data-act="masteryIntro"]').count()) === 1);
   await pg.click('[data-act="practiceSkill"]');
   ok('Lesson H practice round runs (multi-verb items)', (await pg.evaluate(() => { const v = window.__CLC.view(); return v.v === 'round' && v.ids.every(id => id.startsWith('vh')); })));
 
@@ -138,7 +138,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   // save + resume: reload, continue from home
   const before = await pg.evaluate(() => JSON.stringify(window.__CLC.P().mastery.ans));
   await pg.reload();
-  ok('home Continue mentions mastery', /Verb Mastery Challenge, sentence 12 of 59/.test(await pg.textContent('.continue')));
+  ok('home Continue mentions mastery', /Verb Identification Benchmark, sentence 12 of 59/.test(await pg.textContent('.continue')));
   await pg.click('[data-act="resume"]');
   const after = await pg.evaluate(() => JSON.stringify(window.__CLC.P().mastery.ans));
   ok('save/resume preserves answers and position', before === after && (await pg.evaluate(() => window.__CLC.P().mastery.i)) === 11, (await pg.evaluate(() => Object.keys(window.__CLC.P().mastery.ans).length)) + ' answers kept');

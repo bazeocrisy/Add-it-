@@ -308,3 +308,13 @@ button, .btn, .tok, .choice, .bucket, .sent-btn { touch-action: manipulation; -w
 .daily-steps li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: var(--cream); border-radius: 12px; padding: 10px 12px; }
 .daily-steps li span { min-width: 0; flex: 1 1 220px; }
 .daily-steps li.done { background: var(--good-l); color: var(--good); }
+
+.tok.sel-fix { background: var(--fix-l) !important; border-color: var(--fix) !important; border-style: dashed !important; }
+.order-built { min-height: 64px; border: 3px dashed var(--line); border-radius: 14px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; background: var(--white); }
+.order-pool { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.chunk { font: inherit; font-size: 19px; min-height: 48px; padding: 8px 14px; border-radius: 12px; border: 3px solid #d8cfbd; background: var(--cream); cursor: pointer; color: var(--ink); text-align: left; }
+.chunk.on { border-color: var(--navy); background: #eef3fb; }
+.chunk:disabled { cursor: default; }
+.worked-box { background: var(--cream); border: 2px dashed var(--gold); border-radius: 14px; padding: 10px 14px; margin: 8px 0 12px; font-size: clamp(19px, 3.4vw, 23px); }
+.worked-box p { margin: 4px 0; }
+.learn-section { margin: 18px 0 8px; }
