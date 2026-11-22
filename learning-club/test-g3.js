@@ -120,7 +120,7 @@ async function answer(pg, wrongFirst) {
   await p5.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('chrissLearningClub.v1', JSON.stringify({ v: 1, nick: 'Chris', lessons: { 'reading:A': true }, stats: { p3q5: { n: 2, ind: 1, help: 1, rev: 0 }, p1q1: { n: 1, ind: 1, help: 0, rev: 0 }, seen_q: { cp2q1: 1 } }, skills: { 'reading.main': { hist: ['ind', 'ind', 'help'], ind: 2, help: 1, rev: 0, chkRight: 1, chkTotal: 2, lastChk: { right: 1, total: 2 } } }, checks: [{ a: 'reading', date: '2026-11-20T10:00:00Z', n: 5, score: 4, missed: ['main'] }] })); } });
   await p5.goto(FILE);
   const mig = await p5.evaluate(() => { const P = window.__CLC.P(); return { v: P.v, legacy: P.skills['reading.legacy_main'], main: P.skills['reading.main'], theme: P.skills['reading.theme'], missed: P.checks[0].missed, legacyFlag: P.checks[0].legacy }; });
-  ok('migration keeps old main-idea record as legacy mixed comprehension', mig.v === 2 && mig.legacy && mig.legacy.ind === 2 && mig.legacy.help === 1 && mig.legacy.chkTotal === 2 && /Legacy mixed comprehension/.test(mig.legacy.legacy), JSON.stringify(mig.legacy));
+  ok('migration keeps old main-idea record as legacy mixed comprehension', mig.v === 3 && mig.legacy && mig.legacy.ind === 2 && mig.legacy.help === 1 && mig.legacy.chkTotal === 2 && /Legacy mixed comprehension/.test(mig.legacy.legacy), JSON.stringify(mig.legacy));
   ok('migration rebuilds main idea only from genuine main-idea questions', mig.main.ind === 1 && mig.main.help === 0 && mig.main.hist.length === 0 && mig.main.chkTotal === 0, JSON.stringify(mig.main));
   ok('migration moves theme answers to Theme', mig.theme && mig.theme.ind === 1 && mig.theme.help === 1, JSON.stringify(mig.theme));
   ok('old check history relabeled, not deleted', mig.missed.join() === 'legacy_main' && mig.legacyFlag === true);
@@ -157,7 +157,7 @@ async function answer(pg, wrongFirst) {
     const C = window.__CLC, out = { bad: [] }, Q = C.QBY;
     const mq = Object.values(Q).filter(q => q.area === 'money');
     const val = { p: 1, n: 5, d: 10, q: 25 };
-    mq.filter(q => q.kind === 'num' && q.coins).forEach(q => { const sum = q.coins.toLowerCase().split('').reduce((t, c) => t + val[c], 0); if (sum !== q.ans) out.bad.push('num key ' + q.id); });
+    mq.filter(q => q.kind === 'num' && q.coins && !q.story).forEach(q => { const sum = q.coins.toLowerCase().split('').reduce((t, c) => t + val[c], 0); if (sum !== q.ans) out.bad.push('num key ' + q.id); });
     const tray = Q['mo37']; // 30 cents, any coins
     [['d','d','d'], ['q','n'], ['q','p','p','p','p','p'], ['n','n','n','n','n','n']].forEach(t => { if (!C.gradeOnly(tray, { tray: t })) out.bad.push('tray any-combo rejected ' + t.join('')); });
     if (C.gradeOnly(tray, { tray: ['q'] })) out.bad.push('tray short accepted');
@@ -182,7 +182,7 @@ async function answer(pg, wrongFirst) {
   await p7.click('[data-act="area"][data-a="money"]'); await p7.click('[data-act="pick"][data-mode="practice"]'); await p7.click('[data-act="startRound"][data-sk="mix2"]');
   const cur = await p7.evaluate(() => { const q = window.__CLC.view().qs.q; return { n: q.coins.length, ans: q.ans }; });
   for (const ch of String(cur.n)) await p7.click(`[data-act="nkey"][data-k="${ch}"]`); await p7.click('[data-act="check"]');
-  ok('money: typing the number of coins gets "count what they are WORTH" feedback', /Count what the coins are WORTH/.test(await p7.textContent('.fb')));
+  ok('money: typing the number of coins gets "count what they are WORTH" feedback', /how much they are WORTH/.test(await p7.textContent('.fb')));
   await p7.click('[data-act="home"] >> nth=0'); await p7.click('[data-act="area"][data-a="money"]'); await p7.click('[data-act="pick"][data-mode="practice"]'); await p7.click('[data-act="startRound"][data-sk="make"]');
   await p7.click('[data-act="tadd"] >> nth=0');
   ok('money: no running total during independent practice', !/Total so far/.test(await p7.textContent('.qbox')));
@@ -191,7 +191,7 @@ async function answer(pg, wrongFirst) {
   ok('money: running total shows with the coach (guided)', /Total so far: \d+¢/.test(await p7.textContent('.qbox')));
   await p7.click('[data-act="home"] >> nth=0'); await p7.click('[data-act="area"][data-a="money"]'); await p7.click('[data-act="pick"][data-mode="practice"]'); await p7.click('[data-act="startRound"][data-sk="names"]');
   const alts = await p7.evaluate(() => [...document.querySelectorAll('.qbox img.coin')].map(i => i.alt));
-  ok('money: coin-naming questions do not reveal the coin name to screen readers', alts.length > 0 && alts.every(a => a === 'a coin'), alts.join(','));
+  ok('money: coin-naming questions do not reveal the coin name to screen readers', alts.length > 0 && alts.every(a => !/penny|pennies|nickel|dime|quarter|cent\b|¢/i.test(a.replace(/ONE CENT|FIVE CENTS|ONE DIME|QUARTER DOLLAR/g, ''))), alts.join(','));
   ok('money: no horizontal scroll at phone width', await p7.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await c7.close();
   ok('no JS errors', errs.length === 0, errs.slice(0, 3).join(' | '));

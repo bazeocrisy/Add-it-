@@ -13,7 +13,8 @@
     money: 'A penny, a nickel, a dime, and a quarter shown at their real sizes'
   };
   function pic(k, cls) { var src = (typeof IMAGES !== 'undefined') && IMAGES[k]; return src ? '<img class="pic ' + (cls || '') + '" src="' + src + '" alt="' + esc(PIC_ALT[k] || '') + '">' : ''; }
-  var HOSTED = !!window.__CLC_HOSTED; // claude.ai hosted copy: printing and downloads are blocked there
+  var HOSTED = !!window.__CLC_HOSTED;
+  var BUILD_ID = window.__CLC_BUILD || 'dev'; // claude.ai hosted copy: printing and downloads are blocked there
   var app = D.getElementById('app');
 
   /* ───────────── small helpers ───────────── */
@@ -65,7 +66,7 @@
     return { id: id || raw.id, area: area, sk: raw.sk, cat: raw.cat || null, kind: 'select', mode: mode, toks: toks, marked: marked, ans: ans, teams: teams, want: raw.want || null, ask: raw.ask || null, h: raw.h || '', ex: raw.ex, notes: lowerKeys(raw.notes), labels: lowerKeys(raw.labels) };
   }
   function mkMC(raw, area, id) {
-    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'mc', q: raw.q, c: raw.c, a: raw.a, h: raw.h, h2: raw.h2 || '', ex: raw.ex, why: raw.why || [], say: !!raw.say, coins: raw.coins || '', cc: !!raw.cc };
+    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'mc', q: raw.q, c: raw.c, a: raw.a, h: raw.h, h2: raw.h2 || '', ex: raw.ex, why: raw.why || [], say: !!raw.say, coins: raw.coins || '', cc: !!raw.cc, groups: raw.groups || null };
   }
   function mkSort(raw, area, id) { return { id: id || raw.id, area: area, sk: raw.sk, kind: 'sort', q: raw.q, b: raw.b, items: raw.items, h: raw.h, h2: raw.h2 || '', ex: raw.ex }; }
   function mkMC2(raw, area, id) {
@@ -88,28 +89,94 @@
   function coinsTotal(str) { return str.split('').reduce(function (t, c) { return t + coinVal(c); }, 0); }
   function countSteps(str) { var t = 0; return str.toLowerCase().split('').sort(function (a, b) { return coinVal(b) - coinVal(a); }).map(function (c) { t += coinVal(c); return t; }); }
   function cents(n) { return n === 100 ? '100¢ ($1.00)' : n + '¢'; }
-  /* fewest coins for an amount with the allowed coins (greedy is exact for U.S. coins and these subsets) */
-  function greedyCoins(target, only) { var out = [], left = target; COIN_ORDER.filter(function (c) { return only.indexOf(c) >= 0; }).forEach(function (c) { while (left >= COIN[c].val) { out.push(c); left -= COIN[c].val; } }); return left === 0 ? out : null; }
+  var COIN_PL = { p: 'pennies', n: 'nickels', d: 'dimes', q: 'quarters' };
+  function coinNames(list) { return list.map(function (c) { return COIN_PL[c]; }).join(' and '); }
+  /* What a sighted child can see on the picture, without the coin's name or value.
+     Used where naming the coin or its value IS the skill, so screen-reader text does not give the answer away. */
+  var COIN_LOOK = {
+    p: 'small copper-colored coin, a man with a beard facing right',
+    n: 'medium-size silver-colored coin, a man with his hair tied back facing left',
+    d: 'the smallest silver-colored coin, a man with short hair facing left',
+    q: 'large silver-colored coin, a man with his hair tied back facing left',
+    P: 'copper-colored coin with a shield; the words say ONE CENT',
+    N: 'medium-size silver-colored coin with a building that has a dome; the words say FIVE CENTS',
+    D: 'small silver-colored coin with a torch between two branches; the words say ONE DIME',
+    Q: 'large silver-colored coin with an eagle; the words say QUARTER DOLLAR'
+  };
+  /* The true minimum number of coins for an amount using only the allowed coins (dynamic programming,
+     so it stays exact for any set of allowed coins). Returns one fewest-coin list, highest value first, or null. */
+  function minCoins(target, only) {
+    var best = [[]];
+    for (var v = 1; v <= target; v++) {
+      best[v] = null;
+      for (var i = 0; i < only.length; i++) {
+        var w = COIN[only[i]].val, prev = v >= w ? best[v - w] : null;
+        if (prev && (!best[v] || prev.length + 1 < best[v].length)) best[v] = prev.concat([only[i]]);
+      }
+    }
+    return best[target] ? best[target].slice().sort(function (a, b) { return COIN[b].val - COIN[a].val; }) : null;
+  }
   function coinHTML(c, scale, anon) {
     var lc = c.toLowerCase(), co = COIN[lc], side = c === lc ? 'heads' : 'tails', px = Math.round(co.mm * (scale || 3.4));
-    var src = typeof IMAGES !== 'undefined' && IMAGES['coin-' + co.name + '-' + side], alt = anon ? 'a coin' : co.name + ' (' + side + ')';
+    var src = typeof IMAGES !== 'undefined' && IMAGES['coin-' + co.name + '-' + side], alt = anon ? COIN_LOOK[c] : co.name + ' (' + side + ')';
     return src ? '<img class="coin" src="' + src + '" width="' + px + '" height="' + px + '" alt="' + alt + '">'
       : '<span class="coin coin-fallback c-' + lc + '" style="width:' + px + 'px;height:' + px + 'px" role="img" aria-label="' + alt + '">' + (anon ? '' : co.val + '¢') + '</span>';
+  }
+  function groupsHTML(groups) {
+    return '<div class="coin-groups">' + groups.map(function (g) { return '<div class="coin-group"><p class="cg-label">' + esc(g.label) + '</p>' + coinRow(g.coins, 3.2) + '</div>'; }).join('') + '</div>';
   }
   function coinRow(str, scale, labels, anon) {
     return '<div class="coin-row">' + str.split('').map(function (c, i) { return '<figure class="coin-fig">' + coinHTML(c, scale, anon) + (labels && labels[i] ? '<figcaption>' + esc(labels[i]) + '</figcaption>' : '') + '</figure>'; }).join('') + '</div>';
   }
+  /* Story answers come from the item's numbers, never from a typed key:
+     coins + price = how much more is needed; prices = total cost; prices + paid = change; groups + diff = difference */
+  function storyAnswer(raw) {
+    var sum = (raw.prices || []).reduce(function (t, x) { return t + x; }, 0);
+    if (raw.groups && raw.diff) return Math.abs(coinsTotal(raw.groups[0].coins) - coinsTotal(raw.groups[1].coins));
+    if (raw.coins && raw.price != null) return raw.price - coinsTotal(raw.coins);
+    if (raw.prices && raw.paid != null) return raw.paid - sum;
+    if (raw.prices) return sum;
+    return null;
+  }
   function mkNum(raw, area, id) {
-    var ans = raw.ans != null ? raw.ans : coinsTotal(raw.coins), st = raw.coins ? countSteps(raw.coins) : null;
-    var ex = raw.ex || ('Put the coins in order, biggest value first, and count on: ' + st.map(function (x) { return x + '¢'; }).join(', ') + '. That is ' + cents(ans) + '.');
-    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'num', q: raw.q || 'How much money is this? Count the coins.', coins: raw.coins || '', ans: ans, unit: raw.unit != null ? raw.unit : '¢', h: raw.h, h2: raw.h2 || '', ex: ex };
+    var story = storyAnswer(raw), ans = story != null ? story : raw.ans != null ? raw.ans : coinsTotal(raw.coins);
+    if (typeof ans !== 'number' || ans <= 0 || ans > 100 || ans !== Math.round(ans)) throw new Error('money answer out of range: ' + (id || raw.id));
+    if (story != null && !raw.ex) throw new Error('story item needs an authored explanation: ' + (id || raw.id));
+    var ex = raw.ex || ('Start with the coin worth the most, then count on: ' + countSteps(raw.coins).map(function (x) { return x + '¢'; }).join(', ') + '. That is ' + cents(ans) + '.');
+    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'num', q: raw.q || 'How much money is this? Count the coins.', coins: raw.coins || '', groups: raw.groups || null, story: story != null, ans: ans, unit: raw.unit != null ? raw.unit : '¢', h: raw.h, h2: raw.h2 || '', ex: ex };
   }
   function mkTray(raw, area, id) {
-    var only = raw.only ? raw.only.split('') : COIN_ORDER.slice(), best = greedyCoins(raw.target, only);
+    var only = raw.only ? raw.only.split('') : COIN_ORDER.slice(), best = minCoins(raw.target, only);
     if (!best) throw new Error('tray target cannot be made: ' + (id || raw.id));
-    var q = raw.q || ('Make ' + cents(raw.target) + ' with coins.' + (raw.only ? ' Use only ' + only.map(function (c) { return COIN[c].name === 'penny' ? 'pennies' : COIN[c].name + 's'; }).join(' and ') + '.' : '') + (raw.fewest ? ' Use the FEWEST coins you can.' : ''));
-    var ex = raw.ex || ((raw.fewest ? 'The fewest coins: ' : 'One way: ') + best.map(function (c) { return COIN[c].name; }).join(', ') + ' = ' + cents(raw.target) + '.' + (raw.fewest ? ' Start with the biggest coin that fits, then the next biggest.' : ' Any coins that add up to exactly ' + cents(raw.target) + ' are correct.'));
+    var q = raw.q || ('Make ' + cents(raw.target) + ' with coins.' + (raw.only ? ' Use only ' + coinNames(only) + '.' : '') + (raw.fewest ? ' Use the FEWEST coins you can.' : ''));
+    if (raw.q && raw.only && raw.q.indexOf(coinNames(only)) < 0) throw new Error('restriction must be stated in the question: ' + (id || raw.id));
+    if (raw.q && raw.fewest && !/fewest/i.test(raw.q)) throw new Error('fewest rule must be stated in the question: ' + (id || raw.id));
+    var ex = raw.ex || ((raw.fewest ? 'The fewest coins is ' + best.length + ': ' : 'One way: ') + best.map(function (c) { return COIN[c].name; }).join(', ') + ' = ' + cents(raw.target) + '.' + (raw.fewest ? ' Use the coin worth the most that still fits, then check: could fewer coins make the same amount?' : ' Any coins that add up to exactly ' + cents(raw.target) + ' are correct.'));
     return { id: id || raw.id, area: area, sk: raw.sk, kind: 'tray', q: q, target: raw.target, only: only, fewest: !!raw.fewest, best: best, h: raw.h, h2: raw.h2 || '', ex: ex };
+  }
+  function describeCoins(str) {
+    var lc = str.toLowerCase().split(''), parts = COIN_ORDER.filter(function (c) { return lc.indexOf(c) >= 0; }).map(function (c) { var k = lc.filter(function (x) { return x === c; }).length; return k + ' ' + (k === 1 ? COIN[c].name : COIN_PL[c]); });
+    return parts.length < 3 ? parts.join(' and ') : parts.slice(0, -1).join(', ') + ', and ' + parts[parts.length - 1];
+  }
+  /* Coin-choice items: choices are coin sets; the right one is the set worth the wanted amount (computed, never typed) */
+  function prepCoinChoices(raw) {
+    var r = {}; Object.keys(raw).forEach(function (k) { r[k] = raw[k]; });
+    var want = raw.want != null ? raw.want : raw.paid - (raw.prices || []).reduce(function (t, x) { return t + x; }, 0);
+    var hits = raw.opts.map(function (o, i) { return coinsTotal(o) === want ? i : -1; }).filter(function (i) { return i >= 0; });
+    if (hits.length !== 1) throw new Error('coin-choice item needs exactly one right choice: ' + raw.id);
+    r.c = raw.opts.map(describeCoins); r.a = hits[0];
+    return r;
+  }
+  /* Compare items: the right choice is computed from the coin groups */
+  function prepCompare(raw) {
+    if (raw.k === 'mc' && raw.opts) return prepCoinChoices(raw);
+    if (!raw.groups || !raw.cmp || raw.k !== 'mc') return raw;
+    var r = {}; Object.keys(raw).forEach(function (k) { r[k] = raw[k]; });
+    var t = raw.groups.map(function (g) { return coinsTotal(g.coins); }), want = raw.cmp === 'more' ? Math.max.apply(null, t) : Math.min.apply(null, t);
+    if (t.filter(function (x) { return x === want; }).length !== 1) throw new Error('compare item has a tie: ' + raw.id);
+    r.c = raw.c || raw.groups.map(function (g) { return g.label; });
+    r.a = t.indexOf(want);
+    return r;
   }
   function trayTotal(tray) { return (tray || []).reduce(function (t, c) { return t + COIN[c].val; }, 0); }
   function trayOK(q, tray) {
@@ -118,8 +185,10 @@
     if (trayTotal(tray) !== q.target) return false;
     return !q.fewest || tray.length === q.best.length;
   }
+  function trayFewestOK(q, tray) { return tray.length === q.best.length; }
   /* Any non-passage item, by its kind */
   function mkAny(raw, area, mode, id) {
+    raw = prepCompare(raw);
     if (raw.k === 'num') return mkNum(raw, area, id);
     if (raw.k === 'tray') return mkTray(raw, area, id);
     if (raw.k === 'mc') return mkMC(raw, area, id);
@@ -249,6 +318,14 @@
     { area: 'adjectives', from: 'link', label: 'Legacy mixed adjective records (before skills were relabeled)', moves: { a18: 'after', a19: 'after', a20: 'after', a21: 'after', a22: 'after', ac7: 'after', ac8: 'after' } }
   ];
   function migrate(p) {
+    migrate2(p);
+    if (p.v < 3) {
+      var hadHelp = Object.keys(p.skills || {}).some(function (k) { return p.skills[k] && p.skills[k].help > 0; });
+      if (hadHelp) p.helpBefore = new Date().toISOString();
+      p.v = 3;
+    }
+  }
+  function migrate2(p) {
     if ((p.v || 1) >= 2) return;
     RELABEL.forEach(function (m) {
       var seenQ = (p.stats && p.stats.seen_q) || {};
@@ -272,7 +349,7 @@
     });
     p.v = 2;
   }
-  function defP() { return { v: 2, nick: 'Player', lessons: {}, stats: {}, skills: {}, checks: [], resume: null, serve: 0, mastery: null, masteryResults: [] }; }
+  function defP() { return { v: 3, nick: 'Player', lessons: {}, stats: {}, skills: {}, checks: [], resume: null, serve: 0, mastery: null, masteryResults: [] }; }
   function loadP() {
     var ls;
     try { ls = window.localStorage; var t = '__clc_test'; ls.setItem(t, '1'); ls.removeItem(t); }
@@ -292,6 +369,7 @@
       if (Array.isArray(d.masteryResults)) p.masteryResults = d.masteryResults.slice(-10);
       if (d.daily && typeof d.daily === 'object') p.daily = d.daily;
       if (d.ready && typeof d.ready === 'object') p.ready = d.ready;
+      if (typeof d.helpBefore === 'string') p.helpBefore = d.helpBefore;
       p.v = typeof d.v === 'number' ? d.v : 1;
       migrate(p);
       return p;
@@ -313,13 +391,13 @@
   /* A lesson counts as taught when finished, or (Foundation Review only) when skipped after a passed Ready Check */
   function lessonTaught(a, id) { return lessonDone(a, id) || (isFoundation(a, id) && foundationReady(a)); }
   function skillTaught(a, sk) { var s = skillById(a, sk); return !!(s && lessonTaught(a, s.lesson)); }
-  function skillRec(a, sk) { var k = a + '.' + sk; if (!P.skills[k]) P.skills[k] = { hist: [], ind: 0, help: 0, rev: 0, chkRight: 0, chkTotal: 0, lastChk: null }; return P.skills[k]; }
+  function skillRec(a, sk) { var k = a + '.' + sk; if (!P.skills[k]) P.skills[k] = { hist: [], ind: 0, retry: 0, help: 0, rev: 0, chkRight: 0, chkTotal: 0, lastChk: null }; return P.skills[k]; }
   function record(q, outcome) {
     var s = P.stats[q.id] || (P.stats[q.id] = { n: 0, ind: 0, help: 0, rev: 0, last: 0 });
-    s.n++; s[outcome]++;
+    s.n++; s[outcome] = (s[outcome] || 0) + 1;
     if (s.n === 1) s.first = outcome;
     var r = skillRec(q.area, q.sk);
-    r[outcome]++; r.hist.push(outcome); if (r.hist.length > 12) r.hist = r.hist.slice(-12);
+    r[outcome] = (r[outcome] || 0) + 1; r.hist.push(outcome); if (r.hist.length > 12) r.hist = r.hist.slice(-12);
     saveP();
   }
   function skillStatus(a, sk) {
@@ -633,23 +711,41 @@
       return { correct: good2, msgs: msgs, marks: marks };
     }
   }
+  /* Likely mistakes, worded as possibilities: a typed number can fit more than one cause */
+  function moneyDiagnoses(q, n) {
+    var out = [];
+    if (!(n >= 0)) return out;
+    if (q.unit === '¢' && q.ans === 100 && n === 1) out.push('1 is one DOLLAR. This answer is in cents (¢). How many cents make one dollar?');
+    if (!q.coins || q.story) return out;
+    var lc = q.coins.toLowerCase().split(''), kinds = COIN_ORDER.filter(function (c) { return lc.indexOf(c) >= 0; });
+    var valued = function (map) { return lc.reduce(function (t, c) { return t + (map[c] != null ? map[c] : COIN[c].val); }, 0); };
+    if (n === lc.length) out.push('It looks like ' + n + ' may be how many coins there are. This question asks how much they are WORTH. Count by each coin\u2019s value.');
+    if (lc.indexOf('d') >= 0 && lc.indexOf('n') >= 0 && n === valued({ d: 5, n: 10 })) out.push('Check the dimes and nickels. Maybe they got switched? A dime is worth 10¢ and a nickel is worth 5¢, even though the dime is smaller.');
+    else if (lc.indexOf('d') >= 0 && n === valued({ d: 5 })) out.push('Check the dimes. Did you count a dime as 5¢? A dime is worth 10¢, even though it is the smallest coin.');
+    else if (lc.indexOf('n') >= 0 && n === valued({ n: 10 })) out.push('Check the nickels. Did you count a nickel as 10¢? A nickel is worth 5¢.');
+    if (lc.indexOf('q') >= 0 && (n === valued({ q: 20 }) || n === valued({ q: 10 }))) out.push('Check the quarters. Each quarter is worth 25¢: 25, 50, 75, 100.');
+    if (kinds.length > 1) {
+      var groupTotals = kinds.map(function (k) { return lc.filter(function (c) { return c === k; }).length * COIN[k].val; });
+      if (groupTotals.indexOf(n) >= 0 && n !== q.ans) out.push('It looks like the count may have started over at 0 when the coins changed. Keep the total going: count ON from the coins worth more.');
+    }
+    return out;
+  }
   function evaluateMoney(QS) {
     var q = QS.q, msgs = [];
     if (q.kind === 'num') {
-      var n = Number(QS.num), ok = n === q.ans;
+      var n = Number(QS.num), ok = n === q.ans, d = ok ? [] : moneyDiagnoses(q, n);
       if (ok) msgs.push({ t: 'good', x: q.ex });
-      else if (q.coins && n === q.coins.length) msgs.push({ t: 'fix', x: 'You counted how many coins there are. Count what the coins are WORTH instead. ' + q.h });
-      else if (q.coins && /[dn]/i.test(q.coins) && n === q.coins.toLowerCase().split('').reduce(function (t, c) { return t + (c === 'd' ? 5 : c === 'n' ? 10 : COIN[c].val); }, 0)) msgs.push({ t: 'fix', x: 'Check the dimes and nickels. A dime is worth 10¢ and a nickel is worth 5¢, even though the dime is smaller.' });
-      else msgs.push({ t: 'fix', x: (q.coins ? 'Not quite. Put the coins in order, biggest value first, and count on again. ' : 'Not quite. ') + q.h });
+      else if (d.length) msgs.push({ t: 'fix', x: d[0] });
+      else msgs.push({ t: 'fix', x: 'Not quite. ' + (q.coins && !q.story ? 'Start with the coin worth the most, then count on again. ' : '') + q.h });
       return { correct: ok, msgs: msgs, marks: {} };
     }
     var t = trayTotal(QS.tray), bad = QS.tray.filter(function (c) { return q.only.indexOf(c) < 0; });
     var good = trayOK(q, QS.tray);
     if (good) msgs.push({ t: 'good', x: q.ex });
-    else if (bad.length) msgs.push({ t: 'fix', x: 'For this one, use only ' + q.only.map(function (c) { return COIN[c].name === 'penny' ? 'pennies' : COIN[c].name + 's'; }).join(' and ') + '. Tap a coin in the tray to take it out.' });
+    else if (bad.length) msgs.push({ t: 'fix', x: 'For this one, use only ' + coinNames(q.only) + '. Tap a coin in the tray to take it out.' });
     else if (t < q.target) msgs.push({ t: 'fix', x: 'Your coins make ' + t + '¢. You need ' + (q.target - t) + '¢ more.' });
     else if (t > q.target) msgs.push({ t: 'fix', x: 'Your coins make ' + t + '¢. That is ' + (t - q.target) + '¢ too much. Tap a coin in the tray to take it out.' });
-    else msgs.push({ t: 'fix', x: 'Your coins make the right amount! Now use FEWER coins. Trade smaller coins for a bigger one where you can.' });
+    else msgs.push({ t: 'fix', x: 'Your coins make the right amount! But this one asks for the FEWEST coins, and fewer coins can make ' + q.target + '¢. Can you trade some coins for one coin worth more?' });
     return { correct: good, msgs: msgs, marks: {} };
   }
   /* Hint 2 fallback: a focused strategy for the skill. It never removes a choice or gives the answer. */
@@ -669,7 +765,7 @@
     'reading.evidence': 'Evidence is the sentence that PROVES the answer. Ask: if I read only this sentence, would it show the answer?',
     'reading.theme': 'A theme is the lesson the character learns. Ask: how did the character change, and what helped them change?',
     'reading.problem': 'Ask: what goes wrong for the main character near the beginning? The solution is how it gets fixed.',
-    'money.names': 'Use three clues: color (copper or silver), size (small or big), and edge (smooth or bumpy).',
+    'money.names': 'Use the clues you can see: color (copper or silver), size, the picture, and the words on the coin.',
     'money.values': 'Name the coin first. Then remember: penny 1¢, nickel 5¢, dime 10¢, quarter 25¢.',
     'money.dollar': 'Remember: 100¢ is one dollar. Count by 25s for quarters, 10s for dimes, and 5s for nickels.'
   };
@@ -709,13 +805,14 @@
       if (q.mode === 'adj') return 'Find each noun. Ask: what kind, which one, or how many?';
     }
     if (q.kind === 'ev') return 'Read the question. Then look back in the text for the sentence that proves it.';
-    if (q.kind === 'num') return 'Put the coins in order, biggest value first. Then count on, one coin at a time.';
-    if (q.kind === 'tray') return 'Start with the biggest coin that is not more than the amount. Watch the total.';
+    if (q.kind === 'num') return q.story ? 'Read the story again. What do you know, and what is the question asking?' : 'Start with the coin worth the most. Then count on, one coin at a time.';
+    if (q.kind === 'tray') return 'Start with the coin worth the most that is not more than the amount. Watch the total.';
     if (q.passage) return 'Read the question. Then look back in the text before you choose.';
     return 'Read every choice before you pick.';
   }
 
-  function outcomeOf(QS) { if (QS.revealed) return 'rev'; if (isGuidedCtx(QS.ctx)) return 'help'; return (QS.tries === 1 && QS.hint === 0) ? 'ind' : 'help'; }
+  /* ind = right on the first Check, no hint; retry = right after another try, no hint; help = hint or coach; rev = Show me */
+  function outcomeOf(QS) { if (QS.revealed) return 'rev'; if (isGuidedCtx(QS.ctx) || QS.hint > 0) return 'help'; return QS.tries === 1 ? 'ind' : 'retry'; }
 
   /* ───────────── icons & art ───────────── */
   var ICON = {
@@ -763,7 +860,7 @@
     var v = view, r = null;
     if (v.v === 'lesson') r = { v: 'lesson', a: v.a, l: v.l, step: v.step };
     else if (v.v === 'round') r = { v: 'round', a: v.a, mode: v.mode, sk: v.sk || null, story: v.story || null, ids: v.ids, i: v.i, res: v.res };
-    else if (v.v === 'test' || v.v === 'testReview') r = { v: 'test', a: v.a, ids: v.ids, i: v.i, ans: v.ans, priorQ: v.priorQ || [], priorP: v.priorP || [], ready: !!v.ready };
+    else if (v.v === 'test' || v.v === 'testReview') r = { v: 'test', a: v.a, ids: v.ids, i: v.i, ans: v.ans, priorQ: v.priorQ || [], priorP: v.priorP || [], ready: !!v.ready, asked: v.asked || v.ids.length };
     else if (v.v === 'mastery' || v.v === 'masteryBreak' || v.v === 'masteryReview') r = { v: 'mastery', a: 'verbs' };
     if (r) { P.resume = r; saveP(); }
     else if (v.v === 'roundEnd' || v.v === 'testResult' || v.v === 'lessonEnd' || v.v === 'masteryResult') { P.resume = null; saveP(); }
@@ -782,7 +879,7 @@
       if (r.v === 'lesson') { var l = lessonById(r.a, r.l); if (!l) throw 0; return startLesson(r.a, r.l, Math.min(r.step, l.steps.length - 1)); }
       if (r.v === 'round') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var v = { v: 'round', a: r.a, mode: r.mode, sk: r.sk, story: r.story, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), res: r.res || [] }; v.qs = newQS(QBY[v.ids[v.i]], r.mode); return go(v); }
       if (r.v === 'mastery') { if (!validMastery(P.mastery)) throw 0; return openMasteryQ(P.mastery.i); }
-      if (r.v === 'test') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var t = { v: 'test', a: r.a, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), ans: r.ans || {}, priorQ: r.priorQ || [], priorP: r.priorP || [], ready: !!r.ready }; t.qs = newQS(QBY[t.ids[t.i]], 'test', t.ans[t.ids[t.i]]); return go(t); }
+      if (r.v === 'test') { if (!r.ids.every(function (id) { return QBY[id]; })) throw 0; var t = { v: 'test', a: r.a, ids: r.ids, i: Math.min(r.i, r.ids.length - 1), ans: r.ans || {}, priorQ: r.priorQ || [], priorP: r.priorP || [], ready: !!r.ready, asked: r.asked || r.ids.length }; t.qs = newQS(QBY[t.ids[t.i]], 'test', t.ans[t.ids[t.i]]); return go(t); }
     } catch (e) { /* fall through */ }
     P.resume = null; saveP(); go({ v: 'home' });
   }
@@ -898,24 +995,28 @@
       if (QS.done && !test && (q.mode === 'adj' || q.mode === 'adv')) main += linkSummary(q, q.ans);
     } else if (q.kind === 'mc') {
       main += '<p class="prompt big">' + nl(q.q) + '</p>' + sayBtn(q.q.replace(/\n/g, ' ') + (q.cc ? '' : ' ' + q.c.join('. ')), 'Read the question');
-      if (q.coins) main += coinRow(q.coins, 6, null, q.sk === 'names');
+      if (q.groups) main += groupsHTML(q.groups);
+      if (q.coins) main += coinRow(q.coins, 6, null, q.sk === 'names' || q.sk === 'values');
       main += '<div class="choices' + (q.cc ? ' coin-choices' : '') + '" role="group" aria-label="Answer choices">';
       q.c.forEach(function (c, i) {
         var on = QS.choice === i, mk = QS.fb && QS.fb.marks && !test ? QS.fb.marks[i] : null;
-        main += '<button type="button" class="choice' + (on ? ' on' : '') + (mk ? ' m-' + mk : '') + '" data-act="choice" data-i="' + i + '" data-fkey="ch' + i + '" aria-pressed="' + (on ? 'true' : 'false') + '"' + (QS.done ? ' disabled' : '') + '><span class="ch-letter">' + 'ABCD'.charAt(i) + '</span> ' + (q.cc ? coinHTML(c, 4.2, true) : esc(c)) + '</button>';
+        main += '<button type="button" class="choice' + (on ? ' on' : '') + (mk ? ' m-' + mk : '') + '" data-act="choice" data-i="' + i + '" data-fkey="ch' + i + '" aria-pressed="' + (on ? 'true' : 'false') + '"' + (QS.done ? ' disabled' : '') + '><span class="ch-letter">' + 'ABCD'.charAt(i) + '</span> ' + (q.cc ? coinHTML(c, 3.6, true) : esc(c)) + '</button>';
       });
       main += '</div>';
       if (q.say && canSpeak) main += '<p class="muted small">Tip: tap “Read the question” to hear the words.</p>';
     } else if (q.kind === 'num') {
       main += '<p class="prompt big">' + nl(q.q) + '</p>' + sayBtn(q.q, 'Read the question');
+      if (q.groups) main += groupsHTML(q.groups);
       if (q.coins) main += coinRow(q.coins, 3.6);
-      main += '<div class="num-entry"><span class="num-box" aria-live="polite" aria-label="Your answer">' + (QS.num ? esc(QS.num) : '<span class="muted">?</span>') + '</span>' + (q.unit ? '<span class="num-unit">' + esc(q.unit) + '</span>' : '') + '</div>';
+      var unitWord = q.unit === '¢' ? 'cents' : '';
+      main += '<div class="num-entry"><span class="num-label" id="numlbl">' + (unitWord ? 'Type the answer in cents. Numbers only.' : 'Type a number.') + '</span><span class="num-box" role="status" aria-live="polite" aria-labelledby="numlbl numval"><span id="numval">' + (QS.num ? esc(QS.num) + (unitWord ? ' cents' : '') : '<span class="muted">nothing typed yet</span>') + '</span></span>' + (q.unit ? '<span class="num-unit" aria-hidden="true">' + esc(q.unit) + '</span>' : '') + '</div>';
       if (!QS.done) main += '<div class="keypad" role="group" aria-label="Number pad">' + ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0'].map(function (k) { return '<button type="button" class="key" data-act="nkey" data-k="' + k + '" data-fkey="nk' + k + '" aria-label="' + (k === 'back' ? 'Erase' : k) + '">' + (k === 'back' ? '\u232B' : k) + '</button>'; }).join('') + '</div>';
     } else if (q.kind === 'tray') {
       main += '<p class="prompt big">' + nl(q.q) + '</p>' + sayBtn(q.q, 'Read the question');
       if (!QS.done) main += '<p class="small">Tap a coin to add it:</p><div class="coin-bank" role="group" aria-label="Coins to add">' + q.only.map(function (c) { return '<button type="button" class="coin-btn" data-act="tadd" data-c="' + c + '" data-fkey="ta' + c + '" aria-label="Add a ' + COIN[c].name + '">' + coinHTML(c, 3.4) + '</button>'; }).join('') + '</div>';
       main += '<div class="tray" aria-label="Your coins">' + (QS.tray.length ? QS.tray.map(function (c, i) { return '<button type="button" class="coin-btn in-tray" data-act="trem" data-i="' + i + '" data-fkey="tr' + i + '" aria-label="' + COIN[c].name + ', tap to take out"' + (QS.done ? ' disabled' : '') + '>' + coinHTML(c, 2.8) + '</button>'; }).join('') : '<span class="muted">Your tray is empty.</span>') + '</div>';
-      main += '<p class="small">' + QS.tray.length + ' coin' + (QS.tray.length === 1 ? '' : 's') + ' in the tray' + ((isGuidedCtx(QS.ctx) || QS.done) && !test ? ' \u00B7 <b>Total so far: ' + trayTotal(QS.tray) + '¢</b>' : '') + '</p>';
+      main += '<p class="small" aria-live="polite">' + QS.tray.length + ' coin' + (QS.tray.length === 1 ? '' : 's') + ' in the tray' + ((isGuidedCtx(QS.ctx) || QS.done) && !test ? ' \u00B7 <b>Total so far: ' + trayTotal(QS.tray) + '¢</b>' : '') + '</p>';
+      if (!QS.done && QS.tray.length) main += '<div class="tray-tools">' + btn('tundo', '\u21B6 Undo last coin', null, 'small') + btn('tclear', 'Clear the tray', null, 'small ghost') + '</div>';
     } else if (q.kind === 'sort') {
       main += '<p class="prompt big">' + esc(q.q) + '</p><div class="sort">';
       q.items.forEach(function (it, i) {
@@ -1012,6 +1113,8 @@
     else if (act === 'nkey' && !QS.done) { var k = el.getAttribute('data-k'); QS.num = k === 'back' ? QS.num.slice(0, -1) : (QS.num.length < 4 ? (QS.num === '0' ? k : QS.num + k) : QS.num); QS.fb = null; }
     else if (act === 'tadd' && !QS.done) { if (QS.tray.length < 30) QS.tray.push(el.getAttribute('data-c')); QS.fb = null; }
     else if (act === 'trem' && !QS.done) { QS.tray.splice(i, 1); QS.fb = null; }
+    else if (act === 'tundo' && !QS.done) { QS.tray.pop(); QS.fb = null; }
+    else if (act === 'tclear' && !QS.done) { QS.tray = []; QS.fb = null; }
     else if (act === 'hint' && !QS.done) { QS.hint = Math.min(2, QS.hint + 1); }
     else if (act === 'check' && !QS.done) {
       if (QS.ctx === 'test') return;
@@ -1122,6 +1225,14 @@
     var a = areaById(view.a), ls = LESSONS[a.id];
     var h = topNav([btn('area', '← ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' })]);
     h += '<h1 id="scr-title" tabindex="-1">' + esc(a.short) + ' lessons</h1><p class="lead">One idea at a time. Pick a lesson.</p>';
+    if (a.sections) {
+      a.sections.forEach(function (sec) {
+        h += '<h2 class="learn-section">' + esc(sec.title) + ' <span class="tag">' + esc(sec.tag) + '</span></h2><p class="small">' + esc(sec.note) + '</p><ol class="lesson-list">';
+        ls.filter(function (l) { return l.part === sec.part; }).forEach(function (l) { h += lessonItem(a, l); });
+        h += '</ol>';
+      });
+      return h;
+    }
     var hasF = ls.some(function (l) { return l.foundation; });
     if (hasF) {
       h += '<h2 class="learn-section">Foundation Review</h2>';
@@ -1132,12 +1243,16 @@
     var shownG3 = false;
     ls.forEach(function (l) {
       if (hasF && !l.foundation && !shownG3) { shownG3 = true; h += '</ol><h2 class="learn-section">Grade 3 ' + esc(a.short) + '</h2><ol class="lesson-list">'; }
-      var done = lessonDone(a.id, l.id), skipped = !done && l.foundation && foundationReady(a.id);
-      h += '<li><button type="button" class="lesson-item' + (done ? ' done' : '') + '" data-act="lesson" data-l="' + l.id + '" data-fkey="les' + l.id + '"><span class="l-id">' + l.id + '</span><span class="l-title">' + esc(l.title) + (l.optional ? ' <span class="tag">' + (a.id === 'verbs' ? 'extra \u00B7 on the Verb Benchmark' : 'optional') + '</span>' : '') + '</span><span class="l-state">' + (done ? '✓ Done' : skipped ? 'Skipped (ready)' : 'Start') + '</span></button></li>';
+      h += lessonItem(a, l);
     });
     h += '</ol>';
     if (a.id === 'verbs') h += '<p class="muted">Want to drill the 23 helping verbs again? Open Lesson C any time.</p>';
     return h;
+  }
+  function lessonItem(a, l) {
+      var done = lessonDone(a.id, l.id), skipped = !done && l.foundation && foundationReady(a.id), h = '';
+      h += '<li><button type="button" class="lesson-item' + (done ? ' done' : '') + '" data-act="lesson" data-l="' + l.id + '" data-fkey="les' + l.id + '"><span class="l-id">' + l.id + '</span><span class="l-title">' + esc(l.title) + (l.optional ? ' <span class="tag">' + (a.id === 'verbs' ? 'extra \u00B7 on the Verb Benchmark' : 'optional') + '</span>' : '') + '</span><span class="l-state">' + (done ? '✓ Done' : skipped ? 'Skipped (ready)' : 'Start') + '</span></button></li>';
+      return h;
   }
 
   function startLesson(a, l, step) {
@@ -1162,11 +1277,16 @@
     h += '<span class="steps-text">Step ' + (view.step + 1) + ' of ' + n + '</span></div>';
     var title = st.title || (st.guided ? 'Let\u2019s do one together' : null) || ({ guided: 'Let’s do one together', 'try': 'Your turn', mc: 'Quick check', reading: 'Read and answer', cards: 'Helper memory cards' })[st.t] || '';
     h += '<section class="card lesson-card"><h1 id="scr-title" tabindex="-1">' + esc(title) + '</h1>';
+    if (les.goal && view.step === 0) h += '<p class="goal"><b>Goal:</b> ' + esc(les.goal) + (les.mins ? ' <span class="muted small">(about ' + les.mins + ' minutes)</span>' : '') + '</p>';
     if (st.img) h += '<div class="lesson-pic-wrap">' + pic(st.img, 'lesson-pic') + '</div>';
     var canNext = true;
     if (st.t === 'coins') {
-      st.rows.forEach(function (r) { h += coinRow(r.coins, 4.4, r.labels); });
-      h += '<div class="explain">' + st.text.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') + '</div>' + sayBtn(st.text.join(' '));
+      if (st.worked) h += '<span class="tag">Worked example</span>';
+      if (st.groups) h += groupsHTML(st.groups);
+      (st.rows || []).forEach(function (r) { h += (r.label ? '<p class="cg-label">' + esc(r.label) + '</p>' : '') + coinRow(r.coins, 4.4, r.labels); });
+      h += '<div class="explain">' + st.text.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') + '</div>';
+      if (st.box) h += '<div class="worked-box">' + st.box.map(function (x) { return '<p>' + nl(x) + '</p>'; }).join('') + '</div>';
+      h += sayBtn(st.text.join(' ') + (st.box ? ' ' + st.box.join(' ') : ''));
     } else if (st.t === 'explain') {
       if (st.tiles) h += '<div class="tiles">' + st.tiles.map(function (t) { return canSpeak ? '<button type="button" class="tile" data-act="say" data-text="' + esc(t) + '">' + esc(t) + '</button>' : '<span class="tile">' + esc(t) + '</span>'; }).join('') + '</div>';
       h += '<div class="explain">' + st.text.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') + '</div>';
@@ -1271,7 +1391,7 @@
     var h = '<div class="round-dots" aria-label="Question ' + (v.i + 1) + ' of ' + v.ids.length + '">';
     v.ids.forEach(function (id, i) {
       var r = v.res[i];
-      h += '<span class="rdot' + (i === v.i ? ' now' : '') + (r === 'ind' ? ' ind' : r === 'help' ? ' help' : r === 'rev' ? ' rev' : '') + '" aria-hidden="true">' + (r === 'ind' ? '★' : r === 'help' ? '✓' : r === 'rev' ? '•' : i + 1) + '</span>';
+      h += '<span class="rdot' + (i === v.i ? ' now' : '') + (r === 'ind' ? ' ind' : r === 'retry' ? ' retry' : r === 'help' ? ' help' : r === 'rev' ? ' rev' : '') + '" aria-hidden="true">' + (r === 'ind' ? '★' : r === 'retry' ? '↻' : r === 'help' ? '✓' : r === 'rev' ? '•' : i + 1) + '</span>';
     });
     return h + '<span class="steps-text">Question ' + (v.i + 1) + ' of ' + v.ids.length + '</span></div>';
   }
@@ -1287,10 +1407,10 @@
   }
   function screenRoundEnd() {
     var a = areaById(view.a), r = view.res;
-    var ind = r.filter(function (x) { return x === 'ind'; }).length, help = r.filter(function (x) { return x === 'help'; }).length, rev = r.filter(function (x) { return x === 'rev'; }).length;
+    var ind = r.filter(function (x) { return x === 'ind'; }).length, retry = r.filter(function (x) { return x === 'retry'; }).length, help = r.filter(function (x) { return x === 'help'; }).length, rev = r.filter(function (x) { return x === 'rev'; }).length;
     var line = view.mode === 'guided' ? 'You worked through every question with the coach. That is how skills grow!' : ind === r.length ? 'Every one on the first try. Wow!' : ind >= r.length - 1 ? 'Strong round! You are getting it.' : 'Good effort! Every try makes your brain stronger.';
     var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">Round complete! <span aria-hidden="true">⭐</span></h1><p class="lead">' + esc(line) + '</p><ul class="tally">';
-    if (view.mode !== 'guided') h += '<li><span class="rdot ind">★</span> First try: <b>' + ind + '</b></li>';
+    if (view.mode !== 'guided') h += '<li><span class="rdot ind">★</span> First try: <b>' + ind + '</b></li><li><span class="rdot retry">↻</span> Right after another try: <b>' + retry + '</b></li>';
     h += '<li><span class="rdot help">✓</span> With help: <b>' + help + '</b></li><li><span class="rdot rev">•</span> Shown: <b>' + rev + '</b></li></ul>';
     var missedSk = [];
     view.ids.forEach(function (id, i) { if (r[i] !== 'ind') { var q = QBY[id]; if (missedSk.indexOf(q.sk) < 0) missedSk.push(q.sk); } });
@@ -1332,9 +1452,10 @@
       ids = shuffle(fpool.filter(function (q) { return !seenQ[q.id]; })).concat(shuffle(fpool.filter(function (q) { return seenQ[q.id]; }))).slice(0, n).map(function (q) { return q.id; });
     } else ids = testPick(a, n);
     if (!ids.length) return go({ v: 'testSetup', a: a, empty: true });
+    var asked = n;
     var priorQ = ids.filter(function (id) { return expo('q')[id]; });
     var priorP = []; ids.forEach(function (id) { var p = QBY[id].passage; if (p && expo('p')[p.id] && priorP.indexOf(p.id) < 0) priorP.push(p.id); });
-    var v = { v: 'test', a: a, ids: ids, i: 0, ans: {}, priorQ: priorQ, priorP: priorP, ready: !!(opts && opts.ready) };
+    var v = { v: 'test', a: a, ids: ids, i: 0, ans: {}, priorQ: priorQ, priorP: priorP, ready: !!(opts && opts.ready), asked: a === 'reading' ? ids.length : asked };
     v.qs = newQS(QBY[ids[0]], 'test');
     go(v);
   }
@@ -1345,6 +1466,7 @@
     h += '<div class="round-dots" aria-label="Question ' + (view.i + 1) + ' of ' + n + '">';
     view.ids.forEach(function (id, i) { var done = answered(newQS(QBY[id], 'test', view.ans[id])); h += '<button type="button" class="rdot jump' + (i === view.i ? ' now' : '') + (done ? ' answered' : '') + '" data-act="tjump" data-i="' + i + '" data-fkey="tj' + i + '" aria-label="Go to question ' + (i + 1) + (done ? ', answered' : ', not answered') + '">' + (i + 1) + '</button>'; });
     h += '<span class="steps-text">Question ' + (view.i + 1) + ' of ' + n + '</span></div>';
+    if (view.i === 0 && view.asked && view.asked > n) h += '<p class="msg info short-note">This check has ' + n + ' question' + (n > 1 ? 's' : '') + ', not ' + view.asked + '. Only ' + n + ' check question' + (n > 1 ? 's are' : ' is') + ' ready for the lessons you have finished. No question is used twice in one check.</p>';
     h += '<section class="card"><h1 id="scr-title" tabindex="-1" class="sr-only">Question ' + (view.i + 1) + '</h1>' + qWidget(view.qs) + '</section>';
     h += '<div class="lesson-foot">' + (view.i > 0 ? btn('tprev', '← Back') : '<span></span>') + (view.i < n - 1 ? btn('tnext', 'Next →', null, 'primary big') : btn('treview', 'Review my answers →', null, 'primary big')) + '</div>';
     return h;
@@ -1372,17 +1494,17 @@
     var unseen = !repeat && !passRepeat;
     var memItems = items.filter(function (it) { return QBY[it.id].sk === 'helpers'; });
     var mem = memItems.length ? { right: memItems.filter(function (x) { return x.ok; }).length, total: memItems.length } : null;
-    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, mem: mem, repeat: repeat, passRepeat: passRepeat, unseen: unseen, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
+    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, asked: view.asked || items.length, score: score, mem: mem, repeat: repeat, passRepeat: passRepeat, unseen: unseen, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
     if (P.checks.length > 50) P.checks = P.checks.slice(-50);
     saveP();
     var readyPassed = null;
     if (view.ready) { readyPassed = score >= Math.ceil(items.length * 0.8); P.ready = P.ready || {}; if (readyPassed) P.ready[view.a] = new Date().toISOString(); saveP(); }
-    go({ v: 'testResult', a: view.a, items: items, score: score, mem: mem, per: per, repeat: repeat, passRepeat: passRepeat, unseen: unseen, ready: view.ready, readyPassed: readyPassed });
+    go({ v: 'testResult', a: view.a, items: items, score: score, mem: mem, per: per, repeat: repeat, passRepeat: passRepeat, unseen: unseen, ready: view.ready, readyPassed: readyPassed, asked: view.asked || items.length });
   }
   function givenText(q, g) {
     if (!g) return 'No answer';
     if (q.kind === 'select') return g.sel && g.sel.length ? g.sel.slice().sort(function (x, y) { return x - y; }).map(function (i) { return q.toks[i].w; }).join(', ') : 'No answer';
-    if (q.kind === 'mc') return g.choice != null ? q.c[g.choice] : 'No answer';
+    if (q.kind === 'mc') return g.choice != null ? choiceText(q, g.choice) : 'No answer';
     if (q.kind === 'sort') return q.items.map(function (it, i) { return it[0] + ' → ' + (g.sort && g.sort[i] != null ? q.b[g.sort[i]] : '?'); }).join('; ');
     if (q.kind === 'ev') return g.pick != null ? q.passage.sents[g.pick] : 'No answer';
     if (q.kind === 'mc2') return (g.choice != null ? q.c[g.choice] : '(no revision chosen)') + ' / Why: ' + (g.choice2 != null ? q.c2[g.choice2] : '(no reason chosen)');
@@ -1394,7 +1516,7 @@
   }
   function correctText(q) {
     if (q.kind === 'select') return q.ans.map(function (i) { return q.toks[i].w; }).join(', ');
-    if (q.kind === 'mc') return q.c[q.a];
+    if (q.kind === 'mc') return choiceText(q, q.a);
     if (q.kind === 'sort') return q.items.map(function (it) { return it[0] + ' → ' + q.b[it[1]]; }).join('; ');
     if (q.kind === 'ev') return q.ok.map(function (i) { return q.passage.sents[i]; }).join('  OR  ');
     if (q.kind === 'mc2') return q.c[q.a] + ' / Why: ' + q.c2[q.a2];
@@ -1403,6 +1525,7 @@
     if (q.kind === 'num') return q.ans + q.unit;
     if (q.kind === 'tray') return (q.fewest ? '' : 'For example: ') + q.best.map(function (c) { return COIN[c].name; }).join(', ') + ' = ' + cents(q.target);
   }
+  function choiceText(q, i) { var c = q.c[i]; if (!q.cc) return c; var lc = c.toLowerCase(); return 'the ' + COIN[lc].name + ' (' + (c === lc ? 'heads' : 'tails') + ' side)'; }
   function qLabel(q) {
     if (q.kind === 'select') return promptFor(q) + '  “' + plainSentence(q) + '”';
     if (q.kind === 'fix') return 'Fix the wrong word: \u201c' + q.toks.map(function (t) { return t.pre + t.w + t.post; }).join(' ') + '\u201d';
@@ -1417,7 +1540,7 @@
     var a = areaById(view.a), n = view.items.length;
     var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">You finished! <span aria-hidden="true">⭐</span></h1><p class="score">' + view.score + ' of ' + n + ' correct</p>';
     if (view.mem) h += '<p class="small mem-split">Finding verbs in sentences: <b>' + (view.score - view.mem.right) + ' of ' + (n - view.mem.total) + '</b> \u00B7 Helper-word memory (recall, reported separately): <b>' + view.mem.right + ' of ' + view.mem.total + '</b></p>';
-    h += '<p class="lead">' + (view.score === n ? 'Every single one. Amazing!' : 'Let’s look at the ones to practice. Mistakes help us learn.') + '</p>' + exposureNote(view) + (view.ready ? '<p class="msg ' + (view.readyPassed ? 'good' : 'info') + '">' + (view.readyPassed ? 'Ready! Foundation Review is marked as skipped. Next: the Grade 3 Word Study lessons.' : 'Let\u2019s review the Foundation lessons first. They are short.') + '</p>' : '') + '</section>';
+    h += '<p class="lead">' + (view.score === n ? 'Every single one. Amazing!' : 'Let’s look at the ones to practice. Mistakes help us learn.') + '</p>' + (view.asked > n ? '<p class="muted small">For grown-ups: a ' + view.asked + '-question check was chosen, but only ' + n + ' check questions were ready for the finished lessons, so this check was shorter. No question was repeated to fill it.</p>' : '') + exposureNote(view) + (view.ready ? '<p class="msg ' + (view.readyPassed ? 'good' : 'info') + '">' + (view.readyPassed ? 'Ready! Foundation Review is marked as skipped. Next: the Grade 3 Word Study lessons.' : 'Let\u2019s review the Foundation lessons first. They are short.') + '</p>' : '') + '</section>';
     var missed = view.items.filter(function (x) { return !x.ok; });
     if (missed.length) {
       h += '<h2 class="section-h">Let’s learn from these</h2>';
@@ -1432,7 +1555,7 @@
       var sks = [];
       missed.forEach(function (it) { var s = QBY[it.id].sk; if (sks.indexOf(s) < 0) sks.push(s); });
       h += '<h2 class="section-h">Practice what you missed</h2><div class="end-btns">';
-      sks.forEach(function (s) { var so = skillById(view.a, s); h += btn('practiceSkill', 'Practice: ' + esc(so ? so.name : s), { attrs: 'data-a="' + view.a + '" data-sk="' + s + '" data-mode="guided"', key: s }, 'big'); });
+      sks.forEach(function (s) { var so = skillById(view.a, s), ll = so ? lessonById(view.a, so.lesson) : null; if (ll) h += btn('lesson', 'Review Lesson ' + ll.id + ': ' + esc(ll.title), { attrs: 'data-l="' + ll.id + '"', key: 'L' + s }, 'big'); h += btn('practiceSkill', 'Practice: ' + esc(so ? so.name : s), { attrs: 'data-a="' + view.a + '" data-sk="' + s + '" data-mode="guided"', key: s }, 'big'); });
       h += '</div>';
     }
     h += '<div class="end-btns">' + btn('area', 'Back to ' + esc(a.short), { attrs: 'data-a="' + a.id + '"' }, 'primary big') + btn('home', '⌂ Home', null, 'big') + '</div>';
@@ -1445,7 +1568,8 @@
     nouns: { title: 'Nouns Reference Sheet' },
     adjectives: { title: 'Adjectives Reference Sheet' },
     adverbs: { title: 'Adverbs Reference Sheet' },
-    vowels: { title: 'Vowel Patterns Reference Sheet' }
+    vowels: { title: 'Vowel Patterns Reference Sheet' },
+    money: { title: 'Money Reference Sheet' }
   };
   function hasPDF() { var el = D.getElementById('verb-guide-pdf'); return !!(el && el.textContent.trim().length > 100); }
   function screenGuides() {
@@ -1507,6 +1631,14 @@
       h += sec('Practice: write S (short) or L (long)', '<ol class="sh-practice"><li>cape ___</li><li>hop ___</li><li>rain ___</li><li>pet ___</li><li>boat ___</li></ol>');
       h += '<section class="sh-sec sh-key"><h2>Answer key</h2><p>1. L &nbsp; 2. S &nbsp; 3. L &nbsp; 4. S &nbsp; 5. L</p></section>';
     }
+    else if (k === 'money') {
+      h += '<h1>Money Reference Sheet</h1><p class="sh-sub">100 cents (100¢) = one dollar ($1.00). Pictures are to scale.</p>';
+      h += sec('The four coins', '<div class="sh-coins">' + ['p', 'n', 'd', 'q'].map(function (c) { return '<figure>' + coinHTML(c, 3.4) + '<figcaption><b>' + COIN[c].name + '</b><br>' + COIN[c].val + '¢</figcaption></figure>'; }).join('') + '</div><p class="sh-note">Size does not tell the value. The dime is the smallest coin, but it is worth more than the bigger nickel and penny. Real coins can have other pictures on them; the value stays the same. On a real coin, feel the edge: dimes and quarters have ridges, pennies and nickels are smooth.</p>');
+      h += sec('Count on', ul(['Pennies: count by 1s. Nickels: by 5s. Dimes: by 10s. Quarters: 25, 50, 75, 100.', 'Mixed coins: start with the coin worth the most, then count on. Quarter, dime, nickel, penny: 25, 35, 40, 41. That is 41¢.']));
+      h += sec('Make change by counting up', '<p>A snack costs 65¢. You pay $1.00. Count up from 65: add a dime → 75, add a quarter → 100. The change is 10¢ + 25¢ = 35¢.</p><p>Or subtract: 100 − 65 = 35¢.</p>');
+      h += sec('Practice', '<ol class="sh-practice"><li>3 dimes and 2 pennies = ____¢</li><li>2 quarters and 1 nickel = ____¢</li><li>Make 40¢ with the fewest coins: ____________</li><li>A pencil costs 30¢ and an eraser costs 15¢. Together: ____¢</li><li>You pay $1.00 for a 70¢ juice. Change: ____¢</li></ol>');
+      h += '<section class="sh-sec sh-key"><h2>Answer key</h2><p>1. 32¢ &nbsp; 2. 55¢ &nbsp; 3. a quarter, a dime, and a nickel (3 coins) &nbsp; 4. 45¢ &nbsp; 5. 30¢</p></section>';
+    }
     h += '<p class="sh-foot">Chris’s Learning Club</p></article>';
     return h;
   }
@@ -1522,19 +1654,19 @@
     h += '<div class="card"><p>' + (storageOK ? 'Progress is saved in this browser on this device only. It does not sync to other devices and is never sent anywhere.' : '<b>Progress is not being saved.</b> ' + esc(storageNote)) + '</p>';
     var ns = nextSkill();
     if (ns) { var ar = areaById(ns.a); h += '<p class="next-skill"><b>Next skill to practice:</b> ' + esc(ar.short) + ' – ' + esc(ns.sk.name) + ' <span class="muted">(' + esc(ns.why) + ')</span></p>'; }
-    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>With help</b> = used a hint, the coach, or a retry. <b>Shown</b> = used “Show me.” \u201cEarly evidence\u201d means fewer than 5 answers so far, so no conclusion yet (one right check answer is not enough). \u201cGetting strong\u201d needs at least 5 first-try practice answers at 80% or better, and any check answers at 80% or better. The app never says a skill is mastered. Check My Skills results are kept separate from practice.</p><p class="muted small"><b>About checks:</b> each subject has its own check questions that never appear in lessons or practice (' + AREAS.map(function (ar) { return ar.short + ' ' + (CHECK_Q[ar.id] || []).length; }).join(', ') + '; reading uses ' + CHECK_PASSAGES.length + ' check-only stories). Checks use unseen questions (and unseen stories) first, so two five-question checks can both be unseen. When a bank runs low, results are labeled \u201cmixed\u201d or \u201crepeated\u201d below. Checks only ask about lessons he has finished.</p></div>';
+    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>Right after a retry</b> = wrong at first, then right on a later Check with no hint. <b>With help</b> = used a hint or the coach. <b>Shown</b> = used “Show me.” \u201cEarly evidence\u201d means fewer than 5 answers so far, so no conclusion yet (one right check answer is not enough). \u201cGetting strong\u201d needs at least 5 first-try practice answers at 80% or better, and any check answers at 80% or better. The app never says a skill is mastered. Check My Skills results are kept separate from practice.</p><p class="muted small"><b>About checks:</b> each subject has its own check questions that never appear in lessons or practice (' + AREAS.map(function (ar) { return ar.short + ' ' + (CHECK_Q[ar.id] || []).length; }).join(', ') + '; reading uses ' + CHECK_PASSAGES.length + ' check-only stories). Checks use unseen questions (and unseen stories) first, so two five-question checks can both be unseen. When a bank runs low, results are labeled \u201cmixed\u201d or \u201crepeated\u201d below. Checks only ask about lessons he has finished.</p></div>';
     AREAS.forEach(function (a) {
       var ls = LESSONS[a.id], done = ls.filter(function (l) { return lessonDone(a.id, l.id); }).length;
-      h += '<div class="card"><h2>' + esc(a.name) + ' <span class="muted small">· ' + done + ' of ' + ls.length + ' lessons done</span></h2><div class="tbl-wrap"><table class="tbl small"><thead><tr><th scope="col">Skill</th><th scope="col">Lesson</th><th scope="col">First try</th><th scope="col">With help</th><th scope="col">Shown</th><th scope="col">Checks</th><th scope="col">Status</th></tr></thead><tbody>';
+      h += '<div class="card"><h2>' + esc(a.name) + ' <span class="muted small">· ' + done + ' of ' + ls.length + ' lessons done</span></h2><div class="tbl-wrap"><table class="tbl small"><thead><tr><th scope="col">Skill</th><th scope="col">Lesson</th><th scope="col">First try</th><th scope="col">Right after a retry</th><th scope="col">With help</th><th scope="col">Shown</th><th scope="col">Checks</th><th scope="col">Status</th></tr></thead><tbody>';
       SKILLS[a.id].forEach(function (s) {
         var r = P.skills[a.id + '.' + s.id] || { ind: 0, help: 0, rev: 0, chkRight: 0, chkTotal: 0 }, st = skillStatus(a.id, s.id);
-        h += '<tr><th scope="row">' + esc(s.name) + (s.optional ? ' <span class="tag">optional</span>' : '') + '</th><td>' + (lessonDone(a.id, s.lesson) ? '✓' : '–') + '</td><td>' + r.ind + '</td><td>' + r.help + '</td><td>' + r.rev + '</td><td>' + (r.chkTotal ? r.chkRight + '/' + r.chkTotal : '–') + '</td><td><span class="status s-' + st.key + '">' + esc(st.label) + '</span>' + (st.n ? '<span class="muted small"> (' + st.n + ' answer' + (st.n > 1 ? 's' : '') + ')</span>' : '') + '</td></tr>';
+        h += '<tr><th scope="row">' + esc(s.name) + (s.optional ? ' <span class="tag">optional</span>' : '') + (s.strand ? ' <span class="muted small">(' + esc(s.strand) + ')</span>' : '') + '</th><td>' + (lessonDone(a.id, s.lesson) ? '✓' : '–') + '</td><td>' + r.ind + '</td><td>' + (r.retry || 0) + '</td><td>' + r.help + '</td><td>' + r.rev + '</td><td>' + (r.chkTotal ? r.chkRight + '/' + r.chkTotal : '–') + '</td><td><span class="status s-' + st.key + '">' + esc(st.label) + '</span>' + (st.n ? '<span class="muted small"> (' + st.n + ' answer' + (st.n > 1 ? 's' : '') + ')</span>' : '') + '</td></tr>';
       });
       Object.keys(P.skills).filter(function (k) { return k.indexOf(a.id + '.legacy_') === 0; }).forEach(function (k) {
         var r = P.skills[k];
-        h += '<tr class="legacy"><th scope="row">' + esc(r.legacy || 'Legacy mixed records') + '</th><td>\u2013</td><td>' + r.ind + '</td><td>' + r.help + '</td><td>' + r.rev + '</td><td>' + (r.chkTotal ? r.chkRight + '/' + r.chkTotal : '\u2013') + '</td><td><span class="status s-none">Kept for history</span></td></tr>';
+        h += '<tr class="legacy"><th scope="row">' + esc(r.legacy || 'Legacy mixed records') + '</th><td>\u2013</td><td>' + r.ind + '</td><td>' + (r.retry || 0) + '</td><td>' + r.help + '</td><td>' + r.rev + '</td><td>' + (r.chkTotal ? r.chkRight + '/' + r.chkTotal : '\u2013') + '</td><td><span class="status s-none">Kept for history</span></td></tr>';
       });
-      h += '</tbody></table></div>' + (a.id === 'vowels' ? '<p class="muted small">Word Study activities are on-screen reading and spelling tasks. They do not measure reading aloud, and the app does not estimate a Lexile or grade level.</p>' : '') + '</div>';
+      h += '</tbody></table></div>' + (a.id === 'money' ? '<p class="muted small">Money lessons A\u2013H are the foundation (knowing and counting coins). Lessons I and J use those skills to compare amounts and find change. These are practice activities, not a grade-level score.</p>' : '') + (a.id === 'vowels' ? '<p class="muted small">Word Study activities are on-screen reading and spelling tasks. They do not measure reading aloud, and the app does not estimate a Lexile or grade level.</p>' : '') + '</div>';
     });
     h += '<div class="card"><h2>Verb Identification Benchmark</h2><p class="muted small">59 sentences used only in this final check. Benchmark: ' + MASTERY_BENCHMARK + ' of ' + MASTERY_IDS.length + ' with no help. Every verb word must be found; a partial verb team or an extra word makes that sentence wrong.</p>';
     if (validMastery(P.mastery)) h += '<p><b>In progress:</b> ' + mAnswered() + ' of ' + MASTERY_IDS.length + ' answered (saved).</p>';
@@ -1544,7 +1676,8 @@
     h += '<div class="card"><h2>Check My Skills history</h2>';
     if (!P.checks.length) h += '<p class="muted">No checks yet.</p>';
     else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.mem ? ' <span class="muted">(sentences ' + (c.score - c.mem.right) + '/' + (c.n - c.mem.total) + '; helper memory ' + c.mem.right + '/' + c.mem.total + ')</span>' : '') + (c.unseen ? ' <span class="tag">unseen</span>' : (c.repeat ? ' <span class="tag">' + (c.repeat < c.n ? 'mixed: ' : 'repeated: ') + c.repeat + ' of ' + c.n + ' seen before</span>' : '') + (c.passRepeat ? ' <span class="tag">story seen before</span>' : '')) + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : (s.indexOf('legacy_') === 0 ? 'legacy mixed records' : s); }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
-    h += '</div><div class="card"><h2>Settings</h2>' + btn('editNameG', 'Change nickname (now: ' + esc(P.nick) + ')');
+    h += '</div><div class="card"><h2>About this copy</h2><p class="small">Build <code class="build-id">' + esc(BUILD_ID) + '</code>' + (HOSTED ? ' \u00B7 online preview' : ' \u00B7 offline file') + '</p>' + (P.helpBefore ? '<p class="muted small">Answers saved before ' + esc(new Date(P.helpBefore).toLocaleDateString()) + ' count a retry as \u201cwith help\u201d, because the app did not record retries separately then.</p>' : '') + '</div>';
+    h += '<div class="card"><h2>Settings</h2>' + btn('editNameG', 'Change nickname (now: ' + esc(P.nick) + ')');
     if (view.confirmReset) h += '<div class="confirm" role="alertdialog" aria-label="Confirm reset"><p><b>Erase all progress on this device?</b> This cannot be undone.</p>' + btn('doReset', 'Yes, erase everything', null, 'danger') + ' ' + btn('cancelReset', 'Cancel') + '</div>';
     else h += ' ' + btn('askReset', 'Reset all progress', null, 'ghost');
     h += '</div>';
@@ -1821,13 +1954,13 @@
       case 'mSubmit': return submitMastery();
       case 'quitTest': P.resume = null; saveP(); return go({ v: 'area', a: view.a });
       // question actions
-      case 'tok': case 'choice': case 'choice2': case 'ftok': case 'oadd': case 'orem': case 'nkey': case 'tadd': case 'trem': case 'sort': case 'ev': case 'hint': case 'check': case 'showme':
+      case 'tok': case 'choice': case 'choice2': case 'ftok': case 'oadd': case 'orem': case 'nkey': case 'tadd': case 'trem': case 'tundo': case 'tclear': case 'sort': case 'ev': case 'hint': case 'check': case 'showme':
         return qAct(act, el);
     }
   });
 
   /* Test hooks for automated checks (harmless in normal use) */
-  window.__CLC = { QBY: QBY, AREA_Q: AREA_Q, gradeOnly: gradeOnly, evaluate: function (q, sel) { return evaluate({ q: q, sel: sel, phase: null }); }, lessonQ: lessonQ, P: function () { return P; }, view: function () { return view; }, CHECK_Q: CHECK_Q, MASTERY_Q: MASTERY_Q, masteryMeets: masteryMeets };
+  window.__CLC = { QBY: QBY, AREA_Q: AREA_Q, gradeOnly: gradeOnly, evaluate: function (q, sel) { return evaluate({ q: q, sel: sel, phase: null }); }, lessonQ: lessonQ, P: function () { return P; }, view: function () { return view; }, CHECK_Q: CHECK_Q, MASTERY_Q: MASTERY_Q, masteryMeets: masteryMeets, minCoins: minCoins, describeCoins: describeCoins, moneyDiagnoses: moneyDiagnoses, trayOK: trayOK, evaluateQS: evaluate, newQS: newQS, outcomeOf: outcomeOf, migrate: migrate, LESSONS: LESSONS, SKILLS: SKILLS, BUILD_ID: BUILD_ID, sheetHTML: sheetHTML };
 
   render(true);
 })();

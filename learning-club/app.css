@@ -339,3 +339,18 @@ button, .btn, .tok, .choice, .bucket, .sent-btn { touch-action: manipulation; -w
 .coin-btn:hover { border-color: var(--teal); }
 .tray { min-height: 90px; border: 3px dashed var(--line); border-radius: 16px; padding: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: var(--cream); }
 .coin-btn:disabled { cursor: default; }
+
+/* money v2 */
+.coin-groups { display: grid; gap: 10px; margin: 10px 0; }
+.coin-group { background: var(--cream); border-radius: 12px; padding: 8px 12px; }
+.cg-label { margin: 0; font-weight: 700; color: var(--navy); }
+.coin-group .coin-row { margin: 4px 0; }
+.num-label { flex-basis: 100%; font-weight: 700; color: var(--navy); }
+.tray-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.rdot.retry { background: var(--teal); color: #fff; }
+.short-note { margin: 0 0 10px; }
+.sh-coins { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px; }
+.sh-coins figure { margin: 0; text-align: center; }
+.build-id { font-size: 14px; background: var(--cream); padding: 2px 6px; border-radius: 6px; }
+.goal { background: var(--good-l); border-radius: 10px; padding: 8px 12px; margin: 0 0 10px; }
+.coin-choices .choice { flex-direction: column; gap: 6px; }
