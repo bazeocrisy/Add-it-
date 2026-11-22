@@ -127,6 +127,28 @@ async function answer(pg, wrongFirst) {
   await p5.click('[data-act="grown"] >> nth=0');
   ok('grown-up view shows the legacy row and the new reading skills', /Legacy mixed comprehension/.test(await p5.textContent('#app')) && /Theme \/ lesson/.test(await p5.textContent('#app')) && /Character problem and solution/.test(await p5.textContent('#app')));
   await c5.close();
+  // ---- final audit comparison fixes ----
+  const c6 = await b.newContext(); const p6 = await c6.newPage(); p6.on('pageerror', e => errs.push(e.message)); await p6.goto(FILE);
+  const struct = await p6.evaluate(() => { const bad = []; AREAS.forEach(a => LESSONS[a.id].forEach(l => { const g = l.steps.some(s => s.t === 'guided' || s.guided); const iIdx = l.steps.map((s, i) => (s.t === 'try' || s.t === 'mc' || (s.t === 'reading' && !s.guided)) ? i : -1).filter(i => i >= 0); const gIdx = l.steps.findIndex(s => s.t === 'guided' || s.guided); if (!g || !iIdx.some(i => i > gIdx)) bad.push(a.id + ' ' + l.id); })); return bad; });
+  ok('every lesson has a guided attempt followed by an independent attempt', struct.length === 0, struct.join(', '));
+  const fSteps = await p6.evaluate(() => { const l = LESSONS.verbs.find(x => x.id === 'F'); const i = l.steps.findIndex(s => /An -ed word can describe/.test(s.title || '')); const q = l.steps.findIndex(s => !!s.q); return [i, q]; });
+  ok('Ending Clues teaches an -ed describing word before any question', fSteps[0] >= 0 && fSteps[0] < fSteps[1], fSteps.join(','));
+  // one right reading-check answer is only "Early evidence"
+  await p6.evaluate(() => { const P = window.__CLC.P(); P.skills['reading.theme'] = { hist: [], ind: 0, help: 0, rev: 0, chkRight: 1, chkTotal: 1, lastChk: { right: 1, total: 1 } }; P.skills['nouns.people'] = { hist: ['ind', 'ind', 'ind', 'ind', 'ind', 'ind'], ind: 6, help: 0, rev: 0, chkRight: 1, chkTotal: 1, lastChk: { right: 1, total: 1 } }; P.skills['nouns.places'] = { hist: ['ind', 'ind', 'ind', 'ind', 'ind', 'ind'], ind: 6, help: 0, rev: 0, chkRight: 3, chkTotal: 3, lastChk: { right: 2, total: 2 } }; });
+  await p6.click('[data-act="grown"] >> nth=0');
+  const rowOf = name => p6.evaluate(n => { const r = [...document.querySelectorAll('tr')].find(tr => tr.querySelector('th') && tr.querySelector('th').textContent.trim().startsWith(n)); return r ? r.querySelector('td:last-child').textContent.trim() : null; }, name);
+  const themeRow = await rowOf('Theme / lesson'), peopleRow = await rowOf('People nouns'), placesRow = await rowOf('Place nouns');
+  ok('one correct reading-check answer shows only "Early evidence (1 answer)"', /^Early evidence \(1 answer\)$/.test(themeRow), themeRow);
+  ok('strong practice plus only one check answer is not "Getting strong"', !/Getting strong/.test(peopleRow), peopleRow);
+  ok('enough practice and check evidence can show "Getting strong"', /^Getting strong \(9 answers\)$/.test(placesRow), placesRow);
+  // helper-word memory reported separately in a verb check
+  await p6.evaluate(() => { const P = window.__CLC.P(); P.lessons['verbs:C'] = true; P.lessons['verbs:A'] = true; });
+  await p6.click('[data-act="home"] >> nth=0'); await p6.click('[data-act="area"][data-a="verbs"]'); await p6.click('[data-act="testSetup"]'); await p6.click('[data-act="startTest"][data-n="10"]');
+  const vids = await p6.evaluate(() => window.__CLC.view().ids);
+  for (let i = 0; i < vids.length - 1; i++) await p6.click('[data-act="tnext"]'); await p6.click('[data-act="treview"]'); await p6.click('[data-act="submitTest"]');
+  const split = await p6.locator('.mem-split').count() ? await p6.textContent('.mem-split') : '';
+  ok('verb check reports helper-word memory separately from finding verbs in sentences', /Finding verbs in sentences/.test(split) && /Helper-word memory \(recall, reported separately\)/.test(split), split);
+  await c6.close();
   ok('no JS errors', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close(); console.log(R.join('\n')); const f = R.filter(x => x.startsWith('FAIL')).length; console.log(`\n${R.length - f} passed, ${f} failed`); process.exit(f ? 1 : 0);
 })().catch(e => { console.error(e); console.log(R.join('\n')); process.exit(1); });

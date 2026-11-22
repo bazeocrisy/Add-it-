@@ -46,6 +46,7 @@
     if (mode === 'noun') {
       if (want === 'P') return t.tags.indexOf('P') >= 0;
       if (want === 'c') return t.tags.indexOf('P') < 0;
+      if (want === 'G') return t.tags.indexOf('G') >= 0;
       return t.tags.indexOf(want) >= 0;
     }
     if (mode === 'adv') return t.tags === want;
@@ -100,7 +101,7 @@
   function addQ(q) { QBY[q.id] = q; (AREA_Q[q.area] = AREA_Q[q.area] || []).push(q); }
   VERB_BANK.forEach(function (r) { addQ(mkSelect(r, 'verbs', 'verb')); });
   HELPER_MC.forEach(function (r) { addQ(mkMC(r, 'verbs')); });
-  NOUN_BANK.forEach(function (r) { addQ(mkSelect(r, 'nouns', 'noun')); });
+  NOUN_BANK.forEach(function (r) { addQ(mkAny(r, 'nouns', 'noun')); });
   ADJ_BANK.forEach(function (r) { addQ(mkSelect(r, 'adjectives', 'adj')); });
   ADV_BANK.forEach(function (r) { addQ(r.k === 'mc' ? mkMC(r, 'adverbs') : mkSelect(r, 'adverbs', 'adv')); });
   VOWEL_BANK.forEach(function (r) { addQ(r.k === 'sort' ? mkSort(r, 'vowels') : mkMC(r, 'vowels')); });
@@ -110,7 +111,7 @@
   function addCheck(q) { QBY[q.id] = q; (CHECK_Q[q.area] = CHECK_Q[q.area] || []).push(q); }
   VERB_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'verbs', 'verb')); });
   HELPER_CHECK.forEach(function (r) { addCheck(mkMC(r, 'verbs')); });
-  NOUN_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'nouns', 'noun')); });
+  NOUN_CHECK.forEach(function (r) { addCheck(mkAny(r, 'nouns', 'noun')); });
   ADJ_CHECK.forEach(function (r) { addCheck(mkSelect(r, 'adjectives', 'adj')); });
   ADV_CHECK.forEach(function (r) { addCheck(r.k === 'mc' ? mkMC(r, 'adverbs') : mkSelect(r, 'adverbs', 'adv')); });
   VOWEL_CHECK.forEach(function (r) { addCheck(r.k === 'sort' ? mkSort(r, 'vowels') : mkMC(r, 'vowels')); });
@@ -154,6 +155,17 @@
     LESSONS[a] = cur;
   }); });
   (typeof LESSONS_ADD_ALL !== 'undefined' ? LESSONS_ADD_ALL : []).forEach(function (add) { Object.keys(add).forEach(function (a) { LESSONS[a] = (LESSONS[a] || []).concat(add[a]); }); });
+  /* small authored patches: extra guided/independent steps */
+  (typeof LESSON_INSERTS !== 'undefined' ? LESSON_INSERTS : []).forEach(function (ins) {
+    var l = (LESSONS[ins.area] || []).filter(function (x) { return x.id === ins.lesson; })[0]; if (!l) return;
+    var at = ins.at === 'beforeFirstQuestion' ? l.steps.map(function (st) { return !!st.q; }).indexOf(true) : ins.at === 'end' ? l.steps.length : ins.at;
+    if (at < 0) at = l.steps.length;
+    l.steps.splice.apply(l.steps, [at, 0].concat(ins.steps));
+  });
+  (typeof LESSON_STEP_PATCH !== 'undefined' ? LESSON_STEP_PATCH : []).forEach(function (pt) {
+    var l = (LESSONS[pt.area] || []).filter(function (x) { return x.id === pt.lesson; })[0]; if (!l) return;
+    var st = l.steps.filter(function (x) { return x.t === pt.match; })[0]; if (st) Object.keys(pt.set).forEach(function (k) { st[k] = pt.set[k]; });
+  });
   /* step text may be one string or a list of short sentences */
   Object.keys(LESSONS).forEach(function (a) { LESSONS[a].forEach(function (l) { l.steps.forEach(function (st) { if (typeof st.text === 'string') st.text = [st.text]; if (typeof st.box === 'string') st.box = [st.box]; }); }); });
   /* Word Study: lessons for foundation skills form the skippable Foundation Review */
@@ -273,11 +285,15 @@
   function skillStatus(a, sk) {
     var r = P.skills[a + '.' + sk];
     if (!r || (!r.hist.length && !r.chkTotal)) return { key: 'none', label: 'Not started' };
-    if (r.lastChk && r.lastChk.right < r.lastChk.total) return { key: 'review', label: 'Needs review' };
+    var evid = r.hist.length + (r.chkTotal || 0);
+    if (r.lastChk && r.lastChk.right < r.lastChk.total) return { key: 'review', label: 'Needs review', n: evid };
     var recent = r.hist.slice(-8), ind = recent.filter(function (x) { return x === 'ind'; }).length;
-    if (recent.length >= 3 && ind / recent.length < 0.5) return { key: 'review', label: 'Needs review' };
-    if (ind >= 5 && ind / recent.length >= 0.8) return { key: 'strong', label: 'Getting strong' };
-    return { key: 'practicing', label: 'Practicing' };
+    if (recent.length >= 3 && ind / recent.length < 0.5) return { key: 'review', label: 'Needs review', n: evid };
+    /* too little evidence to say anything strong: e.g. one right check answer */
+    if (evid < 5) return { key: 'early', label: 'Early evidence', n: evid };
+    var chkOK = !r.chkTotal || (r.chkTotal >= 2 && r.chkRight / r.chkTotal >= 0.8);
+    if (ind >= 5 && ind / recent.length >= 0.8 && chkOK) return { key: 'strong', label: 'Getting strong', n: evid };
+    return { key: 'practicing', label: 'Practicing', n: evid };
   }
   function nextSkill() {
     var i, a, list, j;
@@ -425,6 +441,7 @@
     if (q.mode === 'noun') {
       if (t.ans) {
         if (q.want === 'P') return w + ' is a common noun. Look for a special name that starts with a capital letter.';
+        if (q.want === 'G') return w + ' is a noun, but it names one ' + nounCat(t) + ', not a whole group.';
         if (q.want === 'c') return w + ' is a proper noun (a special name). Find the common noun.';
         return w + ' is a noun, but it names a ' + nounCat(t) + '. This question wants a ' + CAT[q.want] + '.';
       }
@@ -476,6 +493,7 @@
     if (q.mode === 'noun') {
       var n = miss.length, t = q.toks[miss[0]];
       var pre = hit.length ? 'You found ' + hit.length + '! ' : '';
+      if (q.want === 'G') return pre + 'Look for a noun that names a whole GROUP, like team, flock, or crowd.';
       if (q.want === 'P') return pre + 'Look for ' + (n > 1 ? n + ' more special names' : 'a special name') + ' that start with a capital letter.';
       return pre + 'You still need ' + n + ' more noun' + (n > 1 ? 's' : '') + '. Look for a word that names a ' + nounCat(t) + '. Ask: ' + CATQ[(t.tags.replace('P', '').charAt(0)) || 't'];
     }
@@ -884,7 +902,7 @@
     if (q.mode === 'verb') return 'Tap EVERY verb word: main verbs and their helpers.';
     if (q.mode === 'noun') {
       if (!q.want) return 'Tap ALL the nouns.';
-      return { p: 'Tap every noun that names a PERSON.', l: 'Tap every noun that names a PLACE.', t: 'Tap every noun that names a THING.', i: 'Tap every noun that names an IDEA.', P: 'Tap every PROPER noun (special names).', c: 'Tap every COMMON noun.' }[q.want];
+      return { p: 'Tap every noun that names a PERSON.', l: 'Tap every noun that names a PLACE.', t: 'Tap every noun that names a THING.', i: 'Tap every noun that names an IDEA.', G: 'Tap every COLLECTIVE noun (a word for a whole group).', P: 'Tap every PROPER noun (special names).', c: 'Tap every COMMON noun.' }[q.want];
     }
     if (q.mode === 'adj') return 'Tap every adjective (describing word).';
     if (q.mode === 'adv') return q.want ? 'Tap the adverb that tells ' + q.want.toUpperCase() + '.' : 'Tap the adverb.';
@@ -1259,12 +1277,14 @@
     Object.keys(per).forEach(function (sk) { var r = skillRec(view.a, sk); r.chkRight += per[sk].right; r.chkTotal += per[sk].total; r.lastChk = per[sk]; });
     var repeat = (view.priorQ || []).length, passRepeat = (view.priorP || []).length;
     var unseen = !repeat && !passRepeat;
-    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, repeat: repeat, passRepeat: passRepeat, unseen: unseen, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
+    var memItems = items.filter(function (it) { return QBY[it.id].sk === 'helpers'; });
+    var mem = memItems.length ? { right: memItems.filter(function (x) { return x.ok; }).length, total: memItems.length } : null;
+    P.checks.push({ a: view.a, date: new Date().toISOString(), n: items.length, score: score, mem: mem, repeat: repeat, passRepeat: passRepeat, unseen: unseen, missed: Object.keys(per).filter(function (k) { return per[k].right < per[k].total; }) });
     if (P.checks.length > 50) P.checks = P.checks.slice(-50);
     saveP();
     var readyPassed = null;
     if (view.ready) { readyPassed = score >= Math.ceil(items.length * 0.8); P.ready = P.ready || {}; if (readyPassed) P.ready[view.a] = new Date().toISOString(); saveP(); }
-    go({ v: 'testResult', a: view.a, items: items, score: score, per: per, repeat: repeat, passRepeat: passRepeat, unseen: unseen, ready: view.ready, readyPassed: readyPassed });
+    go({ v: 'testResult', a: view.a, items: items, score: score, mem: mem, per: per, repeat: repeat, passRepeat: passRepeat, unseen: unseen, ready: view.ready, readyPassed: readyPassed });
   }
   function givenText(q, g) {
     if (!g) return 'No answer';
@@ -1299,6 +1319,7 @@
   function screenTestResult() {
     var a = areaById(view.a), n = view.items.length;
     var h = '<section class="card center"><h1 id="scr-title" tabindex="-1">You finished! <span aria-hidden="true">⭐</span></h1><p class="score">' + view.score + ' of ' + n + ' correct</p>';
+    if (view.mem) h += '<p class="small mem-split">Finding verbs in sentences: <b>' + (view.score - view.mem.right) + ' of ' + (n - view.mem.total) + '</b> \u00B7 Helper-word memory (recall, reported separately): <b>' + view.mem.right + ' of ' + view.mem.total + '</b></p>';
     h += '<p class="lead">' + (view.score === n ? 'Every single one. Amazing!' : 'Let’s look at the ones to practice. Mistakes help us learn.') + '</p>' + exposureNote(view) + (view.ready ? '<p class="msg ' + (view.readyPassed ? 'good' : 'info') + '">' + (view.readyPassed ? 'Ready! Foundation Review is marked as skipped. Next: the Grade 3 Word Study lessons.' : 'Let\u2019s review the Foundation lessons first. They are short.') + '</p>' : '') + '</section>';
     var missed = view.items.filter(function (x) { return !x.ok; });
     if (missed.length) {
@@ -1404,13 +1425,13 @@
     h += '<div class="card"><p>' + (storageOK ? 'Progress is saved in this browser on this device only. It does not sync to other devices and is never sent anywhere.' : '<b>Progress is not being saved.</b> ' + esc(storageNote)) + '</p>';
     var ns = nextSkill();
     if (ns) { var ar = areaById(ns.a); h += '<p class="next-skill"><b>Next skill to practice:</b> ' + esc(ar.short) + ' – ' + esc(ns.sk.name) + ' <span class="muted">(' + esc(ns.why) + ')</span></p>'; }
-    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>With help</b> = used a hint, the coach, or a retry. <b>Shown</b> = used “Show me.” “Getting strong” needs at least 5 first-try answers in recent practice; the app never calls a skill mastered from one answer. Check My Skills results are kept separate from practice.</p><p class="muted small"><b>About checks:</b> each subject has its own check questions that never appear in lessons or practice (' + AREAS.map(function (ar) { return ar.short + ' ' + (CHECK_Q[ar.id] || []).length; }).join(', ') + '; reading uses ' + CHECK_PASSAGES.length + ' check-only stories). Checks use unseen questions (and unseen stories) first, so two five-question checks can both be unseen. When a bank runs low, results are labeled \u201cmixed\u201d or \u201crepeated\u201d below. Checks only ask about lessons he has finished.</p></div>';
+    h += '<p class="muted small"><b>First try</b> = right on the first Check with no hint. <b>With help</b> = used a hint, the coach, or a retry. <b>Shown</b> = used “Show me.” \u201cEarly evidence\u201d means fewer than 5 answers so far, so no conclusion yet (one right check answer is not enough). \u201cGetting strong\u201d needs at least 5 first-try practice answers at 80% or better, and any check answers at 80% or better. The app never says a skill is mastered. Check My Skills results are kept separate from practice.</p><p class="muted small"><b>About checks:</b> each subject has its own check questions that never appear in lessons or practice (' + AREAS.map(function (ar) { return ar.short + ' ' + (CHECK_Q[ar.id] || []).length; }).join(', ') + '; reading uses ' + CHECK_PASSAGES.length + ' check-only stories). Checks use unseen questions (and unseen stories) first, so two five-question checks can both be unseen. When a bank runs low, results are labeled \u201cmixed\u201d or \u201crepeated\u201d below. Checks only ask about lessons he has finished.</p></div>';
     AREAS.forEach(function (a) {
       var ls = LESSONS[a.id], done = ls.filter(function (l) { return lessonDone(a.id, l.id); }).length;
       h += '<div class="card"><h2>' + esc(a.name) + ' <span class="muted small">· ' + done + ' of ' + ls.length + ' lessons done</span></h2><div class="tbl-wrap"><table class="tbl small"><thead><tr><th scope="col">Skill</th><th scope="col">Lesson</th><th scope="col">First try</th><th scope="col">With help</th><th scope="col">Shown</th><th scope="col">Checks</th><th scope="col">Status</th></tr></thead><tbody>';
       SKILLS[a.id].forEach(function (s) {
         var r = P.skills[a.id + '.' + s.id] || { ind: 0, help: 0, rev: 0, chkRight: 0, chkTotal: 0 }, st = skillStatus(a.id, s.id);
-        h += '<tr><th scope="row">' + esc(s.name) + (s.optional ? ' <span class="tag">optional</span>' : '') + '</th><td>' + (lessonDone(a.id, s.lesson) ? '✓' : '–') + '</td><td>' + r.ind + '</td><td>' + r.help + '</td><td>' + r.rev + '</td><td>' + (r.chkTotal ? r.chkRight + '/' + r.chkTotal : '–') + '</td><td><span class="status s-' + st.key + '">' + esc(st.label) + '</span></td></tr>';
+        h += '<tr><th scope="row">' + esc(s.name) + (s.optional ? ' <span class="tag">optional</span>' : '') + '</th><td>' + (lessonDone(a.id, s.lesson) ? '✓' : '–') + '</td><td>' + r.ind + '</td><td>' + r.help + '</td><td>' + r.rev + '</td><td>' + (r.chkTotal ? r.chkRight + '/' + r.chkTotal : '–') + '</td><td><span class="status s-' + st.key + '">' + esc(st.label) + '</span>' + (st.n ? '<span class="muted small"> (' + st.n + ' answer' + (st.n > 1 ? 's' : '') + ')</span>' : '') + '</td></tr>';
       });
       Object.keys(P.skills).filter(function (k) { return k.indexOf(a.id + '.legacy_') === 0; }).forEach(function (k) {
         var r = P.skills[k];
@@ -1425,7 +1446,7 @@
     h += '</div>';
     h += '<div class="card"><h2>Check My Skills history</h2>';
     if (!P.checks.length) h += '<p class="muted">No checks yet.</p>';
-    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.unseen ? ' <span class="tag">unseen</span>' : (c.repeat ? ' <span class="tag">' + (c.repeat < c.n ? 'mixed: ' : 'repeated: ') + c.repeat + ' of ' + c.n + ' seen before</span>' : '') + (c.passRepeat ? ' <span class="tag">story seen before</span>' : '')) + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : (s.indexOf('legacy_') === 0 ? 'legacy mixed records' : s); }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
+    else h += '<ul class="hist">' + P.checks.slice(-10).reverse().map(function (c) { var a = areaById(c.a); var d = new Date(c.date); return '<li>' + esc(isNaN(d) ? '' : d.toLocaleDateString()) + ' · ' + esc(a ? a.short : c.a) + ': <b>' + c.score + ' of ' + c.n + '</b>' + (c.mem ? ' <span class="muted">(sentences ' + (c.score - c.mem.right) + '/' + (c.n - c.mem.total) + '; helper memory ' + c.mem.right + '/' + c.mem.total + ')</span>' : '') + (c.unseen ? ' <span class="tag">unseen</span>' : (c.repeat ? ' <span class="tag">' + (c.repeat < c.n ? 'mixed: ' : 'repeated: ') + c.repeat + ' of ' + c.n + ' seen before</span>' : '') + (c.passRepeat ? ' <span class="tag">story seen before</span>' : '')) + (c.missed && c.missed.length ? ' · review: ' + esc(c.missed.map(function (s) { var so = skillById(c.a, s); return so ? so.name : (s.indexOf('legacy_') === 0 ? 'legacy mixed records' : s); }).join(', ')) : '') + '</li>'; }).join('') + '</ul>';
     h += '</div><div class="card"><h2>Settings</h2>' + btn('editNameG', 'Change nickname (now: ' + esc(P.nick) + ')');
     if (view.confirmReset) h += '<div class="confirm" role="alertdialog" aria-label="Confirm reset"><p><b>Erase all progress on this device?</b> This cannot be undone.</p>' + btn('doReset', 'Yes, erase everything', null, 'danger') + ' ' + btn('cancelReset', 'Cancel') + '</div>';
     else h += ' ' + btn('askReset', 'Reset all progress', null, 'ghost');

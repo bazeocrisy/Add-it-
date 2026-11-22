@@ -242,7 +242,7 @@ button.rdot.now { border-color: var(--navy); background: var(--gold-l); }
 .review .rq { font-weight: 700; color: var(--navy); }
 .rules { font-size: 20px; }
 .status { display: inline-block; border-radius: 999px; padding: 1px 10px; font-weight: 700; font-size: 14px; white-space: nowrap; }
-.s-none { background: #eee; } .s-practicing { background: var(--teal-l); } .s-review { background: var(--fix-l); color: var(--fix); } .s-strong { background: var(--good-l); color: var(--good); }
+.s-none { background: #eee; } .s-early { background: var(--gold-l); } .s-practicing { background: var(--teal-l); } .s-review { background: var(--fix-l); color: var(--fix); } .s-strong { background: var(--good-l); color: var(--good); }
 .hist { padding-left: 20px; }
 .confirm { margin-top: 12px; background: #fdecec; border: 2px solid #9b1c1c; border-radius: 12px; padding: 12px; }
 .next-skill { background: var(--teal-l); border-radius: 12px; padding: 10px 14px; }

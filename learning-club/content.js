@@ -21,7 +21,7 @@ var SKILLS = {
   verbs: [
     { id: 'action', name: 'Action verbs', lesson: 'A' },
     { id: 'being', name: 'Being & standalone verbs', lesson: 'B' },
-    { id: 'helpers', name: 'The 23 helping verbs', lesson: 'C' },
+    { id: 'helpers', name: 'Helper-word memory (recall)', lesson: 'C' },
     { id: 'team', name: 'Whole verb teams', lesson: 'D' },
     { id: 'long', name: 'Longer verb teams', lesson: 'E', optional: true },
     { id: 'endings', name: 'Ending clues (-ed, -ing)', lesson: 'F' },
@@ -37,7 +37,8 @@ var SKILLS = {
     { id: 'things', name: 'Thing nouns', lesson: 'C' },
     { id: 'proper', name: 'Common & proper nouns', lesson: 'D' },
     { id: 'multi', name: 'Find every noun', lesson: 'E' },
-    { id: 'ideas', name: 'Idea nouns', lesson: 'F' }
+    { id: 'ideas', name: 'Idea nouns', lesson: 'F' },
+    { id: 'collective', name: 'Collective nouns (groups)', lesson: 'G' }
   ],
   adjectives: [
     { id: 'kind', name: 'What kind?', lesson: 'A' },
@@ -204,7 +205,13 @@ var NOUN_BANK = [
   { id: 'n29', sk: 'things', s: 'My [grandmother:p] knitted a warm [scarf:t] in the [kitchen:l].', want: 't', h: 'What did Grandmother make?', h2: 'A thing noun names an object you can touch. Grandmother is a person and kitchen is a place.', ex: 'Scarf names a thing.', notes: { warm: 'Warm describes the scarf. It is an adjective.' } },
   { id: 'n30', sk: 'things', s: 'At the [market:l], [Dad:pP] bought fresh [peaches:t].', want: 't', h: 'What did Dad buy?', h2: 'Look for the object Dad bought. Market is where he was.', ex: 'Peaches names things. Market is a place and Dad is a person.', notes: { fresh: 'Fresh describes the peaches. It is an adjective.' } },
   { id: 'n31', sk: 'ideas', s: '[Bravery:i] helped the young [swimmer:p] cross the [lake:l].', want: 'i', h: 'Which noun can you not see or touch?', h2: 'An idea noun names a feeling or quality, like courage or joy. Swimmer and lake can be seen.', ex: 'Bravery names an idea. Swimmer is a person and lake is a place.' },
-  { id: 'n32', sk: 'ideas', s: 'The [students:p] felt great [excitement:i] before the [parade:t].', want: 'i', h: 'Which noun names a feeling?', h2: 'Find the word that names what the students felt inside.', ex: 'Excitement names a feeling, which is an idea. Students are people and the parade is an event.', notes: { great: 'Great describes the excitement. It is an adjective.' } }
+  { id: 'n32', sk: 'ideas', s: 'The [students:p] felt great [excitement:i] before the [parade:t].', want: 'i', h: 'Which noun names a feeling?', h2: 'Find the word that names what the students felt inside.', ex: 'Excitement names a feeling, which is an idea. Students are people and the parade is an event.', notes: { great: 'Great describes the excitement. It is an adjective.' } },
+{ id: 'n33', sk: 'collective', s: 'A [flock:tG] of [geese:t] landed on the [lake:l].', want: 'G', h: 'Which noun names a whole group?', h2: 'A collective noun is one word for many members together. Geese are the members; find the word for the group.', ex: 'Flock is a collective noun. It names a group of geese.' },
+  { id: 'n34', sk: 'collective', s: 'The [team:pG] cheered for its [captain:p] after the [game:t].', want: 'G', h: 'Which word names many players as one group?', h2: 'The captain is one person. Look for the word that means all the players together.', ex: 'Team is a collective noun. It names a group of players.' },
+  { id: 'n35', sk: 'collective', k: 'mc', q: 'Which word names a group of cows?', c: ['herd', 'flock', 'class'], a: 0, h: 'Think about animals that live on a farm and move together in a field.', h2: 'Each group word goes with certain members. A class is students, and a flock is usually birds or sheep.', ex: 'A herd is a group of cows.', why: [null, 'Flock is usually for birds or sheep.', 'A class is a group of students.'] },
+  { id: 'n36', sk: 'collective', k: 'mc', q: 'A ___ of wolves howled at the moon.', c: ['team', 'pack', 'flock'], a: 1, h: 'Which group word do people use for wolves or dogs?', h2: 'Team is for people who play or work together. Flock is for birds or sheep.', ex: 'A pack is a group of wolves.', why: ['Team is for people.', null, 'Flock is for birds or sheep.'] },
+  { id: 'n37', sk: 'collective', s: 'Our [class:pG] planted a [garden:l] behind the [school:l].', want: 'G', h: 'Which noun names a whole group of students?', h2: 'Garden and school are places. Find the word for the students all together.', ex: 'Class is a collective noun. It names a group of students.' },
+  { id: 'n38', sk: 'collective', k: 'mc', q: 'Which sentence uses a collective noun?', c: ['A bunch of grapes sat in the bowl.', 'Two grapes sat in the bowl.', 'The grape was purple.'], a: 0, h: 'Look for one word that means many things together.', h2: 'Read each sentence. Which one has a single word for a whole group of grapes?', ex: 'Bunch is a collective noun. It names a group of grapes.', why: [null, 'Two tells how many, but it does not name a group.', 'This sentence is about one grape.'] }
 ];
 
 /* ───────────────────────── ADJECTIVE BANK ───────────────────────── */
@@ -1585,7 +1592,11 @@ var NOUN_CHECK = [
   { id: 'nc10', sk: 'multi', s: 'The [mayor:p] cut a [ribbon:t] to open the new [playground:l] beside the [courthouse:l].', h: 'Find the person, the thing she cut, and two places.', ex: 'Mayor is a person. Ribbon is a thing. Playground and courthouse are places.', notes: { new: 'New describes the playground. It is an adjective.', open: 'Open is an action word, a verb. It is not a noun.' } },
 { id: 'nc11', sk: 'people', s: 'The [baker:p] pulled warm [rolls:t] from the [oven:t].', want: 'p', h: 'Who pulled the rolls out?', h2: 'Ask "who?"', ex: 'Baker names a person. Rolls and oven are things.' },
   { id: 'nc12', sk: 'places', s: 'Our [team:p] practiced at the [stadium:l] on [Monday:tP].', want: 'l', h: 'Where did the team practice?', h2: 'Ask "where?"', ex: 'Stadium names a place. Team names people and Monday names a day.' },
-  { id: 'nc13', sk: 'things', s: 'The [nurse:p] gave me a [bandage:t].', want: 't', h: 'What did the nurse give?', h2: 'Find the object.', ex: 'Bandage names a thing. Nurse names a person.', notes: { me: 'Me is a pronoun. It stands in for a noun, so we do not tap it here.' } }
+  { id: 'nc13', sk: 'things', s: 'The [nurse:p] gave me a [bandage:t].', want: 't', h: 'What did the nurse give?', h2: 'Find the object.', ex: 'Bandage names a thing. Nurse names a person.', notes: { me: 'Me is a pronoun. It stands in for a noun, so we do not tap it here.' } },
+{ id: 'nc14', sk: 'collective', s: 'A [crowd:pG] waited outside the [stadium:l].', want: 'G', h: 'Which word names many people together?', h2: 'Find the group word.', ex: 'Crowd is a collective noun. It names a group of people.' },
+  { id: 'nc15', sk: 'collective', k: 'mc', q: 'A ___ of bees buzzed around the hive.', c: ['herd', 'swarm', 'class'], a: 1, h: 'Which group word goes with insects that fly together?', h2: 'Herd is for animals like cows, and class is for students.', ex: 'A swarm is a group of bees.', why: ['Herd is for animals like cows.', null, 'A class is a group of students.'] },
+  { id: 'nc16', sk: 'collective', s: 'The [band:pG] played loudly at the [parade:t].', want: 'G', h: 'Which noun names a group of musicians?', h2: 'Find the word for all the players together.', ex: 'Band is a collective noun. It names a group of musicians.' },
+  { id: 'nc17', sk: 'collective', k: 'mc', q: 'Which word names a group of family members?', c: ['family', 'father', 'home'], a: 0, h: 'Which word means all of them together?', h2: 'One word names one person, one names a place, and one names the whole group.', ex: 'Family is a collective noun. It names a group of relatives.', why: [null, 'Father names one person.', 'Home names a place.'] }
 ];
 var ADJ_CHECK = [
   { id: 'ac1', sk: 'kind', s: 'The [bumpy@road] road led to a [peaceful@farm] farm in the country.', h: 'What kind of road? What kind of farm?', ex: 'Bumpy describes road. Peaceful describes farm.' },
@@ -3825,3 +3836,45 @@ var LESSONS_REPLACE_READING = {
 var LESSONS_ADD_ALL = [LESSONS_ADD_GRAMMAR, LESSONS_ADD_WORD, LESSONS_ADD_WORKSHOP];
 var LESSONS_REPLACE_ALL = [LESSONS_REPLACE_BRIDGES, LESSONS_REPLACE_READING];
 /* ===== GRADE 3 ADDITIONS END ===== */
+
+/* ===== FINAL AUDIT FIXES ===== */
+var LESSONS_ADD_FINAL = { nouns: [
+  { id: 'G', title: 'Collective Nouns', skill: 'collective', key: 'A collective noun names a whole group as one thing.', steps: [
+    { t: 'explain', title: 'Words for groups', text: ['Some nouns name a whole GROUP as one thing.', 'They are called collective nouns.', 'Team, class, family, crowd, and flock are collective nouns.'], box: ['Many players together = a team', 'Many students together = a class', 'Many birds together = a flock'] },
+    { t: 'table', title: 'Groups and their words', head: ['Group of...', 'Collective noun'], rows: [['people who play together', 'team'], ['students', 'class'], ['musicians', 'band'], ['birds or sheep', 'flock'], ['cows', 'herd'], ['wolves', 'pack'], ['bees', 'swarm']] },
+    { t: 'show', title: 'Watch me find it', mode: 'noun', s: 'Our [family:pG] ate dinner.', labels: { family: 'group' }, text: ['Family names a whole group of people.'] },
+    { t: 'show', title: 'A longer sentence', mode: 'noun', s: 'After the game, the whole [team:pG] lined up to shake hands with the other players.', labels: { team: 'group' }, text: ['Game and players are nouns too, but team is the one word for the whole group.', 'Ask: which word means many members together?'] },
+    { t: 'guided', coach: 'Find the members first (cows). Then find the one word for all of them together.', q: { mode: 'noun', want: 'G', s: 'A [herd:tG] of [cows:t] crossed the [road:l].', h: 'Cows are the members. Which word names the whole group?', h2: 'Road is a place. The group word comes right before "of cows."', ex: 'Herd is a collective noun. It names a group of cows.' } },
+    { t: 'try', q: { k: 'mc', q: 'A ___ of birds flew over the field.', c: ['flock', 'herd', 'pack'], a: 0, h: 'Which group word goes with birds?', h2: 'Herd and pack go with animals that walk or run together.', ex: 'A flock is a group of birds.', why: [null, 'Herd is for animals like cows.', 'Pack is for animals like wolves.'] } },
+    { t: 'try', q: { mode: 'noun', want: 'G', s: 'The [crowd:pG] clapped when the [singer:p] took a [bow:t].', h: 'Which word names many people as one group?', h2: 'The singer is one person. Find the word for all the people watching.', ex: 'Crowd is a collective noun. It names a group of people.' } }
+  ] }
+] };
+LESSONS_ADD_ALL.push(LESSONS_ADD_FINAL);
+var LESSON_INSERTS = [
+  { area: 'verbs', lesson: 'F', at: 'beforeFirstQuestion', steps: [
+    { t: 'show', title: 'An -ed word can describe too', mode: 'verb', s: 'The tired campers [rested] by the warm fire.', labels: { tired: 'describes campers', rested: 'verb' }, text: ['Tired ends in -ed, but here it tells what kind of campers. It describes, so it is not the verb.', 'Rested tells what the campers did. That is the verb.', 'So an ending is only a clue. Ask: does the word tell what someone did, or describe a noun?'] } ] },
+  { area: 'vowels', lesson: 'A', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'Say a, e, i, o, u. Then check each word letter by letter.', q: { k: 'mc', q: 'Which word has the vowel letter a?', c: ['hat', 'hit', 'hot'], a: 0, h: 'Look at the middle letter of each word.', h2: 'Name the vowel in each word. Only one of them is a.', ex: 'Hat has the vowel letter a.', why: [null, 'Hit has the vowel i.', 'Hot has the vowel o.'] } },
+    { t: 'try', q: { k: 'mc', q: 'How many vowel letters are in the word lamp?', c: ['1', '2', '3'], a: 0, h: 'Check l-a-m-p.', h2: 'Point to each letter and ask: is it a, e, i, o, or u?', ex: 'Lamp has one vowel letter: a.', why: [null, 'Only one letter in lamp is a vowel.', 'Only one letter in lamp is a vowel.'] } } ] },
+  { area: 'vowels', lesson: 'B', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'Look for one vowel closed in by consonants, with no e at the end.', q: { k: 'mc', q: 'Which word has a short i sound, like in sit?', c: ['pin', 'pine', 'ride'], a: 0, say: true, h: 'Which word ends with a consonant, not an e?', h2: 'Silent e at the end usually makes the vowel say its name. A short vowel has no silent e.', ex: 'Pin has the short i pattern p-i-n.', why: [null, 'Pine ends with silent e, so the i says its name.', 'Ride ends with silent e, so the i says its name.'] } } ] },
+  { area: 'vowels', lesson: 'B', at: 'end', steps: [
+    { t: 'try', q: { k: 'mc', q: 'Which word has a short e sound, like in pet?', c: ['net', 'neat', 'need'], a: 0, say: true, h: 'Which word has only one vowel letter?', h2: 'Two vowels side by side often make a long sound. Look for one e closed in by consonants.', ex: 'Net has the short e pattern n-e-t.', why: [null, 'Neat has the team ea, which says long e.', 'Need has the team ee, which says long e.'] } } ] },
+  { area: 'vowels', lesson: 'C', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'A long vowel says its own name. Look for a silent e at the end.', q: { k: 'mc', q: 'Which word has a long a sound, where the a says its name?', c: ['gate', 'gas', 'gab'], a: 0, say: true, h: 'Which word ends with a silent e?', h2: 'Words with one vowel closed in by consonants usually have a short sound.', ex: 'Gate ends with silent e, so the a says its name.', why: [null, 'Gas has a short a.', 'Gab has a short a.'] } } ] },
+  { area: 'vowels', lesson: 'C', at: 'end', steps: [
+    { t: 'try', q: { k: 'mc', q: 'Which word has a long i sound, where the i says its name?', c: ['pin', 'pine', 'pan'], a: 1, say: true, h: 'Look for a silent e at the end.', h2: 'Silent e at the end usually helps the vowel before it say its name.', ex: 'Pine ends with silent e, so the i says its name.', why: ['Pin has a short i.', null, 'Pan has a short a.'] } } ] },
+  { area: 'vowels', lesson: 'D', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'Write the word. Put an e on the end. Then read it with the vowel saying its name.', q: { k: 'mc', q: 'Add silent e to tap. What word do you make?', c: ['tape', 'taps', 'tip'], a: 0, say: true, h: 'Write tap, then add e.', h2: 'Adding e keeps every letter of tap and puts one more at the end.', ex: 'tap + e = tape. The a now says its name.', why: [null, 'Taps adds s, not e.', 'Tip changes the vowel instead of adding e.'] } } ] },
+  { area: 'vowels', lesson: 'E', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'Look for a and i sitting side by side.', q: { k: 'mc', q: 'Which word has the vowel team ai?', c: ['mail', 'mall', 'mile'], a: 0, say: true, h: 'Check the middle of each word.', h2: 'A vowel team is two vowels touching. Look for the a right next to an i.', ex: 'Mail has the team ai, which says long a.', why: [null, 'Mall has only the vowel a.', 'Mile has i and a silent e, not ai.'] } } ] },
+  { area: 'vowels', lesson: 'F', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'Look for two e letters side by side.', q: { k: 'mc', q: 'Which word has the vowel team ee?', c: ['jeep', 'jet', 'jab'], a: 0, say: true, h: 'Which word has two vowels in a row?', h2: 'Count the vowel letters in each word. The team has two of the same vowel.', ex: 'Jeep has the team ee, which says long e.', why: [null, 'Jet has one e.', 'Jab has one a.'] } } ] },
+  { area: 'vowels', lesson: 'G', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'Look for an e followed right away by an a.', q: { k: 'mc', q: 'Which word has the vowel team ea?', c: ['meat', 'met', 'mat'], a: 0, say: true, h: 'Which word has two vowels touching?', h2: 'Check each word for an e with an a right after it.', ex: 'Meat has the team ea, which says long e.', why: [null, 'Met has one e.', 'Mat has one a.'] } } ] },
+  { area: 'vowels', lesson: 'H', at: 'beforeFirstQuestion', steps: [
+    { t: 'guided', coach: 'Look for an o followed right away by an a.', q: { k: 'mc', q: 'Which word has the vowel team oa?', c: ['loaf', 'lot', 'loft'], a: 0, say: true, h: 'Which word has two vowels touching?', h2: 'Check each word for an o with an a right after it.', ex: 'Loaf has the team oa, which says long o.', why: [null, 'Lot has one o.', 'Loft has one o.'] } } ] }
+];
+var LESSON_STEP_PATCH = [
+  { area: 'adverbs', lesson: 'D', match: 'mc', set: { t: 'guided', coach: 'Ask: what does careful tell about? A noun (a person, place, or thing) or a verb (an action)?' } }
+];

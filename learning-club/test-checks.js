@@ -121,10 +121,11 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
     const last = await p2.evaluate(() => { const P = window.__CLC.P(); return P.checks[P.checks.length - 1]; });
     return { ids, last, note: (await p2.textContent('.exposure')).trim(), left: left && left[1] };
   };
-  const n1 = await runCheck('nouns', 5), n2 = await runCheck('nouns', 5), n3 = await runCheck('nouns', 5);
-  ok('nouns: 2nd five-question check uses the 5 unused questions', n2.ids.every(id => !n1.ids.includes(id)) && n2.last.unseen === true && n2.last.repeat === 0, n2.ids.join(','));
-  ok('nouns: both first checks labeled unseen', n1.last.unseen && /unseen check/.test(n1.note) && /unseen check/.test(n2.note));
-  ok('nouns: 3rd check (only 3 unseen left) uses them and is labeled mixed', n3.last.repeat === 2 && !n3.last.unseen && /2 of 5 questions were seen in an earlier check \(mixed exposure\)/.test(n3.note) && n3.left === '3', n3.note + ' | left before=' + n3.left);
+  const nb = await p2.evaluate(() => window.__CLC.CHECK_Q.nouns.length);
+  const runs = []; for (let k = 0; k < Math.floor(nb / 5); k++) runs.push(await runCheck('nouns', 5));
+  ok(`nouns: all ${runs.length} five-question checks within the ${nb}-item bank are unseen and never overlap`, runs.every(r => r.last.unseen && r.last.repeat === 0 && /unseen check/.test(r.note)) && new Set(runs.flatMap(r => r.ids)).size === runs.length * 5, runs.map(r => r.last.repeat).join(','));
+  const nLast = await runCheck('nouns', 5), leftN = nb % 5, expR = 5 - leftN;
+  ok(`nouns: next check uses the ${leftN} unseen left and is labeled ${expR < 5 ? 'mixed' : 'repeated'}`, nLast.last.repeat === expR && !nLast.last.unseen && new RegExp(expR + ' of 5 questions were seen in an earlier check \\((' + (expR < 5 ? 'mixed exposure' : 'repeated') + ')\\)').test(nLast.note) && nLast.left === String(leftN), nLast.note + ' | left before=' + nLast.left);
   const a1 = await runCheck('adjectives', 5, 3); // looks at 3 questions then quits
   const seenAfterQuit = await p2.evaluate(ids => { const s = window.__CLC.P().stats.seen_q; return ids.map(id => !!s[id]); }, a1.ids);
   ok('quit check: exactly the 3 questions shown count as seen', seenAfterQuit.join() === 'true,true,true,false,false', seenAfterQuit.join());
