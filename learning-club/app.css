@@ -318,3 +318,24 @@ button, .btn, .tok, .choice, .bucket, .sent-btn { touch-action: manipulation; -w
 .worked-box { background: var(--cream); border: 2px dashed var(--gold); border-radius: 14px; padding: 10px 14px; margin: 8px 0 12px; font-size: clamp(19px, 3.4vw, 23px); }
 .worked-box p { margin: 4px 0; }
 .learn-section { margin: 18px 0 8px; }
+
+/* money */
+.coin-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 14px; margin: 10px 0; }
+.coin-fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.coin-fig figcaption { font-size: 15px; font-weight: 700; color: var(--navy); text-align: center; }
+.coin { display: block; border-radius: 50%; max-width: 100%; height: auto; filter: drop-shadow(0 2px 2px rgba(19, 41, 75, .25)); }
+.coin-fallback { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; border: 3px solid var(--navy); }
+.coin-fallback.c-p { background: #c07a3c; color: #fff; } .coin-fallback.c-n, .coin-fallback.c-d, .coin-fallback.c-q { background: #c9cdd2; color: var(--navy); }
+.coin-choices { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.coin-choices .choice { justify-content: center; min-height: 110px; }
+.num-entry { display: flex; align-items: center; gap: 8px; margin: 12px 0; }
+.num-box { min-width: 110px; min-height: 60px; padding: 6px 14px; border: 3px solid var(--navy); border-radius: 14px; background: var(--white); font-size: 34px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.num-unit { font-size: 30px; font-weight: 700; color: var(--navy); }
+.keypad { display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; margin: 6px 0 10px; }
+.key { min-height: 56px; border-radius: 12px; border: 3px solid #d8cfbd; background: var(--white); font-size: 24px; font-weight: 700; cursor: pointer; color: var(--navy); }
+.key:hover { border-color: var(--teal); }
+.coin-bank { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 6px 0 10px; }
+.coin-btn { background: none; border: 3px solid transparent; border-radius: 50%; padding: 3px; cursor: pointer; line-height: 0; }
+.coin-btn:hover { border-color: var(--teal); }
+.tray { min-height: 90px; border: 3px dashed var(--line); border-radius: 16px; padding: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: var(--cream); }
+.coin-btn:disabled { cursor: default; }

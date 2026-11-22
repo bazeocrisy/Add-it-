@@ -9,7 +9,8 @@
     adjectives: 'A big red ball, a small red ball, and a yellow ball',
     adverbs: 'Chris running quickly toward a base',
     vowels: 'A baseball cap and a superhero cape',
-    reading: 'Three teammates throwing and catching on the baseball field'
+    reading: 'Three teammates throwing and catching on the baseball field',
+    money: 'A penny, a nickel, a dime, and a quarter shown at their real sizes'
   };
   function pic(k, cls) { var src = (typeof IMAGES !== 'undefined') && IMAGES[k]; return src ? '<img class="pic ' + (cls || '') + '" src="' + src + '" alt="' + esc(PIC_ALT[k] || '') + '">' : ''; }
   var HOSTED = !!window.__CLC_HOSTED; // claude.ai hosted copy: printing and downloads are blocked there
@@ -64,7 +65,7 @@
     return { id: id || raw.id, area: area, sk: raw.sk, cat: raw.cat || null, kind: 'select', mode: mode, toks: toks, marked: marked, ans: ans, teams: teams, want: raw.want || null, ask: raw.ask || null, h: raw.h || '', ex: raw.ex, notes: lowerKeys(raw.notes), labels: lowerKeys(raw.labels) };
   }
   function mkMC(raw, area, id) {
-    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'mc', q: raw.q, c: raw.c, a: raw.a, h: raw.h, h2: raw.h2 || '', ex: raw.ex, why: raw.why || [], say: !!raw.say };
+    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'mc', q: raw.q, c: raw.c, a: raw.a, h: raw.h, h2: raw.h2 || '', ex: raw.ex, why: raw.why || [], say: !!raw.say, coins: raw.coins || '', cc: !!raw.cc };
   }
   function mkSort(raw, area, id) { return { id: id || raw.id, area: area, sk: raw.sk, kind: 'sort', q: raw.q, b: raw.b, items: raw.items, h: raw.h, h2: raw.h2 || '', ex: raw.ex }; }
   function mkMC2(raw, area, id) {
@@ -80,8 +81,47 @@
     var n = raw.parts.length, ident = []; for (var i = 0; i < n; i++) ident.push(i);
     return { id: id || raw.id, area: area, sk: raw.sk, kind: 'order', q: raw.q, parts: raw.parts, okOrders: [ident].concat(raw.alt || []), h: raw.h, h2: raw.h2 || '', ex: raw.ex };
   }
+  /* ---- Money: coins (p n d q; UPPERCASE = tails side) ---- */
+  var COIN = { p: { name: 'penny', val: 1, mm: 19.05 }, n: { name: 'nickel', val: 5, mm: 21.21 }, d: { name: 'dime', val: 10, mm: 17.91 }, q: { name: 'quarter', val: 25, mm: 24.26 } };
+  var COIN_ORDER = ['q', 'd', 'n', 'p'];
+  function coinVal(c) { return COIN[c.toLowerCase()].val; }
+  function coinsTotal(str) { return str.split('').reduce(function (t, c) { return t + coinVal(c); }, 0); }
+  function countSteps(str) { var t = 0; return str.toLowerCase().split('').sort(function (a, b) { return coinVal(b) - coinVal(a); }).map(function (c) { t += coinVal(c); return t; }); }
+  function cents(n) { return n === 100 ? '100¢ ($1.00)' : n + '¢'; }
+  /* fewest coins for an amount with the allowed coins (greedy is exact for U.S. coins and these subsets) */
+  function greedyCoins(target, only) { var out = [], left = target; COIN_ORDER.filter(function (c) { return only.indexOf(c) >= 0; }).forEach(function (c) { while (left >= COIN[c].val) { out.push(c); left -= COIN[c].val; } }); return left === 0 ? out : null; }
+  function coinHTML(c, scale, anon) {
+    var lc = c.toLowerCase(), co = COIN[lc], side = c === lc ? 'heads' : 'tails', px = Math.round(co.mm * (scale || 3.4));
+    var src = typeof IMAGES !== 'undefined' && IMAGES['coin-' + co.name + '-' + side], alt = anon ? 'a coin' : co.name + ' (' + side + ')';
+    return src ? '<img class="coin" src="' + src + '" width="' + px + '" height="' + px + '" alt="' + alt + '">'
+      : '<span class="coin coin-fallback c-' + lc + '" style="width:' + px + 'px;height:' + px + 'px" role="img" aria-label="' + alt + '">' + (anon ? '' : co.val + '¢') + '</span>';
+  }
+  function coinRow(str, scale, labels, anon) {
+    return '<div class="coin-row">' + str.split('').map(function (c, i) { return '<figure class="coin-fig">' + coinHTML(c, scale, anon) + (labels && labels[i] ? '<figcaption>' + esc(labels[i]) + '</figcaption>' : '') + '</figure>'; }).join('') + '</div>';
+  }
+  function mkNum(raw, area, id) {
+    var ans = raw.ans != null ? raw.ans : coinsTotal(raw.coins), st = raw.coins ? countSteps(raw.coins) : null;
+    var ex = raw.ex || ('Put the coins in order, biggest value first, and count on: ' + st.map(function (x) { return x + '¢'; }).join(', ') + '. That is ' + cents(ans) + '.');
+    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'num', q: raw.q || 'How much money is this? Count the coins.', coins: raw.coins || '', ans: ans, unit: raw.unit != null ? raw.unit : '¢', h: raw.h, h2: raw.h2 || '', ex: ex };
+  }
+  function mkTray(raw, area, id) {
+    var only = raw.only ? raw.only.split('') : COIN_ORDER.slice(), best = greedyCoins(raw.target, only);
+    if (!best) throw new Error('tray target cannot be made: ' + (id || raw.id));
+    var q = raw.q || ('Make ' + cents(raw.target) + ' with coins.' + (raw.only ? ' Use only ' + only.map(function (c) { return COIN[c].name === 'penny' ? 'pennies' : COIN[c].name + 's'; }).join(' and ') + '.' : '') + (raw.fewest ? ' Use the FEWEST coins you can.' : ''));
+    var ex = raw.ex || ((raw.fewest ? 'The fewest coins: ' : 'One way: ') + best.map(function (c) { return COIN[c].name; }).join(', ') + ' = ' + cents(raw.target) + '.' + (raw.fewest ? ' Start with the biggest coin that fits, then the next biggest.' : ' Any coins that add up to exactly ' + cents(raw.target) + ' are correct.'));
+    return { id: id || raw.id, area: area, sk: raw.sk, kind: 'tray', q: q, target: raw.target, only: only, fewest: !!raw.fewest, best: best, h: raw.h, h2: raw.h2 || '', ex: ex };
+  }
+  function trayTotal(tray) { return (tray || []).reduce(function (t, c) { return t + COIN[c].val; }, 0); }
+  function trayOK(q, tray) {
+    if (!Array.isArray(tray) || !tray.length) return false;
+    if (tray.some(function (c) { return q.only.indexOf(c) < 0; })) return false;
+    if (trayTotal(tray) !== q.target) return false;
+    return !q.fewest || tray.length === q.best.length;
+  }
   /* Any non-passage item, by its kind */
   function mkAny(raw, area, mode, id) {
+    if (raw.k === 'num') return mkNum(raw, area, id);
+    if (raw.k === 'tray') return mkTray(raw, area, id);
     if (raw.k === 'mc') return mkMC(raw, area, id);
     if (raw.k === 'mc2') return mkMC2(raw, area, id);
     if (raw.k === 'fix') return mkFix(raw, area, id);
@@ -123,10 +163,10 @@
   function bank(name) { return (typeof window[name] !== 'undefined' && Array.isArray(window[name])) ? window[name] : []; }
   function prepPassage(p) { p.sents = []; p.paraOf = []; p.paras.forEach(function (para, pi) { para.forEach(function (s) { p.sents.push(s); p.paraOf.push(pi); }); }); return p; }
   /* Grade-3 additions: practice banks feed practice; *_CHECK banks feed Check My Skills only */
-  [['WORD_BANK', 'vowels', null], ['ADJ_PLUS', 'adjectives', 'adj'], ['ADV_PLUS', 'adverbs', 'adv'], ['VERB_APP', 'verbs', 'verb'], ['WS_BANK', 'workshop', null]].forEach(function (b) {
+  [['MONEY_BANK', 'money', null], ['WORD_BANK', 'vowels', null], ['ADJ_PLUS', 'adjectives', 'adj'], ['ADV_PLUS', 'adverbs', 'adv'], ['VERB_APP', 'verbs', 'verb'], ['WS_BANK', 'workshop', null]].forEach(function (b) {
     bank(b[0]).forEach(function (r) { addQ(mkAny(r, b[1], b[2])); });
   });
-  [['WORD_CHECK', 'vowels', null], ['ADJ_PLUS_CHECK', 'adjectives', 'adj'], ['ADV_PLUS_CHECK', 'adverbs', 'adv'], ['VERB_APP_CHECK', 'verbs', 'verb'], ['WS_CHECK', 'workshop', null]].forEach(function (b) {
+  [['MONEY_CHECK', 'money', null], ['WORD_CHECK', 'vowels', null], ['ADJ_PLUS_CHECK', 'adjectives', 'adj'], ['ADV_PLUS_CHECK', 'adverbs', 'adv'], ['VERB_APP_CHECK', 'verbs', 'verb'], ['WS_CHECK', 'workshop', null]].forEach(function (b) {
     bank(b[0]).forEach(function (r) { addCheck(mkAny(r, b[1], b[2])); });
   });
   bank('RD_MAIN').forEach(function (p) { prepPassage(p); p.mini = true; p.qs.forEach(function (r) { addQ(mkReading(r, p)); }); });
@@ -381,6 +421,8 @@
       if (q.kind === 'fix') { if (typeof saved.tok === 'number') QS.tok = saved.tok; if (typeof saved.choice === 'number') QS.choice = saved.choice; }
       if (q.kind === 'order' && Array.isArray(saved.order)) QS.order = saved.order.slice();
     }
+    if (q.kind === 'num') QS.num = saved && saved.num != null ? String(saved.num) : '';
+    if (q.kind === 'tray') QS.tray = saved && Array.isArray(saved.tray) ? saved.tray.slice() : [];
     if (q.kind === 'order') { QS.pool = shuffle(q.parts.map(function (_, i) { return i; })); if (QS.pool.every(function (x, i) { return x === i; }) && QS.pool.length > 1) QS.pool.reverse(); }
     return QS;
   }
@@ -394,6 +436,8 @@
     if (q.kind === 'mc2') return QS.choice !== null && QS.choice2 !== null;
     if (q.kind === 'fix') return QS.tok !== null && QS.choice !== null;
     if (q.kind === 'order') return QS.order.length === q.parts.length;
+    if (q.kind === 'num') return QS.num !== '';
+    if (q.kind === 'tray') return QS.tray.length > 0;
     return false;
   }
   function saveAnswer(QS) {
@@ -405,6 +449,8 @@
     if (q.kind === 'mc2') return { choice: QS.choice, choice2: QS.choice2 };
     if (q.kind === 'fix') return { tok: QS.tok, choice: QS.choice };
     if (q.kind === 'order') return { order: QS.order.slice() };
+    if (q.kind === 'num') return { num: QS.num };
+    if (q.kind === 'tray') return { tray: QS.tray.slice() };
   }
   function sameOrder(a, b) { return a.length === b.length && a.every(function (x, i) { return x === b[i]; }); }
 
@@ -422,6 +468,8 @@
     if (q.kind === 'mc2') return ans.choice === q.a && ans.choice2 === q.a2;
     if (q.kind === 'fix') return ans.tok === q.wrong && ans.choice === q.a;
     if (q.kind === 'order') return Array.isArray(ans.order) && q.okOrders.some(function (o) { return sameOrder(o, ans.order); });
+    if (q.kind === 'num') return ans.num != null && ans.num !== '' && Number(ans.num) === q.ans;
+    if (q.kind === 'tray') return trayOK(q, ans.tray);
     return false;
   }
 
@@ -510,6 +558,7 @@
 
   function evaluate(QS) {
     var q = QS.q, msgs = [], marks = {};
+    if ((q.kind === 'num' || q.kind === 'tray') && answered(QS)) return evaluateMoney(QS);
     if (!answered(QS)) return { empty: true, msgs: [{ t: 'fix', x: q.kind === 'sort' ? 'Choose a group for every word first.' : 'Choose an answer first.' }] };
     if (q.kind === 'select') {
       var phaseNoun = QS.phase === 'noun';
@@ -584,6 +633,25 @@
       return { correct: good2, msgs: msgs, marks: marks };
     }
   }
+  function evaluateMoney(QS) {
+    var q = QS.q, msgs = [];
+    if (q.kind === 'num') {
+      var n = Number(QS.num), ok = n === q.ans;
+      if (ok) msgs.push({ t: 'good', x: q.ex });
+      else if (q.coins && n === q.coins.length) msgs.push({ t: 'fix', x: 'You counted how many coins there are. Count what the coins are WORTH instead. ' + q.h });
+      else if (q.coins && /[dn]/i.test(q.coins) && n === q.coins.toLowerCase().split('').reduce(function (t, c) { return t + (c === 'd' ? 5 : c === 'n' ? 10 : COIN[c].val); }, 0)) msgs.push({ t: 'fix', x: 'Check the dimes and nickels. A dime is worth 10¢ and a nickel is worth 5¢, even though the dime is smaller.' });
+      else msgs.push({ t: 'fix', x: (q.coins ? 'Not quite. Put the coins in order, biggest value first, and count on again. ' : 'Not quite. ') + q.h });
+      return { correct: ok, msgs: msgs, marks: {} };
+    }
+    var t = trayTotal(QS.tray), bad = QS.tray.filter(function (c) { return q.only.indexOf(c) < 0; });
+    var good = trayOK(q, QS.tray);
+    if (good) msgs.push({ t: 'good', x: q.ex });
+    else if (bad.length) msgs.push({ t: 'fix', x: 'For this one, use only ' + q.only.map(function (c) { return COIN[c].name === 'penny' ? 'pennies' : COIN[c].name + 's'; }).join(' and ') + '. Tap a coin in the tray to take it out.' });
+    else if (t < q.target) msgs.push({ t: 'fix', x: 'Your coins make ' + t + '¢. You need ' + (q.target - t) + '¢ more.' });
+    else if (t > q.target) msgs.push({ t: 'fix', x: 'Your coins make ' + t + '¢. That is ' + (t - q.target) + '¢ too much. Tap a coin in the tray to take it out.' });
+    else msgs.push({ t: 'fix', x: 'Your coins make the right amount! Now use FEWER coins. Trade smaller coins for a bigger one where you can.' });
+    return { correct: good, msgs: msgs, marks: {} };
+  }
   /* Hint 2 fallback: a focused strategy for the skill. It never removes a choice or gives the answer. */
   var STRATEGY = {
     'verbs.helpers': 'Say the family chant from the start: am, is, are, was, were, be, being, been; have, has, had; do, does, did; can, could, may, might, must, shall, should, will, would. Stop at the blank.',
@@ -600,7 +668,10 @@
     'reading.vocab': 'Reread the sentence with the word and the sentence after it. Try each choice in place of the word. Which keeps the meaning?',
     'reading.evidence': 'Evidence is the sentence that PROVES the answer. Ask: if I read only this sentence, would it show the answer?',
     'reading.theme': 'A theme is the lesson the character learns. Ask: how did the character change, and what helped them change?',
-    'reading.problem': 'Ask: what goes wrong for the main character near the beginning? The solution is how it gets fixed.'
+    'reading.problem': 'Ask: what goes wrong for the main character near the beginning? The solution is how it gets fixed.',
+    'money.names': 'Use three clues: color (copper or silver), size (small or big), and edge (smooth or bumpy).',
+    'money.values': 'Name the coin first. Then remember: penny 1¢, nickel 5¢, dime 10¢, quarter 25¢.',
+    'money.dollar': 'Remember: 100¢ is one dollar. Count by 25s for quarters, 10s for dimes, and 5s for nickels.'
   };
   function strategyHint(q) {
     return STRATEGY[q.area + '.' + q.sk] || 'Go back to the lesson rule. Try each choice in the sentence and ask which one follows the rule and makes sense.';
@@ -638,6 +709,8 @@
       if (q.mode === 'adj') return 'Find each noun. Ask: what kind, which one, or how many?';
     }
     if (q.kind === 'ev') return 'Read the question. Then look back in the text for the sentence that proves it.';
+    if (q.kind === 'num') return 'Put the coins in order, biggest value first. Then count on, one coin at a time.';
+    if (q.kind === 'tray') return 'Start with the biggest coin that is not more than the amount. Watch the total.';
     if (q.passage) return 'Read the question. Then look back in the text before you choose.';
     return 'Read every choice before you pick.';
   }
@@ -651,6 +724,7 @@
     star: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5l5.6 12.2 13.4 1.4-10 9 2.9 13.1L24 34l-11.9 6.7L15 27.6l-10-9 13.4-1.4z" fill="#f4b41a" stroke="#13294b" stroke-width="2"/></svg>',
     cleats: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 30c0-4 2-12 8-12h6l4 6c6 1 18 2 18 8v2H6z" fill="#0e7c7b"/><path d="M6 34h36" stroke="#13294b" stroke-width="3"/><path d="M10 38v3M18 38v3M26 38v3M34 38v3" stroke="#13294b" stroke-width="3"/><path d="M30 12l8-4M32 18l9-2M28 6l4-3" stroke="#f4b41a" stroke-width="2.5" stroke-linecap="round"/></svg>',
     abc: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="8" width="40" height="32" rx="8" fill="#0e7c7b"/><text x="24" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#fff" font-family="Verdana, sans-serif">a e i</text></svg>',
+    coin: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="20" cy="26" r="15" fill="#c9cdd2" stroke="#13294b" stroke-width="2.5"/><circle cx="30" cy="20" r="13" fill="#c07a3c" stroke="#13294b" stroke-width="2.5"/><text x="30" y="25" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="Verdana, sans-serif">1¢</text></svg>',
     pencil: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="30" width="36" height="8" rx="3" fill="#13294b"/><path d="M14 30L34 8l6 6-20 22z" fill="#f4b41a" stroke="#13294b" stroke-width="2.5"/><path d="M34 8l6 6" stroke="#d1342f" stroke-width="4"/></svg>',
     book: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 10c6-2 12-2 18 2v28c-6-4-12-4-18-2z" fill="#fff" stroke="#13294b" stroke-width="2.5"/><path d="M42 10c-6-2-12-2-18 2v28c6-4 12-4 18-2z" fill="#f4b41a" stroke="#13294b" stroke-width="2.5"/></svg>'
   };
@@ -823,14 +897,25 @@
       main += sayBtn(plainSentence(q), 'Read the sentence');
       if (QS.done && !test && (q.mode === 'adj' || q.mode === 'adv')) main += linkSummary(q, q.ans);
     } else if (q.kind === 'mc') {
-      main += '<p class="prompt big">' + nl(q.q) + '</p>' + sayBtn(q.q.replace(/\n/g, ' ') + ' ' + q.c.join('. '), 'Read the question');
-      main += '<div class="choices" role="group" aria-label="Answer choices">';
+      main += '<p class="prompt big">' + nl(q.q) + '</p>' + sayBtn(q.q.replace(/\n/g, ' ') + (q.cc ? '' : ' ' + q.c.join('. ')), 'Read the question');
+      if (q.coins) main += coinRow(q.coins, 6, null, q.sk === 'names');
+      main += '<div class="choices' + (q.cc ? ' coin-choices' : '') + '" role="group" aria-label="Answer choices">';
       q.c.forEach(function (c, i) {
         var on = QS.choice === i, mk = QS.fb && QS.fb.marks && !test ? QS.fb.marks[i] : null;
-        main += '<button type="button" class="choice' + (on ? ' on' : '') + (mk ? ' m-' + mk : '') + '" data-act="choice" data-i="' + i + '" data-fkey="ch' + i + '" aria-pressed="' + (on ? 'true' : 'false') + '"' + (QS.done ? ' disabled' : '') + '><span class="ch-letter">' + 'ABCD'.charAt(i) + '</span> ' + esc(c) + '</button>';
+        main += '<button type="button" class="choice' + (on ? ' on' : '') + (mk ? ' m-' + mk : '') + '" data-act="choice" data-i="' + i + '" data-fkey="ch' + i + '" aria-pressed="' + (on ? 'true' : 'false') + '"' + (QS.done ? ' disabled' : '') + '><span class="ch-letter">' + 'ABCD'.charAt(i) + '</span> ' + (q.cc ? coinHTML(c, 4.2, true) : esc(c)) + '</button>';
       });
       main += '</div>';
       if (q.say && canSpeak) main += '<p class="muted small">Tip: tap “Read the question” to hear the words.</p>';
+    } else if (q.kind === 'num') {
+      main += '<p class="prompt big">' + nl(q.q) + '</p>' + sayBtn(q.q, 'Read the question');
+      if (q.coins) main += coinRow(q.coins, 3.6);
+      main += '<div class="num-entry"><span class="num-box" aria-live="polite" aria-label="Your answer">' + (QS.num ? esc(QS.num) : '<span class="muted">?</span>') + '</span>' + (q.unit ? '<span class="num-unit">' + esc(q.unit) + '</span>' : '') + '</div>';
+      if (!QS.done) main += '<div class="keypad" role="group" aria-label="Number pad">' + ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0'].map(function (k) { return '<button type="button" class="key" data-act="nkey" data-k="' + k + '" data-fkey="nk' + k + '" aria-label="' + (k === 'back' ? 'Erase' : k) + '">' + (k === 'back' ? '\u232B' : k) + '</button>'; }).join('') + '</div>';
+    } else if (q.kind === 'tray') {
+      main += '<p class="prompt big">' + nl(q.q) + '</p>' + sayBtn(q.q, 'Read the question');
+      if (!QS.done) main += '<p class="small">Tap a coin to add it:</p><div class="coin-bank" role="group" aria-label="Coins to add">' + q.only.map(function (c) { return '<button type="button" class="coin-btn" data-act="tadd" data-c="' + c + '" data-fkey="ta' + c + '" aria-label="Add a ' + COIN[c].name + '">' + coinHTML(c, 3.4) + '</button>'; }).join('') + '</div>';
+      main += '<div class="tray" aria-label="Your coins">' + (QS.tray.length ? QS.tray.map(function (c, i) { return '<button type="button" class="coin-btn in-tray" data-act="trem" data-i="' + i + '" data-fkey="tr' + i + '" aria-label="' + COIN[c].name + ', tap to take out"' + (QS.done ? ' disabled' : '') + '>' + coinHTML(c, 2.8) + '</button>'; }).join('') : '<span class="muted">Your tray is empty.</span>') + '</div>';
+      main += '<p class="small">' + QS.tray.length + ' coin' + (QS.tray.length === 1 ? '' : 's') + ' in the tray' + ((isGuidedCtx(QS.ctx) || QS.done) && !test ? ' \u00B7 <b>Total so far: ' + trayTotal(QS.tray) + '¢</b>' : '') + '</p>';
     } else if (q.kind === 'sort') {
       main += '<p class="prompt big">' + esc(q.q) + '</p><div class="sort">';
       q.items.forEach(function (it, i) {
@@ -924,6 +1009,9 @@
     else if (act === 'ftok' && !QS.done) { QS.tok = QS.tok === i ? null : i; QS.fb = null; }
     else if (act === 'oadd' && !QS.done) { if (QS.order.indexOf(i) < 0) QS.order.push(i); QS.fb = null; }
     else if (act === 'orem' && !QS.done) { QS.order.splice(i, 1); QS.fb = null; }
+    else if (act === 'nkey' && !QS.done) { var k = el.getAttribute('data-k'); QS.num = k === 'back' ? QS.num.slice(0, -1) : (QS.num.length < 4 ? (QS.num === '0' ? k : QS.num + k) : QS.num); QS.fb = null; }
+    else if (act === 'tadd' && !QS.done) { if (QS.tray.length < 30) QS.tray.push(el.getAttribute('data-c')); QS.fb = null; }
+    else if (act === 'trem' && !QS.done) { QS.tray.splice(i, 1); QS.fb = null; }
     else if (act === 'hint' && !QS.done) { QS.hint = Math.min(2, QS.hint + 1); }
     else if (act === 'check' && !QS.done) {
       if (QS.ctx === 'test') return;
@@ -948,6 +1036,8 @@
       if (q.kind === 'mc2') { QS.choice = q.a; QS.choice2 = q.a2; marks.c1 = {}; marks.c2 = {}; marks.c1[q.a] = 'ok'; marks.c2[q.a2] = 'ok'; }
       if (q.kind === 'fix') { QS.tok = q.wrong; QS.choice = q.a; marks.tok = {}; marks.c1 = {}; marks.tok[q.wrong] = 'ok'; marks.c1[q.a] = 'ok'; }
       if (q.kind === 'order') { QS.order = q.okOrders[0].slice(); }
+      if (q.kind === 'num') { QS.num = String(q.ans); }
+      if (q.kind === 'tray') { QS.tray = q.best.slice(); }
       QS.fb = { msgs: [{ t: 'info', x: 'Here is the answer. ' + q.ex }], marks: marks };
       questionDone(QS);
     }
@@ -1074,7 +1164,10 @@
     h += '<section class="card lesson-card"><h1 id="scr-title" tabindex="-1">' + esc(title) + '</h1>';
     if (st.img) h += '<div class="lesson-pic-wrap">' + pic(st.img, 'lesson-pic') + '</div>';
     var canNext = true;
-    if (st.t === 'explain') {
+    if (st.t === 'coins') {
+      st.rows.forEach(function (r) { h += coinRow(r.coins, 4.4, r.labels); });
+      h += '<div class="explain">' + st.text.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') + '</div>' + sayBtn(st.text.join(' '));
+    } else if (st.t === 'explain') {
       if (st.tiles) h += '<div class="tiles">' + st.tiles.map(function (t) { return canSpeak ? '<button type="button" class="tile" data-act="say" data-text="' + esc(t) + '">' + esc(t) + '</button>' : '<span class="tile">' + esc(t) + '</span>'; }).join('') + '</div>';
       h += '<div class="explain">' + st.text.map(function (x) { return '<p>' + esc(x) + '</p>'; }).join('') + '</div>';
       if (st.box) h += '<div class="worked-box"><span class="tag">Worked example</span>' + st.box.map(function (x) { return '<p>' + nl(x) + '</p>'; }).join('') + '</div>';
@@ -1295,6 +1388,8 @@
     if (q.kind === 'mc2') return (g.choice != null ? q.c[g.choice] : '(no revision chosen)') + ' / Why: ' + (g.choice2 != null ? q.c2[g.choice2] : '(no reason chosen)');
     if (q.kind === 'fix') return (g.tok != null ? 'Tapped \u201c' + q.toks[g.tok].w + '\u201d' : 'No word tapped') + (g.choice != null ? ', chose \u201c' + q.c[g.choice] + '\u201d' : '');
     if (q.kind === 'order') return g.order && g.order.length ? g.order.map(function (i) { return q.parts[i]; }).join(' ') : 'No answer';
+    if (q.kind === 'num') return g.num != null && g.num !== '' ? g.num + q.unit : 'No answer';
+    if (q.kind === 'tray') return g.tray && g.tray.length ? g.tray.map(function (c) { return COIN[c].name; }).join(', ') + ' = ' + trayTotal(g.tray) + '¢' : 'No answer';
     return '';
   }
   function correctText(q) {
@@ -1305,6 +1400,8 @@
     if (q.kind === 'mc2') return q.c[q.a] + ' / Why: ' + q.c2[q.a2];
     if (q.kind === 'fix') return '\u201c' + q.toks[q.wrong].w + '\u201d should be \u201c' + q.c[q.a] + '\u201d';
     if (q.kind === 'order') return q.okOrders[0].map(function (i) { return q.parts[i]; }).join(' ');
+    if (q.kind === 'num') return q.ans + q.unit;
+    if (q.kind === 'tray') return (q.fewest ? '' : 'For example: ') + q.best.map(function (c) { return COIN[c].name; }).join(', ') + ' = ' + cents(q.target);
   }
   function qLabel(q) {
     if (q.kind === 'select') return promptFor(q) + '  “' + plainSentence(q) + '”';
@@ -1724,7 +1821,7 @@
       case 'mSubmit': return submitMastery();
       case 'quitTest': P.resume = null; saveP(); return go({ v: 'area', a: view.a });
       // question actions
-      case 'tok': case 'choice': case 'choice2': case 'ftok': case 'oadd': case 'orem': case 'sort': case 'ev': case 'hint': case 'check': case 'showme':
+      case 'tok': case 'choice': case 'choice2': case 'ftok': case 'oadd': case 'orem': case 'nkey': case 'tadd': case 'trem': case 'sort': case 'ev': case 'hint': case 'check': case 'showme':
         return qAct(act, el);
     }
   });

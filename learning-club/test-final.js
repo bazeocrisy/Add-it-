@@ -8,7 +8,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   const shown = async () => p.evaluate(() => [...document.querySelectorAll('img.pic')].map(i => Object.keys(IMAGES).find(k => IMAGES[k] === i.getAttribute('src'))));
   const used = new Set();
   const expect = async (label, key) => { const s = await shown(); s.forEach(k => used.add(k)); ok('image: ' + label + ' shows "' + key + '"', s.includes(key), s.join(',')); };
-  ok('7 images embedded', await p.evaluate(() => Object.keys(IMAGES).length === 7), await p.evaluate(() => Object.keys(IMAGES).join(',')));
+  ok('7 illustrations embedded (plus coin images)', await p.evaluate(() => ['home', 'verbs', 'nouns', 'adjectives', 'adverbs', 'vowels', 'reading'].every(k => IMAGES[k]) && ['penny', 'nickel', 'dime', 'quarter'].every(c => IMAGES['coin-' + c + '-heads'] && IMAGES['coin-' + c + '-tails'])), await p.evaluate(() => Object.keys(IMAGES).join(',')));
   await expect('home welcome', 'home');
   ok('home does NOT use the swinging image', !(await shown()).includes('verbs'));
   for (const [area, key] of [['verbs', 'verbs'], ['nouns', 'nouns'], ['adjectives', 'adjectives'], ['adverbs', 'adverbs'], ['vowels', 'vowels'], ['reading', 'reading']]) {

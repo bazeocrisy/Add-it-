@@ -4,8 +4,8 @@ here = pathlib.Path(__file__).resolve().parent
 t = (here / 'template.html').read_text()
 # Illustrations: learning-club/images/*.webp embedded as data URIs (works offline)
 imgs = sorted((here / 'images').glob('*.webp'))
-images_js = 'var IMAGES = {\n' + ',\n'.join("  %s: 'data:image/webp;base64,%s'" % (p.stem, base64.b64encode(p.read_bytes()).decode()) for p in imgs) + '\n};\n'
-content_js = images_js + (here / 'content.js').read_text()
+images_js = 'var IMAGES = {\n' + ',\n'.join("  '%s': 'data:image/webp;base64,%s'" % (p.stem, base64.b64encode(p.read_bytes()).decode()) for p in imgs) + '\n};\n'
+content_js = images_js + (here / 'content.js').read_text() + '\n' + (here / 'money.js').read_text()
 pdf = (here / 'verb-guide.pdf').read_bytes()
 b64 = base64.b64encode(pdf).decode()
 b64 = '\n'.join(b64[i:i+120] for i in range(0, len(b64), 120))

@@ -17,3 +17,4 @@ Checks (need Node + Playwright):
 - `node learning-club/test-checks.js`: Check My Skills banks are separate from lessons/practice/mastery, leak-free before submission, and logged correctly
 - `node learning-club/test-final.js`: all 7 images in their intended places, daily plan, Lessons E/G recommended before mastery, no duplicate navigation
 - `node learning-club/test-g3.js`: grade-3 corrections: every skill taught before practice/check, all lessons playable, exact grading of new response types, Ready Check skip, history migration, hint rules
+- Money area sources: `learning-club/money.js` (lessons, practice, checks) and `learning-club/images/coin-*.webp`
