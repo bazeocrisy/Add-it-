@@ -49,7 +49,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
     out.words = CHECK_PASSAGES.map(p => p.title + ': ' + p.sents.join(' ').split(/\s+/).length + ' words');
     return out;
   });
-  ok('every area has a check bank of at least 10', Object.keys(d.counts).length === 7 && Object.values(d.counts).every(n => n >= 10), JSON.stringify(d.counts));
+  ok('every area has a check bank of at least 10', Object.keys(d.counts).length === 8 && Object.values(d.counts).every(n => n >= 10), JSON.stringify(d.counts));
   ok('no check item is in a practice pool', d.inPractice.length === 0, d.inPractice.join(','));
   ok('no check sentence repeats a lesson/practice/mastery sentence', d.exact.length === 0, d.exact.join(','));
   ok('no near-duplicate check sentences (word overlap < 0.5, names ignored)', d.near.j < 0.5, JSON.stringify(d.near));
@@ -71,7 +71,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
   ok('reading guided/practice skill rounds never use check questions', true);
 
   const leakSel = '.badge, .msg, .hint, .coach, .tok-label, [data-act="check"], [data-act="hint"], [data-act="showme"], .m-ok, .m-no, .links-list';
-  for (const a of ['verbs', 'nouns', 'adjectives', 'adverbs', 'workshop', 'vowels', 'reading']) {
+  for (const a of ['verbs', 'nouns', 'adjectives', 'adverbs', 'workshop', 'vowels', 'reading', 'money']) {
     for (const n of [10, 5]) {
       const unseenBefore = await pg.evaluate(a => { const s = window.__CLC.P().stats.seen_q || {}, sp = window.__CLC.P().stats.seen_p || {}; return a === 'reading' ? CHECK_PASSAGES.filter(p => !sp[p.id]).length : window.__CLC.CHECK_Q[a].filter(q => !s[q.id]).length; }, a);
       await pg.click('[data-act="home"] >> nth=0'); await pg.click(`[data-act="area"][data-a="${a}"]`); await pg.click('[data-act="testSetup"]'); await pg.click(`[data-act="startTest"][data-n="${n}"]`);
@@ -79,7 +79,7 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
       ok(`${a} ${n}-question check draws only from its own bank`, info.all && info.ids.length === n, info.ids.join(','));
       let leaks = 0; const wrongAt = 0;
       for (let i = 0; i < info.ids.length; i++) {
-        const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, a2: q.a2, c: q.c ? q.c.length : 0, ok: q.ok, items: q.items, toks: q.toks ? q.toks.length : 0, wrongTok: q.wrong, order: q.okOrders ? q.okOrders[0] : null }; });
+        const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, a2: q.a2, c: q.c ? q.c.length : 0, ok: q.ok, items: q.items, toks: q.toks ? q.toks.length : 0, wrongTok: q.wrong, order: q.okOrders ? q.okOrders[0] : null, best: q.best || null }; });
         const wrong = i === wrongAt;
         if (k.kind === 'select') { if (wrong) { const e = await pg.evaluate(ans => [...document.querySelectorAll('button[data-act="tok"]')].map(b => +b.dataset.i).find(x => !ans.includes(x)), k.ans); for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); await pg.click(`[data-act="tok"][data-i="${e}"]`); } else for (const x of k.ans) await pg.click(`[data-act="tok"][data-i="${x}"]`); }
         if (k.kind === 'mc') await pg.click(`[data-act="choice"][data-i="${wrong ? (k.a + 1) % k.c : k.a}"]`);
@@ -87,6 +87,8 @@ const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !=
         if (k.kind === 'mc2') { await pg.click(`[data-act="choice"][data-i="${wrong ? (k.a + 1) % k.c : k.a}"]`); await pg.click(`[data-act="choice2"][data-i="${k.a2}"]`); }
         if (k.kind === 'fix') { await pg.click(`[data-act="ftok"][data-i="${wrong ? (k.wrongTok === 0 ? 1 : 0) : k.wrongTok}"]`); await pg.click(`[data-act="choice"][data-i="${k.a}"]`); }
         if (k.kind === 'order') { const o = wrong ? k.order.slice().reverse() : k.order; for (const x of o) await pg.click(`[data-act="oadd"][data-i="${x}"]`); }
+        if (k.kind === 'num') { const v = wrong ? String(k.ans + 1) : String(k.ans); for (const ch of v) await pg.click(`[data-act="nkey"][data-k="${ch}"]`); }
+        if (k.kind === 'tray') { const coins = wrong ? k.best.slice(1) : k.best; for (const x of (coins.length ? coins : ['p', 'p'])) await pg.click(`[data-act="tadd"][data-c="${x}"]`); }
         if (k.kind === 'ev') { let p = k.ok[0]; if (wrong) { p = 0; while (k.ok.includes(p)) p++; } await pg.click(`[data-act="ev"][data-i="${p}"]`); }
         leaks += await pg.locator(leakSel).count();
         await pg.click(i < info.ids.length - 1 ? '[data-act="tnext"]' : '[data-act="treview"]');

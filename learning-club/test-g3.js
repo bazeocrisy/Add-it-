@@ -5,13 +5,15 @@ const FILE = 'file://' + path.resolve(__dirname, '../chriss-learning-club.html')
 const R = []; const ok = (n, c, i) => R.push((c ? 'PASS ' : 'FAIL ') + n + (i !== undefined ? '  (' + i + ')' : ''));
 async function answer(pg, wrongFirst) {
   for (let g = 0; g < 5; g++) {
-    const st = await pg.evaluate(() => { const v = window.__CLC.view(), QS = v.qs; if (!QS || QS.done) return null; const q = QS.q; let ans = q.ans; if (QS.phase === 'noun') { ans = []; q.ans.forEach(i => { const t = q.toks[i].to; if (!ans.includes(t)) ans.push(t); }); } return { kind: q.kind, ans, a: q.a, a2: q.a2, ok: q.ok, items: q.items, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null, sel: QS.sel, cur: QS.order }; });
+    const st = await pg.evaluate(() => { const v = window.__CLC.view(), QS = v.qs; if (!QS || QS.done) return null; const q = QS.q; let ans = q.ans; if (QS.phase === 'noun') { ans = []; q.ans.forEach(i => { const t = q.toks[i].to; if (!ans.includes(t)) ans.push(t); }); } return { kind: q.kind, ans, a: q.a, a2: q.a2, ok: q.ok, items: q.items, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null, sel: QS.sel, cur: QS.order, num: q.kind === 'num' ? String(q.ans) : null, best: q.best || null }; });
     if (!st) return;
     if (st.kind === 'select') { for (const i of st.sel) if (!st.ans.includes(i)) await pg.click(`[data-act="tok"][data-i="${i}"]`); for (const i of st.ans) if (!st.sel.includes(i)) await pg.click(`[data-act="tok"][data-i="${i}"]`); }
     if (st.kind === 'mc') await pg.click(`[data-act="choice"][data-i="${st.a}"]`);
     if (st.kind === 'mc2') { await pg.click(`[data-act="choice"][data-i="${st.a}"]`); await pg.click(`[data-act="choice2"][data-i="${st.a2}"]`); }
     if (st.kind === 'fix') { const cur = await pg.evaluate(() => window.__CLC.view().qs.tok); if (cur !== st.wrong) await pg.click(`[data-act="ftok"][data-i="${st.wrong}"]`); await pg.click(`[data-act="choice"][data-i="${st.a}"]`); }
     if (st.kind === 'order') { while ((await pg.evaluate(() => window.__CLC.view().qs.order.length)) > 0) await pg.click('[data-act="orem"][data-i="0"]'); for (const i of st.order) await pg.click(`[data-act="oadd"][data-i="${i}"]`); }
+    if (st.kind === 'num') { while ((await pg.evaluate(() => window.__CLC.view().qs.num.length)) > 0) await pg.click('[data-act="nkey"][data-k="back"]'); for (const ch of st.num) await pg.click(`[data-act="nkey"][data-k="${ch}"]`); }
+    if (st.kind === 'tray') { while ((await pg.evaluate(() => window.__CLC.view().qs.tray.length)) > 0) await pg.click('[data-act="trem"][data-i="0"]'); for (const c of st.best) await pg.click(`[data-act="tadd"][data-c="${c}"]`); }
     if (st.kind === 'sort') for (let i = 0; i < st.items.length; i++) await pg.click(`[data-act="sort"][data-i="${i}"][data-b="${st.items[i][1]}"]`);
     if (st.kind === 'ev') await pg.click(`[data-act="ev"][data-i="${st.ok[0]}"]`);
     await pg.click('[data-act="check"]');
@@ -118,7 +120,7 @@ async function answer(pg, wrongFirst) {
   await p5.addInitScript(() => { if (!sessionStorage.getItem('seeded')) { sessionStorage.setItem('seeded', '1'); localStorage.setItem('chrissLearningClub.v1', JSON.stringify({ v: 1, nick: 'Chris', lessons: { 'reading:A': true }, stats: { p3q5: { n: 2, ind: 1, help: 1, rev: 0 }, p1q1: { n: 1, ind: 1, help: 0, rev: 0 }, seen_q: { cp2q1: 1 } }, skills: { 'reading.main': { hist: ['ind', 'ind', 'help'], ind: 2, help: 1, rev: 0, chkRight: 1, chkTotal: 2, lastChk: { right: 1, total: 2 } } }, checks: [{ a: 'reading', date: '2026-11-20T10:00:00Z', n: 5, score: 4, missed: ['main'] }] })); } });
   await p5.goto(FILE);
   const mig = await p5.evaluate(() => { const P = window.__CLC.P(); return { v: P.v, legacy: P.skills['reading.legacy_main'], main: P.skills['reading.main'], theme: P.skills['reading.theme'], missed: P.checks[0].missed, legacyFlag: P.checks[0].legacy }; });
-  ok('migration keeps old main-idea record as legacy mixed comprehension', mig.v === 2 && mig.legacy && mig.legacy.ind === 2 && mig.legacy.help === 1 && mig.legacy.chkTotal === 2 && /Legacy mixed comprehension/.test(mig.legacy.legacy), JSON.stringify(mig.legacy));
+  ok('migration keeps old main-idea record as legacy mixed comprehension', mig.v === 3 && mig.legacy && mig.legacy.ind === 2 && mig.legacy.help === 1 && mig.legacy.chkTotal === 2 && /Legacy mixed comprehension/.test(mig.legacy.legacy), JSON.stringify(mig.legacy));
   ok('migration rebuilds main idea only from genuine main-idea questions', mig.main.ind === 1 && mig.main.help === 0 && mig.main.hist.length === 0 && mig.main.chkTotal === 0, JSON.stringify(mig.main));
   ok('migration moves theme answers to Theme', mig.theme && mig.theme.ind === 1 && mig.theme.help === 1, JSON.stringify(mig.theme));
   ok('old check history relabeled, not deleted', mig.missed.join() === 'legacy_main' && mig.legacyFlag === true);
@@ -149,6 +151,49 @@ async function answer(pg, wrongFirst) {
   const split = await p6.locator('.mem-split').count() ? await p6.textContent('.mem-split') : '';
   ok('verb check reports helper-word memory separately from finding verbs in sentences', /Finding verbs in sentences/.test(split) && /Helper-word memory \(recall, reported separately\)/.test(split), split);
   await c6.close();
+  // ---- Money area ----
+  const c7 = await b.newContext({ viewport: { width: 390, height: 844 } }); const p7 = await c7.newPage(); p7.on('pageerror', e => errs.push(e.message)); await p7.goto(FILE);
+  const mg = await p7.evaluate(() => {
+    const C = window.__CLC, out = { bad: [] }, Q = C.QBY;
+    const mq = Object.values(Q).filter(q => q.area === 'money');
+    const val = { p: 1, n: 5, d: 10, q: 25 };
+    mq.filter(q => q.kind === 'num' && q.coins && !q.story).forEach(q => { const sum = q.coins.toLowerCase().split('').reduce((t, c) => t + val[c], 0); if (sum !== q.ans) out.bad.push('num key ' + q.id); });
+    const tray = Q['mo37']; // 30 cents, any coins
+    [['d','d','d'], ['q','n'], ['q','p','p','p','p','p'], ['n','n','n','n','n','n']].forEach(t => { if (!C.gradeOnly(tray, { tray: t })) out.bad.push('tray any-combo rejected ' + t.join('')); });
+    if (C.gradeOnly(tray, { tray: ['q'] })) out.bad.push('tray short accepted');
+    if (C.gradeOnly(tray, { tray: ['q', 'd'] })) out.bad.push('tray over accepted');
+    const few = Q['mo42']; if (!C.gradeOnly(few, { tray: ['q', 'n'] }) || C.gradeOnly(few, { tray: ['d', 'd', 'd'] })) out.bad.push('fewest rule');
+    const only = Q['mo41']; if (C.gradeOnly(only, { tray: ['q', 'q'] }) || !C.gradeOnly(only, { tray: ['d', 'd', 'd', 'd', 'n', 'n'] })) out.bad.push('only rule');
+    if (!C.gradeOnly(Q['mo13'], { num: '5' }) || C.gradeOnly(Q['mo13'], { num: '50' })) out.bad.push('num exact');
+    // check items must not repeat a lesson/practice coin set or tray target
+    const ms = s => s.toLowerCase().split('').sort().join('');
+    const seenSets = new Set(), seenTargets = new Set();
+    LESSONS.money.forEach((l, li) => l.steps.forEach((s, si) => { if (s.q && s.q.coins && s.q.k === 'num') seenSets.add(ms(s.q.coins)); if (s.q && s.q.k === 'tray') seenTargets.add(s.q.target + '|' + (s.q.only || '') + '|' + !!s.q.fewest); }));
+    (C.AREA_Q.money || []).forEach(q => { if (q.kind === 'num' && q.coins) seenSets.add(ms(q.coins)); if (q.kind === 'tray') seenTargets.add(q.target + '|' + (q.only.length < 4 ? q.only.join('') : '') + '|' + q.fewest); });
+    out.dupCheck = (C.CHECK_Q.money || []).filter(q => (q.kind === 'num' && q.coins && seenSets.has(ms(q.coins))) || (q.kind === 'tray' && seenTargets.has(q.target + '|' + (q.only.length < 4 ? q.only.join('') : '') + '|' + q.fewest))).map(q => q.id);
+    out.skills = SKILLS.money.map(s => s.id + ':' + (C.AREA_Q.money || []).filter(q => q.sk === s.id).length + '/' + (C.CHECK_Q.money || []).filter(q => q.sk === s.id).length);
+    return out;
+  });
+  ok('money: answers computed from coins; tray accepts any correct combination; only/fewest rules enforced; number answers exact', mg.bad.length === 0, mg.bad.join('; '));
+  ok('money: no check item repeats a lesson or practice coin set or target', mg.dupCheck.length === 0, mg.dupCheck.join(','));
+  console.log('money practice/check per skill:', mg.skills.join('  '));
+  // feedback for common counting mistakes
+  const fb = await p7.evaluate(() => { const C = window.__CLC, q = C.QBY['mo27']; /* qnn = 35 */ const QS = { q, num: '3', tray: [] }; const a = C.evaluate ? null : null; return null; });
+  await p7.click('[data-act="area"][data-a="money"]'); await p7.click('[data-act="pick"][data-mode="practice"]'); await p7.click('[data-act="startRound"][data-sk="mix2"]');
+  const cur = await p7.evaluate(() => { const q = window.__CLC.view().qs.q; return { n: q.coins.length, ans: q.ans }; });
+  for (const ch of String(cur.n)) await p7.click(`[data-act="nkey"][data-k="${ch}"]`); await p7.click('[data-act="check"]');
+  ok('money: typing the number of coins gets "count what they are WORTH" feedback', /how much they are WORTH/.test(await p7.textContent('.fb')));
+  await p7.click('[data-act="home"] >> nth=0'); await p7.click('[data-act="area"][data-a="money"]'); await p7.click('[data-act="pick"][data-mode="practice"]'); await p7.click('[data-act="startRound"][data-sk="make"]');
+  await p7.click('[data-act="tadd"] >> nth=0');
+  ok('money: no running total during independent practice', !/Total so far/.test(await p7.textContent('.qbox')));
+  await p7.click('[data-act="home"] >> nth=0'); await p7.click('[data-act="area"][data-a="money"]'); await p7.click('[data-act="pick"][data-mode="guided"]'); await p7.click('[data-act="startRound"][data-sk="make"]');
+  await p7.click('[data-act="tadd"] >> nth=0');
+  ok('money: running total shows with the coach (guided)', /Total so far: \d+¢/.test(await p7.textContent('.qbox')));
+  await p7.click('[data-act="home"] >> nth=0'); await p7.click('[data-act="area"][data-a="money"]'); await p7.click('[data-act="pick"][data-mode="practice"]'); await p7.click('[data-act="startRound"][data-sk="names"]');
+  const alts = await p7.evaluate(() => [...document.querySelectorAll('.qbox img.coin')].map(i => i.alt));
+  ok('money: coin-naming questions do not reveal the coin name to screen readers', alts.length > 0 && alts.every(a => !/penny|pennies|nickel|dime|quarter|cent\b|¢/i.test(a.replace(/ONE CENT|FIVE CENTS|ONE DIME|QUARTER DOLLAR/g, ''))), alts.join(','));
+  ok('money: no horizontal scroll at phone width', await p7.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await c7.close();
   ok('no JS errors', errs.length === 0, errs.slice(0, 3).join(' | '));
   await b.close(); console.log(R.join('\n')); const f = R.filter(x => x.startsWith('FAIL')).length; console.log(`\n${R.length - f} passed, ${f} failed`); process.exit(f ? 1 : 0);
 })().catch(e => { console.error(e); console.log(R.join('\n')); process.exit(1); });

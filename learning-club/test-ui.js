@@ -7,13 +7,15 @@ const results = []; const ok = (name, cond, info) => { results.push((cond ? 'PAS
 
 async function answer(pg, wrongFirst) {
   for (let g = 0; g < 5; g++) {
-    const st = await pg.evaluate(() => { const v = window.__CLC.view(), QS = v.qs; if (!QS || QS.done) return null; const q = QS.q; let ans = q.ans; if (QS.phase === 'noun') { ans = []; q.ans.forEach(i => { const t = q.toks[i].to; if (!ans.includes(t)) ans.push(t); }); } return { kind: q.kind, ans, a: q.a, a2: q.a2, ok: q.ok, items: q.items, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null, sel: QS.sel, cur: QS.order }; });
+    const st = await pg.evaluate(() => { const v = window.__CLC.view(), QS = v.qs; if (!QS || QS.done) return null; const q = QS.q; let ans = q.ans; if (QS.phase === 'noun') { ans = []; q.ans.forEach(i => { const t = q.toks[i].to; if (!ans.includes(t)) ans.push(t); }); } return { kind: q.kind, ans, a: q.a, a2: q.a2, ok: q.ok, items: q.items, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null, sel: QS.sel, cur: QS.order, num: q.kind === 'num' ? String(q.ans) : null, best: q.best || null }; });
     if (!st) return;
     if (st.kind === 'select') { for (const i of st.sel) if (!st.ans.includes(i)) await pg.click(`[data-act="tok"][data-i="${i}"]`); for (const i of st.ans) if (!st.sel.includes(i)) await pg.click(`[data-act="tok"][data-i="${i}"]`); }
     if (st.kind === 'mc') await pg.click(`[data-act="choice"][data-i="${st.a}"]`);
     if (st.kind === 'mc2') { await pg.click(`[data-act="choice"][data-i="${st.a}"]`); await pg.click(`[data-act="choice2"][data-i="${st.a2}"]`); }
     if (st.kind === 'fix') { const cur = await pg.evaluate(() => window.__CLC.view().qs.tok); if (cur !== st.wrong) await pg.click(`[data-act="ftok"][data-i="${st.wrong}"]`); await pg.click(`[data-act="choice"][data-i="${st.a}"]`); }
     if (st.kind === 'order') { while ((await pg.evaluate(() => window.__CLC.view().qs.order.length)) > 0) await pg.click('[data-act="orem"][data-i="0"]'); for (const i of st.order) await pg.click(`[data-act="oadd"][data-i="${i}"]`); }
+    if (st.kind === 'num') { while ((await pg.evaluate(() => window.__CLC.view().qs.num.length)) > 0) await pg.click('[data-act="nkey"][data-k="back"]'); for (const ch of st.num) await pg.click(`[data-act="nkey"][data-k="${ch}"]`); }
+    if (st.kind === 'tray') { while ((await pg.evaluate(() => window.__CLC.view().qs.tray.length)) > 0) await pg.click('[data-act="trem"][data-i="0"]'); for (const c of st.best) await pg.click(`[data-act="tadd"][data-c="${c}"]`); }
     if (st.kind === 'sort') for (let i = 0; i < st.items.length; i++) await pg.click(`[data-act="sort"][data-i="${i}"][data-b="${st.items[i][1]}"]`);
     if (st.kind === 'ev') await pg.click(`[data-act="ev"][data-i="${st.ok[0]}"]`);
     await pg.click('[data-act="check"]');
@@ -27,7 +29,7 @@ async function answerCurrent(pg) { return answer(pg); }
   const net = []; await ctx.route('**/*', r => { const u = r.request().url(); if (!u.startsWith('file:') && !u.startsWith('blob:') && !u.startsWith('data:')) { net.push(u); return r.abort(); } return r.continue(); });
   const pg = await ctx.newPage(); const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(FILE);
-  ok('home shows 7 areas', (await pg.locator('.area-card').count()) === 7);
+  ok('home shows 8 areas', (await pg.locator('.area-card').count()) === 8);
   if (SHOTS) await pg.screenshot({ path: SHOTS + '/home-desktop.png' });
 
   // Every lesson in every area, start to finish
@@ -85,6 +87,8 @@ async function answerCurrent(pg) { return answer(pg); }
     else if (wrongDone === 'mc2') { const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return [(q.a + 1) % q.c.length, q.a2]; }); await pg.click(`[data-act="choice"][data-i="${k[0]}"]`); await pg.click(`[data-act="choice2"][data-i="${k[1]}"]`); }
     else if (wrongDone === 'fix') { const k = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return [q.wrong === 0 ? 1 : 0, q.a]; }); await pg.click(`[data-act="ftok"][data-i="${k[0]}"]`); await pg.click(`[data-act="choice"][data-i="${k[1]}"]`); }
     else if (wrongDone === 'order') { const o = await pg.evaluate(() => window.__CLC.view().qs.q.okOrders[0].slice().reverse()); for (const x of o) await pg.click(`[data-act="oadd"][data-i="${x}"]`); }
+    else if (wrongDone === 'num') { await pg.click('[data-act="nkey"][data-k="0"]'); }
+    else if (wrongDone === 'tray') { await pg.click('[data-act="tadd"][data-c="p"]'); }
     else if (wrongDone === 'sort') { const n = await pg.evaluate(() => window.__CLC.view().qs.q.items.length); for (let i = 0; i < n; i++) await pg.click(`[data-act="sort"][data-i="${i}"][data-b="0"]`); }
     await pg.click('[data-act="check"]');
     const wrongFb = (await pg.textContent('.fb')).trim();
@@ -118,10 +122,12 @@ async function answerCurrent(pg) { return answer(pg); }
   ok('test gives no correctness marks', (await pg.locator('.badge, .m-ok, .m-no, .msg').count()) === 0);
   await pg.click('[data-act="tnext"]'); await pg.click('[data-act="tprev"]');
   ok('back keeps answer', (await pg.locator('[aria-pressed="true"]').count()) >= 1);
-  for (let k = 1; k < tn - 1; k++) { await pg.click('[data-act="tnext"]'); const q = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, a2: q.a2, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null }; });
+  for (let k = 1; k < tn - 1; k++) { await pg.click('[data-act="tnext"]'); const q = await pg.evaluate(() => { const q = window.__CLC.view().qs.q; return { kind: q.kind, ans: q.ans, a: q.a, a2: q.a2, wrong: q.wrong, order: q.okOrders ? q.okOrders[0] : null, best: q.best || null }; });
     if (q.kind === 'select') for (const i of q.ans) await pg.click(`[data-act="tok"][data-i="${i}"]`);
     else if (q.kind === 'fix') { await pg.click(`[data-act="ftok"][data-i="${q.wrong}"]`); await pg.click(`[data-act="choice"][data-i="${q.a}"]`); }
     else if (q.kind === 'order') { for (const x of q.order) await pg.click(`[data-act="oadd"][data-i="${x}"]`); }
+    else if (q.kind === 'num') { for (const ch of String(q.ans)) await pg.click(`[data-act="nkey"][data-k="${ch}"]`); }
+    else if (q.kind === 'tray') { for (const c of q.best) await pg.click(`[data-act="tadd"][data-c="${c}"]`); }
     else { await pg.click(`[data-act="choice"][data-i="${q.a}"]`); if (q.kind === 'mc2') await pg.click(`[data-act="choice2"][data-i="${q.a2}"]`); } }
   await pg.click('[data-act="tnext"]'); // last left blank
   await pg.click('[data-act="treview"]');
@@ -202,14 +208,14 @@ async function answerCurrent(pg) { return answer(pg); }
   // Storage blocked
   const s1 = await b.newContext(); await s1.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('SecurityError'); } }); });
   const sp = await s1.newPage(); const e1 = []; sp.on('pageerror', e => e1.push(e.message)); await sp.goto(FILE);
-  ok('storage blocked: app works + notice', e1.length === 0 && (await sp.locator('.area-card').count()) === 7 && /not letting the app save/.test(await sp.textContent('#notice')));
+  ok('storage blocked: app works + notice', e1.length === 0 && (await sp.locator('.area-card').count()) === 8 && /not letting the app save/.test(await sp.textContent('#notice')));
   await sp.click('[data-act="area"][data-a="verbs"]'); await sp.click('[data-act="learn"]'); await sp.click('[data-act="lesson"][data-l="A"]'); await sp.click('[data-act="lnext"]');
   ok('storage blocked: lesson still runs', e1.length === 0 && (await sp.locator('.worked').count()) === 1);
   await s1.close();
   // Corrupted storage
   const s2 = await b.newContext(); await s2.addInitScript(() => { try { if (!sessionStorage.getItem('x')) { localStorage.setItem('chrissLearningClub.v1', '{not json'); sessionStorage.setItem('x', 1); } } catch (e) {} });
   const cp = await s2.newPage(); const e2 = []; cp.on('pageerror', e => e2.push(e.message)); await cp.goto(FILE);
-  ok('corrupt storage: fresh start + notice', e2.length === 0 && (await cp.locator('.area-card').count()) === 7 && /could not be read/.test(await cp.textContent('#notice')));
+  ok('corrupt storage: fresh start + notice', e2.length === 0 && (await cp.locator('.area-card').count()) === 8 && /could not be read/.test(await cp.textContent('#notice')));
   await s2.close();
 
   // Reduced motion

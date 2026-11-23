@@ -4,8 +4,16 @@ here = pathlib.Path(__file__).resolve().parent
 t = (here / 'template.html').read_text()
 # Illustrations: learning-club/images/*.webp embedded as data URIs (works offline)
 imgs = sorted((here / 'images').glob('*.webp'))
-images_js = 'var IMAGES = {\n' + ',\n'.join("  %s: 'data:image/webp;base64,%s'" % (p.stem, base64.b64encode(p.read_bytes()).decode()) for p in imgs) + '\n};\n'
-content_js = images_js + (here / 'content.js').read_text()
+images_js = 'var IMAGES = {\n' + ',\n'.join("  '%s': 'data:image/webp;base64,%s'" % (p.stem, base64.b64encode(p.read_bytes()).decode()) for p in imgs) + '\n};\n'
+content_js = images_js + (here / 'content.js').read_text() + '\n' + (here / 'money.js').read_text()
+# Build id: a hash of every source file (not of the output), so the offline file and the hosted copy built
+# from the same sources carry the same id, and rebuilding unchanged sources gives the same id.
+srcs = ['template.html', 'app.css', 'app.js', 'content.js', 'money.js', 'verb-guide.pdf'] + ['images/' + p.name for p in imgs]
+hsh = hashlib.sha256()
+for name in srcs:
+    hsh.update(name.encode()); hsh.update(b'\0'); hsh.update((here / name).read_bytes()); hsh.update(b'\0')
+BUILD = hsh.hexdigest()[:12]
+content_js = "window.__CLC_BUILD = '%s';\n" % BUILD + content_js
 pdf = (here / 'verb-guide.pdf').read_bytes()
 b64 = base64.b64encode(pdf).decode()
 b64 = '\n'.join(b64[i:i+120] for i in range(0, len(b64), 120))
@@ -16,7 +24,7 @@ for key, val in [('/*CSS*/', (here/'app.css').read_text()), ('/*CONTENT*/', cont
     t = t.replace(key, val)
 out = here.parent / 'chriss-learning-club.html'
 out.write_text(t)
-print(out, len(t.encode()), 'bytes; pdf sha256', hashlib.sha256(pdf).hexdigest()[:16])
+print(out, len(t.encode()), 'bytes; build', BUILD, '; pdf sha256', hashlib.sha256(pdf).hexdigest()[:16])
 
 # Hosted (claude.ai artifact) build: page fragment, no PDF bytes, print/download replaced by a note.
 import sys
