@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unload — The Weight</title>
+  <meta name="description" content="A private place to write out what’s weighing on you. Nothing is sent or saved.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#101a2e">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script defer src="assets/js/unload.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- Immediate support: on every page, works without JavaScript -->
+  <div class="help-bar" role="region" aria-label="Immediate support">
+    <div class="container help-bar__inner">
+      <p class="help-bar__text"><span class="help-bar__dot" aria-hidden="true"></span><span class="help-bar__long">Need to talk now?</span> <span class="help-bar__free">Free, 24/7</span></p>
+      <div class="help-bar__actions">
+        <a class="hb-btn hb-btn--strong" href="tel:988">Call 988</a>
+        <a class="hb-btn" href="sms:988">Text 988</a>
+        <a class="hb-btn hb-btn--ghost" href="resources.html#urgent">More help<span class="sr-only">: emergency and crisis lines</span></a>
+      </div>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="index.html" aria-label="The Weight, home"><span class="brand__mark" aria-hidden="true"></span>The Weight</a>
+      <nav aria-label="Main">
+        <ul class="nav" role="list">
+          <li><a href="resources.html">Resources</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section class="page">
+      <div class="container narrow">
+        <p class="eyebrow">Unload</p>
+        <h1>Set it down here.</h1>
+        <p class="page__lead">Write whatever’s on your mind, as messy as it needs to be. No judgment, and no advice.</p>
+        <p class="panel"><strong>Private:</strong> what you type stays on this page in your browser. It isn’t sent or saved, and nobody reads it. It’s gone when you clear it, refresh, or close the tab.</p>
+        <form id="unload-form" onsubmit="return false">
+          <p class="field" id="prompt-label"><strong>Stuck on how to start? Tap one:</strong></p>
+          <ul class="prompts" role="list" aria-labelledby="prompt-label">
+            <li><button type="button" class="chip" data-prompt="What’s weighing on me is…">What’s weighing on me</button></li>
+            <li><button type="button" class="chip" data-prompt="What I haven’t said is…">What I haven’t said</button></li>
+            <li><button type="button" class="chip" data-prompt="One thing I’d change is…">One thing I’d change</button></li>
+            <li><button type="button" class="chip" data-prompt="What I wish I could tell them is…">What I wish I could tell them</button></li>
+          </ul>
+          <div class="field">
+            <label for="unload-text">Write it out</label>
+            <textarea id="unload-text" rows="10" autocomplete="off" aria-describedby="unload-count"></textarea>
+            <p class="meta" id="unload-count" aria-live="polite">0 words</p>
+          </div>
+          <button type="button" class="btn btn--outline" id="unload-clear">Clear what I wrote</button>
+          <p class="status" id="unload-status" role="status"></p>
+        </form>
+        <h2>When you’re done</h2>
+        <div class="btn-row">
+          <a class="btn btn--navy" href="talk.html">Reach out to someone I trust</a>
+          <a class="btn btn--outline" href="index.html#wizard">Find a next step</a>
+        </div>
+        <p class="meta" style="margin-top:1rem">Want to talk to a person right now? Call or text <a href="tel:988">988</a>, free, 24/7.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <div>
+        <p class="brand brand--footer"><span class="brand__mark" aria-hidden="true"></span>The Weight</p>
+        <p class="site-footer__tag">You don’t have to carry it by yourself.</p>
+      </div>
+      <nav aria-label="Footer">
+        <ul class="footer-links" role="list">
+          <li><a href="resources.html">All resources</a></li>
+          <li><a href="unload.html">Unload</a></li>
+          <li><a href="talk.html">Talk It Through</a></li>
+          <li><a href="about.html">About &amp; privacy</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="container site-footer__fine">
+      <p><strong>Design prototype</strong> prepared for the owner of <a href="https://theweightmen.com/">theweightmen.com</a>. Not the official site. Nothing you choose here is saved or sent.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Talk It Through — The Weight</title>
+  <meta name="description" content="Write a short message asking someone you trust to listen or give honest feedback. You send it yourself.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#101a2e">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script defer src="assets/js/talk.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- Immediate support: on every page, works without JavaScript -->
+  <div class="help-bar" role="region" aria-label="Immediate support">
+    <div class="container help-bar__inner">
+      <p class="help-bar__text"><span class="help-bar__dot" aria-hidden="true"></span><span class="help-bar__long">Need to talk now?</span> <span class="help-bar__free">Free, 24/7</span></p>
+      <div class="help-bar__actions">
+        <a class="hb-btn hb-btn--strong" href="tel:988">Call 988</a>
+        <a class="hb-btn" href="sms:988">Text 988</a>
+        <a class="hb-btn hb-btn--ghost" href="resources.html#urgent">More help<span class="sr-only">: emergency and crisis lines</span></a>
+      </div>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="brand" href="index.html" aria-label="The Weight, home"><span class="brand__mark" aria-hidden="true"></span>The Weight</a>
+      <nav aria-label="Main">
+        <ul class="nav" role="list">
+          <li><a href="resources.html">Resources</a></li>
+          <li><a href="about.html">About</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    <section class="page">
+      <div class="container narrow">
+        <p class="eyebrow">Talk It Through</p>
+        <h1>Reach out to someone you trust</h1>
+        <p class="page__lead">A friend, brother, cousin, someone you served with, a pastor, a coach. It’s easier to ask when the words are already there.</p>
+        <p class="panel"><strong>The Weight never sends this.</strong> You copy it and send it yourself, from your own phone or email, to the person you choose.</p>
+        <form id="msg-form" onsubmit="return false">
+          <div class="field">
+            <label for="msg-who">Their first name <span class="meta">(optional)</span></label>
+            <input type="text" id="msg-who" autocomplete="off" maxlength="40">
+          </div>
+          <fieldset class="radio-grid">
+            <legend>What do you want from them?</legend>
+            <label class="radio"><input type="radio" name="ask" value="listen" checked> Just listen</label>
+            <label class="radio"><input type="radio" name="ask" value="perspective"> Help me see it differently</label>
+            <label class="radio"><input type="radio" name="ask" value="feedback"> Honest feedback</label>
+            <label class="radio"><input type="radio" name="ask" value="steps"> Help with next steps</label>
+          </fieldset>
+          <div class="field">
+            <label for="msg-note">Anything to add? <span class="meta">(optional)</span></label>
+            <input type="text" id="msg-note" autocomplete="off" maxlength="200">
+          </div>
+          <h2 class="h3" style="font-size:1.2rem" id="preview-label">Your message</h2>
+          <p class="preview" id="msg-preview" aria-labelledby="preview-label" aria-live="polite"></p>
+          <div class="btn-row">
+            <button type="button" class="btn btn--navy" id="msg-copy">Copy message</button>
+            <a class="btn btn--outline" id="msg-sms" href="sms:">Open in Messages</a>
+            <button type="button" class="btn btn--outline" id="msg-share" hidden>Share…</button>
+            <button type="button" class="btn btn--quiet" id="msg-clear">Clear</button>
+          </div>
+          <p class="status" id="msg-status" role="status"></p>
+        </form>
+        <p class="meta">Would rather talk to someone trained, right now? Call or text <a href="tel:988">988</a>, free, 24/7. Veterans: call 988 and press 1.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <div>
+        <p class="brand brand--footer"><span class="brand__mark" aria-hidden="true"></span>The Weight</p>
+        <p class="site-footer__tag">You don’t have to carry it by yourself.</p>
+      </div>
+      <nav aria-label="Footer">
+        <ul class="footer-links" role="list">
+          <li><a href="resources.html">All resources</a></li>
+          <li><a href="unload.html">Unload</a></li>
+          <li><a href="talk.html">Talk It Through</a></li>
+          <li><a href="about.html">About &amp; privacy</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="container site-footer__fine">
+      <p><strong>Design prototype</strong> prepared for the owner of <a href="https://theweightmen.com/">theweightmen.com</a>. Not the official site. Nothing you choose here is saved or sent.</p>
+    </div>
+  </footer>
+</body>
+</html>
